@@ -98,7 +98,8 @@ def shutdown_toolkit():
 
 if __name__ == "__main__":
 
-    # TODO: parse the port number from the command line args
+    # parse the port number from the command line args
+    port = sys.argv[1]
 
     # ---- BOOTSTRAP!!!
 
@@ -129,13 +130,11 @@ if __name__ == "__main__":
     try:
         from sgtk.platform.qt import QtGui
         app = AdobeCCPython(
-            # TODO: port?
-            title='Shotgun Engine for Adobe CC',
+            port,
+            "Shotgun Engine for Adobe CC",
+            logger=sgtk_logger,
             icon_path=os.path.join(root_path, "icon_256.png")
         )
-        # TODO: remove. testing.
-        win = QtGui.QDialog()
-        win.show()
     except Exception, e:
         # TODO: send message to display in console
         sgtk_logger.critical(
@@ -147,12 +146,3 @@ if __name__ == "__main__":
     sgtk_logger.info("Starting PySide event loop: %s", app)
     sys.exit(app.exec_())
 
-    # TODO: sending messages/events to the port supplied
-    # TODO:
-    #   * respond to any requests from the DCC. examples:
-    #       * launch app
-    #       * shut down
-    #       * context change
-    #   * send a heartbeat back to the DCC
-    # TODO: send message back to js telling it which port we're listening to.
-    # TODO: receive request from js (launch app)

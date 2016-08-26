@@ -55,9 +55,9 @@ var sgtk_bootstrap = function(port) {
             // TODO: default to Desktop python if found?
             "/Applications/Shotgun.app/Contents/Resources/Python/bin/python",
             [
-                plugin_bootstrap_py,
-                "--port=" + port.toString()
-            ],   // add any additional command line args here
+                plugin_bootstrap_py,  // path to the python bootstrap script
+                port.toString()       // the port the local server is running on
+            ],
             {
                 cwd: plugin_python_path,    // start the process from this dir
                 env: process.env            // the environment to use for bootstrapping

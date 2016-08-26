@@ -15,3 +15,17 @@
     # TODO: set message in panel
     # TODO: get remote objects/classes
     # TODO: wrap save as
+
+# MOCKUPS...
+class AdobeCCApplication(object):
+
+    def __init__(self, name):
+        self._name = name
+
+    def __repr__(self):
+        return "<%s - %s>" % (self.__class__, self._name)
+
+class AdobeCCAppFactory(object):
+
+    def get_current_cc_app(self):
+        return AdobeCCApplication("photoshop")
