@@ -117,13 +117,8 @@ if __name__ == "__main__":
     # if we're bootstrapped, this should work!
     import sgtk
 
-    # list the registered commands for debugging purposes
-    engine = sgtk.platform.current_engine()
-    sgtk_logger.debug("Registered Commands:")
-    for (command_name, value) in engine.commands.iteritems():
-        sgtk_logger.debug(" %s: %s" % (command_name, value))
-
-    # now that we've bootstrapped, we can import our Application
+    # now that we've bootstrapped, we can import our Application (requires
+    # sgtk.platform.qt.QtGui)
     from app_integration import AdobeCCPython
 
     # create global app

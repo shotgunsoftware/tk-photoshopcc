@@ -26,7 +26,9 @@ import tank
 class AdobeEngine(tank.platform.Engine):
 
     def post_app_init(self):
-        # TODO: initialize dark look and feel?
+        #print "Setting dark look and feel..."
+        #sys.stdout.flush()
+        #self._initialize_dark_look_and_feel()
         # TODO: initialize & populate the panel
         # TODO: get a handle on the remote CC instance and get the version
             # and any CC-specifics (ps vs premiere)

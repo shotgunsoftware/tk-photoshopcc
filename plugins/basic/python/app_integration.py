@@ -8,6 +8,8 @@
 # agreement to the Shotgun Pipeline Toolkit Source Code License. All rights
 # not expressly granted therein are reserved by Shotgun Software Inc.
 
+import traceback
+
 # don't import this module until bootstrapped
 import sgtk
 from sgtk.platform.qt import QtGui
@@ -23,8 +25,43 @@ class AdobeCCPython(QtGui.QApplication):
             self.setWindowIcon(QtGui.QIcon(icon_path))
         self.setQuitOnLastWindowClosed(False)
 
-        # keep a handle on the engine
         engine = sgtk.platform.current_engine()
+
+        # give the application a dark look and feel
+        try:
+            engine._initialize_dark_look_and_feel()
+        except Exception, e:
+            logger.error("Failed to initialize dark look and feel!")
+            logger.critical(traceback.format_exc())
+        else:
+            logger.debug("Initialized dark look and feel!")
+
+        # list the registered commands for debugging purposes
+        engine = sgtk.platform.current_engine()
+        logger.debug("Registered Commands:")
+        for (command_name, value) in engine.commands.iteritems():
+            logger.debug(" %s: %s" % (command_name, value))
+
+        # list the registered panels for debugging purposes
+        engine = sgtk.platform.current_engine()
+        logger.debug("Registered Panels:")
+        for (panel_name, value) in engine.panels.iteritems():
+            logger.debug(" %s: %s" % (panel_name, value))
+
+        # XXX manually create/show the sg panel as a test
+        panel_widget = None
+        try:
+            panel_widget = engine.panels["tk_multi_shotgunpanel_main"]["callback"]()
+        except Exception, e:
+            logger.error("Failed to show the SG panel!")
+            logger.critical(traceback.format_exc())
+        else:
+            logger.debug("Showing the SG panel...")
+
+        if not panel_widget:
+            panel_widget = QtGui.QLabel("Something happend bro. Your code is whack!")
+
+        panel_widget.show()
 
         adobecc = engine.import_module("adobecc")
 
