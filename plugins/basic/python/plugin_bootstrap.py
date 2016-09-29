@@ -11,9 +11,8 @@
 import logging
 import os
 import sys
-import time
 
-from sgtk_plugin_basic import manifest
+from sgtk_plugin_basic_adobecc import manifest
 
 # toolkit logger
 sgtk_logger = None
@@ -72,7 +71,7 @@ def bootstrap_toolkit(root_path):
 
     # create boostrap manager
     toolkit_mgr = sgtk.bootstrap.ToolkitManager()
-    toolkit_mgr.entry_point = manifest.entry_point
+    toolkit_mgr.plugin_id = manifest.plugin_id
     toolkit_mgr.base_configuration = manifest.base_configuration
     toolkit_mgr.bundle_cache_fallback_paths = [os.path.join(root_path, "bundle_cache")]
     sgtk_logger.debug("Toolkit Manager: " + str(toolkit_mgr))

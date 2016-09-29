@@ -8,22 +8,49 @@
 # agreement to the Shotgun Pipeline Toolkit Source Code License. All rights
 # not expressly granted therein are reserved by Shotgun Software Inc.
 
-# values required by all plugins
+# This file contains the plug-in configuration data that will be packaged into
+# manifest.py by the build_plugin.py script.
+
+# ---- Plug-in information recommended values to specify by convention.
+
+name: "tk-adobecc-basic"
+version: "0.0.1"
+
+description: "Plugin to bootstrap the Shotgun Engine for Adobe CC"
+author: "Shotgun Software"
+organization: "Autodesk Inc."
+contact: "support@shotgunsoftware.com"
+url: "https://www.shotgunsoftware.com"
+
+# ---- Values required by all plug-ins.
+
 base_configuration:
-  type: baked
-  path: ./config
+  # The default configuration that the plugin should use. For documentation and
+  # details, see:
+  #   http://developer.shotgunsoftware.com/tk-core/bootstrap.html#sgtk.bootstrap.ToolkitManager.base_configuration
+  #
+  # This is expressed in the form of a Toolkit Descriptor. For more information
+  # about Toolkit descriptors, see:
+  #   http://developer.shotgunsoftware.com/tk-core/descriptor.html
+  #
+  # If your descriptor supports a version token and you want it to always use
+  # the latest version available, simply omit the version token.
+  # TODO: update this before release
+  type: dev
+  path: /Users/josh/dev/sg/38480_adobe_engine/tk-config-pluginbasic
+  #type: app_store
+  #name: tk-config-pluginbasic
 
-entry_point: "basic"
+# The Plugin Id helps uniquely identify this plugin and can be used to override
+# and customize it. For more information, see:
+#   http://developer.shotgunsoftware.com/tk-core/bootstrap.html#sgtk.bootstrap.ToolkitManager.plugin_id
+#
+# When the plugin is built, this file will be converted into a manifest.py file
+# and located in a python module named based on the plugin id in order to ensure
+# uniqueness.
+plugin_id: "basic.adobecc"
 
-# recommended values that all plugins should
-# specify by convention, unless there is good reason not to
-name: Shotgun Integration
-description: Bootstraps Shotgun Toolkit as a separate Python process
-author: Shotgun Software
-organization: Autodesk, Inc
-contact: support@shotgunsoftware.com
-url: http://www.shotgunsoftware.com
-version: "v0.0.1"
+# ---- Values specific to this plug-in.
 
-# plugin specific settings
+# TODO: turn off before release
 debug_logging: true

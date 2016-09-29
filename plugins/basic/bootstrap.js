@@ -15,7 +15,7 @@
 var child_process = require("child_process");
 const path = require('path');
 
-var sgtk_bootstrap = function(port) {
+var shotgun_bootstrap = function(port) {
     // Bootstrap the toolkit python process.
     //
     // Returns a `child_process.ChildProcess` object for the running
@@ -26,8 +26,8 @@ var sgtk_bootstrap = function(port) {
     // the path to this extension
     var ext_dir = cs_interface.getSystemPath(SystemPath.APPLICATION);
 
-    // Assumes the plugin is added to the extension directory as 'sgtk' folder
-    var plugin_python_path = path.join(ext_dir, "sgtk", "python");
+    // Assumes the plugin is added to the extension directory as 'shotgun' folder
+    var plugin_python_path = path.join(ext_dir, "shotgun", "python");
 
     // get a copy of the current environment and append to PYTHONPATH.
     // we need to append the plugin's python path so that it can locate the
