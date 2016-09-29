@@ -1,0 +1,4 @@
+# the core that the plugin will bootstrap into
+location:
+  type: app_store
+  path: https://github.com/shotgunsoftware/tk-core.git

@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<ExtensionManifest xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" ExtensionBundleId="com.shotgunsoftware.basic.adobecc" ExtensionBundleName="Shotgun Engine for AdobeCC" ExtensionBundleVersion="1.0" Version="6.0">
+    <ExtensionList>
+        <Extension Id="com.shotgunsoftware.basic.adobecc" Version="1.0"/>
+    </ExtensionList>
+    <ExecutionEnvironment>
+        <HostList>
+            <Host Name="PHSP" Version="14.0"/>
+            <Host Name="PHXS" Version="14.0"/>
+        </HostList>
+        <LocaleList>
+            <Locale Code="All"/>
+        </LocaleList>
+        <RequiredRuntimeList>
+            <RequiredRuntime Name="CSXS" Version="6.0"/>
+        </RequiredRuntimeList>
+    </ExecutionEnvironment>
+    <DispatchInfoList>
+        <Extension Id="com.shotgunsoftware.basic.adobecc">
+            <DispatchInfo>
+                <Resources>
+                    <MainPath>./html/index.html</MainPath>
+                    <CEFCommandLine>
+                        <Parameter>--enable-nodejs</Parameter>
+                    </CEFCommandLine>
+                </Resources>
+                <Lifecycle>
+                    <AutoVisible>true</AutoVisible>
+                    <StartOn>
+                    	<Event>applicationActivate</Event>
+                    </StartOn>
+                </Lifecycle>
+                <UI>
+                    <Type>Panel</Type>
+                    <Menu>Shotgun</Menu>
+                    <Geometry>
+                        <Size>
+                            <Height>500</Height>
+                            <Width>200</Width>
+                        </Size>
+                    </Geometry>
+                    <Icons>
+                        <Icon Type="Normal">./images/IconLight.png</Icon>
+                        <Icon Type="RollOver">./images/IconLightRollOver.png</Icon>
+                        <Icon Type="DarkNormal">./images/IconDark.png</Icon>
+                        <Icon Type="DarkRollOver">./images/IconDarkRollOver.png</Icon>
+                    </Icons>
+                </UI>
+            </DispatchInfo>
+        </Extension>
+    </DispatchInfoList>
+</ExtensionManifest>

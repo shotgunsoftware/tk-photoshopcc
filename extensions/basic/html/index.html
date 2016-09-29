@@ -1,0 +1,138 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<!--
+/*************************************************************************
+*
+* ADOBE CONFIDENTIAL
+* ___________________
+*
+*  Copyright 2013, Adobe Systems Incorporated
+*  All Rights Reserved.
+*
+* NOTICE:  All information contained herein is, and remains
+* the property of Adobe Systems Incorporated and its suppliers,
+* if any.  The intellectual and technical concepts contained
+* herein are proprietary to Adobe Systems Incorporated and its
+* suppliers and are protected by trade secret or copyright law.
+* Dissemination of this information or reproduction of this material
+* is strictly forbidden unless prior written permission is obtained
+* from Adobe Systems Incorporated.
+**************************************************************************/
+-->
+<html xmlns="http://www.w3.org/1999/xhtml">
+
+<head>
+</head>
+<body>
+
+WHATEVER BRO!
+
+<script src="../js/CSInterface.js"></script>
+<script src="../js/utils.js"></script>
+<script src="../js/bootstrap.js"></script>
+<script>
+
+console.log("Script loading...");
+
+// TODO: we should separate the server startup into its own .js file
+var HTTP_SERVER;
+var SERVER_PORT;
+var shotgun_py_process;
+
+window.onload = function() {
+
+    console.log("Window loading...");
+
+    var csLib = new CSInterface();
+    var http = require('http');
+    HTTP_SERVER = http.createServer(function (request, response)
+    {
+        response.writeHead(200);
+		var body = '';
+		request.on('data', function(message) {
+			body += message;
+			response.write(message);
+		});
+		request.on('end', function() {
+			csLib.evalScript(body);
+			response.end();
+		});
+    }).listen(0);
+
+    // listen(0) above allows the OS to bind to an open port.
+    // here we retrieve the port so that we can forward it to the python
+    // process.
+    SERVER_PORT = HTTP_SERVER.address().port;
+    console.log("Server listening on port: " + SERVER_PORT);
+
+    // make the panel persistent
+    console.log("Making panel persistent (no reloading).");
+    make_persistent(true);
+
+    // build the flyout menu
+    console.log("Building flyout menu.");
+    flyout_menu();
+
+    // bootstrap toolkit and get a handle on the python process
+    shotgun_py_process = shotgun_bootstrap(SERVER_PORT);
+    console.log("Python process bootstrapped. Process id: " + shotgun_py_process.pid)
+
+    // log stdout from python process
+    shotgun_py_process.stdout.on('data', function(data) {
+        console.log('stdout: ' + data);
+    });
+
+    // log stderr from python process
+    shotgun_py_process.stderr.on('data', function(data) {
+        console.log('stderr: ' + data);
+    });
+
+    // i/o streams closed
+    shotgun_py_process.on('close', function(code) {
+        // TODO: react accordingly to python process disconnection
+        //       display something in panel? restart?
+        //       see what current plugin does
+        console.log('python exited with code: ' + code);
+    });
+
+    console.log("Window finished loading.");
+};
+
+window.onunload = function() {
+
+    console.log("Window unloading...");
+
+    // close the server if its still valid
+    if (typeof httpServer !== 'undefined') {
+        console.log("Closing HTTP server...");
+        try {
+            httpServer.close();
+            console.log("closed!");
+        }
+        catch(err) {
+            console.log("Unable to close HTTP server: " + err);
+        }
+    }
+
+    // attempt to terminate the child python process
+    if (typeof shotgun_py_process !== 'undefined') {
+        console.log("Terminating python process...");
+        try {
+            shotgun_py_process.kill();
+            console.log("terminated!");
+        }
+        catch(err) {
+            console.log("Unable to terminate python process: " + err);
+        }
+    }
+
+    console.log("Window finished unloading.");
+};
+
+console.log("Script finished loading.");
+
+</script>
+
+
+</body>
+
+</html>

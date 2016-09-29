@@ -35,11 +35,14 @@ base_configuration:
   #
   # If your descriptor supports a version token and you want it to always use
   # the latest version available, simply omit the version token.
-  # TODO: update this before release
-  type: dev
-  path: /Users/josh/dev/sg/38480_adobe_engine/tk-config-pluginbasic
+
+  # RELEASE : uncomment these. comment out the dev descriptor args below
   #type: app_store
   #name: tk-config-pluginbasic
+
+  # DEV: uncomment these. comment out the app store descriptor args above
+  type: dev
+  path: $TK_CONFIG_PLUGINBASIC_ROOT
 
 # The Plugin Id helps uniquely identify this plugin and can be used to override
 # and customize it. For more information, see:

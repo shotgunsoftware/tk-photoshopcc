@@ -27,7 +27,7 @@ var shotgun_bootstrap = function(port) {
     var ext_dir = cs_interface.getSystemPath(SystemPath.APPLICATION);
 
     // Assumes the plugin is added to the extension directory as 'shotgun' folder
-    var plugin_python_path = path.join(ext_dir, "shotgun", "python");
+    var plugin_python_path = path.join(ext_dir, "python");
 
     // get a copy of the current environment and append to PYTHONPATH.
     // we need to append the plugin's python path so that it can locate the
