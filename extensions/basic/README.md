@@ -111,10 +111,14 @@ above.
 
 The extension has a flyout menu with 2 options useful for testing and debugging:
 
-* **Debug Shotgun Extension...** - Opens the default browser and displays
+* **Debug Console...** - Opens the default browser and displays
 information about the extension and a clickable link to debug it.
-* **Reload Shotgun Extension** - Reloads the extension, including restarting the
+* **Reload** - Reloads the extension, including restarting the
 external python process.
+
+As you make changes in your code, you will need to rebuild the extension using
+the steps above. You can use the **Reload** menu item to reload the extension
+after it has been rebuilt.
 
 # Building the Plugin for Release
 

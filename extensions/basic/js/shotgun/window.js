@@ -65,11 +65,8 @@ sg_window.StatusPage = new function(path) {
     this.set_message = function(message) {
         // Set the display message for the status page.
 
-        var content_frame = _get_frame_document();
-        alert("CONTENT FRAME: " + content_frame);
-
-        var msg_div = content_frame.getElementById(_message_div_id);
-        msg_div.innerHTML = message;
+        document.getElementById("content_frame").contentWindow.
+            document.getElementById(_message_div_id).innerHTML = message;
 
         // log the message
         console.log(message)
@@ -81,11 +78,10 @@ sg_window.StatusPage = new function(path) {
         // make sure the progress bar is shown
         self.show_progress_bar(true);
 
-        var content_frame = _get_frame_document();
-
         // set the progress percentage
-        var progress_div = content_frame.getElementById(_progress_div_id);
-        progress_div.style.width = Math.min(percent, 100) + "%";
+        document.getElementById("content_frame").contentWindow.
+            document.getElementById(_progress_div_id).style.width =
+                Math.min(percent, 100) + "%";
 
         // message is optional. if supplied, set the message.
         if (typeof(message) !== "undefined") {
@@ -96,10 +92,9 @@ sg_window.StatusPage = new function(path) {
     this.set_title = function(title) {
         // Set the title for the status page.
 
-        var content_frame = _get_frame_document();
-
-        var title_div = content_frame.getElementById(_title_div_id);
-        title_div.innerHTML = "<strong>" + title + "</strong>";
+        document.getElementById("content_frame").contentWindow.
+            document.getElementById(_title_div_id).innerHTML =
+                "<strong>" + title + "</strong>";
     };
 
     this.show_progress_bar = function(show) {
@@ -108,25 +103,15 @@ sg_window.StatusPage = new function(path) {
         // determine the proper display style
         var display = "none";
         if (show) {
-            display = "inline";
+            display = "block";
         }
 
-        var content_frame = _get_frame_document();
-
         // set the display style for the progress bar
-        var progress_bar_div = content_frame.getElementById(
-            _progress_bar_div_id);
-        progress_bar_div.style.display = display;
+        document.getElementById("content_frame").contentWindow.
+            document.getElementById(_progress_bar_div_id).style.display =
+                display;
     };
 
-    // ---- private methods
-
-    var _get_frame_document = function() {
-        // Return the document in the content frame
-        // TODO: promote to base class for other page classes to access.
-        // TODO: path should be defined in base class as well
-        return document.getElementById("content_frame").contentWindow.document;
-    }
 };
 
 // ---------------------------------------------------------------------------
@@ -149,10 +134,15 @@ sg_window.PanelSingleton = new function() {
     // the div id of the iframe on the main page where content is displayed
     var _content_frame_id = "content_frame";
 
+    // debug console url
+    var _debug_console_url = "http://localhost:45217";
+
     // ---- public methods
 
     this.app_is_supported = function() {
         // Tests whether the extension can run with the current application
+
+        return false;
 
         // supported if the panel menu and html extensions are available
         var host_capabilities = _cs_interface.getHostCapabilities();
@@ -219,9 +209,8 @@ sg_window.PanelSingleton = new function() {
         // make the panel persistent
         self.make_persistent(true);
 
-        // show the status page with a loading message
+        // the status page is the default, so we know it is loaded.
         var status_page = sg_window.StatusPage;
-        _set_page(status_page);
         status_page.set_title("Loading Shotgun");
         status_page.set_message("Shotgun will be ready in just a moment...");
         status_page.show_progress_bar(false);
@@ -264,37 +253,11 @@ sg_window.PanelSingleton = new function() {
         // XXX end temporary process communication
 
         // python process streams disconnected
-        self.python_process.on("close", function(code) {
-            var status_page = sg_window.StatusPage;
-            _set_page(status_page);
-            // TODO: better messages here...
-            status_page.set_title("Uh Oh! Shotgun Python Process Terminated.");
-            //status_page.set_message("Something happened... blah blah blah...");
-            //status_page.show_progress_bar(false);
-
-            // XXX begin testing
-            //status_page.show_progress_bar(true);
-            //var val = 10;
-            //var progress_func = function() {
-                //var currentdate = new Date();
-                //var datetime = "Current Time: " + currentdate.getDate() + "/"
-                    //+ (currentdate.getMonth()+1)  + "/"
-                    //+ currentdate.getFullYear() + " @ "
-                    //+ currentdate.getHours() + ":"
-                    //+ currentdate.getMinutes() + ":"
-                    //+ currentdate.getSeconds();
-                //status_page.set_progress(val, datetime);
-                //val += 10;
-            //};
-            //var progress_test = setInterval(progress_func, 1000);
-
-            //status_page.show_progress_bar(false);
-            // XXX end testing
-        });
+        self.python_process.on("close", _on_python_connection_lost);
 
         // TODO: this page should be shown after the python process has
         //   communicated back the information about the commands to display.
-        //_set_page(sg_window.CommandsPage);
+        _set_page(sg_window.CommandsPage);
 
         console.log("Window finished loading.");
     };
@@ -302,18 +265,8 @@ sg_window.PanelSingleton = new function() {
     this.on_unload = function() {
         // code to run when the extension panel is unloaded
 
-        // show the status page with a shut down message
-        var status_page = sg_window.StatusPage;
-        _set_page(status_page);
-        status_page.set_title("Shutting down...");
-        status_page.set_message("Bye for now!");
-        status_page.show_progress_bar(false);
-        // TODO: show processing icon
-
         // make sure the python process is shut down
         _shutdown_python();
-
-        console.log("Window finished unloading.");
     };
 
     this.reload = function() {
@@ -347,8 +300,7 @@ sg_window.PanelSingleton = new function() {
                 // TODO: go directly to console page instead of link page.
                 console.log("Opening debugger in default browser.");
                 // the port should correspond to the port defined in .debug
-                _cs_interface.openURLInDefaultBrowser(
-                    "http://localhost:45217");
+                _cs_interface.openURLInDefaultBrowser(_debug_console_url);
                 break;
 
             // reload extension
@@ -375,17 +327,37 @@ sg_window.PanelSingleton = new function() {
         }
     };
 
-    var _set_page = function (page) {
+    var _on_python_connection_lost = function(code) {
+        // Handles unexpected python process shutdown.
+
+        var status_page = sg_window.StatusPage;
+
+        // set the page and display some values after it is loaded.
+        _set_page(status_page, function() {
+            // TODO: better messages here...
+            status_page.set_title("Uh Oh! Shotgun Python Process Disconnected.");
+            status_page.set_message("Something happened... blah blah blah...");
+            status_page.show_progress_bar(false);
+        });
+    };
+
+    var _set_page = function (page, onload_function) {
         // Make the supplied page current.
         //
         // Args:
         //   page: The page to make current.
 
         // get a handle on the content frame within the main document.
-        // then set the source of the content frame to the path of the
-        // supplied page.
         var content_frame = document.getElementById(_content_frame_id);
+
+        // set the source of the content frame to the path of the supplied page.
         content_frame.src = page.path;
+
+        // if an onload function was supplied, set it up to be called when the
+        // page is loaded.
+        if (typeof onload_function !== "undefined") {
+            content_frame.onload = onload_function;
+        }
 
         console.log("Current page changed to: " + page.path);
         _current_page = page;
@@ -398,7 +370,7 @@ sg_window.PanelSingleton = new function() {
             console.log("Terminating python process...");
             try {
                 self.python_process.kill();
-                console.log("terminated!");
+                console.log("Python process terminated successfully.");
             } catch(err) {
                 console.log("Unable to terminate python process: " + err);
             }
