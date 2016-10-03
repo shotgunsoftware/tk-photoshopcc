@@ -40,7 +40,7 @@ If you're doing development on the `tk-adobecc` engine itself, or an app or
 framework being loaded by the engine, you'll need to clone the config repo so
 that you can make changes to it. The config used by the engine is the
 [tk-config-pluginbasic](https://github.com/shotgunsoftware/tk-config-pluginbasic)
-repo. You'll also obviously need to clone the repos for the bundle's you're
+repo. Obviously, you'll also need to clone the repos for the bundle's you're
 doing development on.
 
 The base configuration is defined in the extension's `info.yml`. You will need
@@ -53,11 +53,8 @@ base_configuration:
   #name: tk-config-pluginbasic
 
   type: dev
-  path: $TK_CONFIG_PLUGINBASIC_ROOT
+  path: /path/to/my/dev/config/repo
 ```
-
-In the example above, the base configuration to use will now be whatever path
-is stored in the `TK_CONFIG_PLUGINBASIC_ROOT` environment variable.
 
 Once you're pointing to your configuration development repo, you can change the
 bundle descriptors in the configuration's environment files to point to the
@@ -90,11 +87,11 @@ Here is an example of building the extension:
 
 The above command will write the built extension to the `~/dev/my_extension`
 directory. In order for the extension to be picked up, it will need to live in
-the CEP extensions directory here:
+the CEP extensions directory:
 
-```
+```shell
 # windows
-C:\Users\[user name]\AppData\Roaming\Adobe\CEP\extensions\
+> C:\Users\[user name]\AppData\Roaming\Adobe\CEP\extensions\
 
 # osx
 > ~/Library/Application Support/Adobe/CEP/extensions/
@@ -126,8 +123,8 @@ Coming soon...
 ## Clean up dev descriptors
 
 # TODO:
-* consider the case where you have the extension installed system wide, but you
-also want to do local development. Revisit once we've done the initial release for
-beta testing.
+* consider the case where you have the officially released extension installed
+system wide, but you also want to do local development. Revisit once we've done
+the initial release for beta testing.
 * consider all the side effects of reloading the extension. does it actually
 handle reconnecting properly. do we get a completely fresh environment?

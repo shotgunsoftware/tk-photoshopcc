@@ -78,7 +78,10 @@ def bootstrap_toolkit(root_path):
 
     # bootstrap the engine!
     sgtk_logger.info("Starting the Adobe CC engine.")
-    toolkit_mgr.bootstrap_engine("tk-adobecc", entity=None)
+
+    # TODO: have the specific dcc supplied on command line so we can bootstrap
+    # into the right engine in the config. i.e. don't hardode here.
+    toolkit_mgr.bootstrap_engine("tk-photoshop", entity=None)
 
 
 # TODO: need to setup server thread on this end to receive messages from the DCC.
@@ -96,9 +99,6 @@ def shutdown_toolkit():
 
 
 if __name__ == "__main__":
-
-    # parse the port number from the command line args
-    port = sys.argv[1]
 
     # ---- BOOTSTRAP!!!
 
@@ -124,7 +124,6 @@ if __name__ == "__main__":
     try:
         from sgtk.platform.qt import QtGui
         app = AdobeCCPython(
-            port,
             "Shotgun Engine for Adobe CC",
             logger=sgtk_logger,
             icon_path=os.path.join(root_path, "icon_256.png")

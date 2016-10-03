@@ -16,7 +16,7 @@ from sgtk.platform.qt import QtGui
 
 class AdobeCCPython(QtGui.QApplication):
 
-    def __init__(self, port, title, logger, icon_path=None):
+    def __init__(self, title, logger, icon_path=None):
 
         super(AdobeCCPython, self).__init__([title])
 
@@ -69,7 +69,6 @@ class AdobeCCPython(QtGui.QApplication):
         adobecc_app = app_factory.get_current_cc_app()
 
         logger.debug("Adobe CC App: %s" % (adobecc_app,))
-        logger.debug("Adobe CC App's port: %s" % (port,))
 
         # TODO:
         #   * setup communications here
