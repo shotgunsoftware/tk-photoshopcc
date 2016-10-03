@@ -10,6 +10,13 @@
 
 "use strict";
 
+
+// XXX TODO:
+//  * clean up status set_* methods
+//  * setup inheritance with Page classes
+//  * mock up some command buttons in the commands page
+
+
 // namespace
 var sg_window = sg_window || {};
 
@@ -141,8 +148,6 @@ sg_window.PanelSingleton = new function() {
 
     this.app_is_supported = function() {
         // Tests whether the extension can run with the current application
-
-        return false;
 
         // supported if the panel menu and html extensions are available
         var host_capabilities = _cs_interface.getHostCapabilities();
