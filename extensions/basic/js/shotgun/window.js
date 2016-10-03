@@ -66,7 +66,7 @@ sg_window.StatusPage = new function(path) {
         // Set the display message for the status page.
 
         var content_frame = _get_frame_document();
-        alert("CONTENT FRAME: " + content_frame)
+        alert("CONTENT FRAME: " + content_frame);
 
         var msg_div = content_frame.getElementById(_message_div_id);
         msg_div.innerHTML = message;
@@ -268,7 +268,7 @@ sg_window.PanelSingleton = new function() {
             var status_page = sg_window.StatusPage;
             _set_page(status_page);
             // TODO: better messages here...
-            //status_page.set_title("Uh Oh! Shotgun Python Process Terminated.");
+            status_page.set_title("Uh Oh! Shotgun Python Process Terminated.");
             //status_page.set_message("Something happened... blah blah blah...");
             //status_page.show_progress_bar(false);
 
@@ -294,7 +294,7 @@ sg_window.PanelSingleton = new function() {
 
         // TODO: this page should be shown after the python process has
         //   communicated back the information about the commands to display.
-        _set_page(sg_window.CommandsPage);
+        //_set_page(sg_window.CommandsPage);
 
         console.log("Window finished loading.");
     };
