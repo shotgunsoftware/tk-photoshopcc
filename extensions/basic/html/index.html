@@ -32,27 +32,7 @@ are reserved by Shotgun Software Inc.
     <script src="../js/adobe/CSInterface.js"></script>
 
     <!-- shotgun -->
-    <script src="../js/shotgun/bootstrap.js"></script>
     <script src="../js/shotgun/window.js"></script>
-  </head>
-
-  <!-- TODO: stylesheet!!! sg design system? -->
-  <body>
-    <!--
-      The frame where content is displayed. We'll swap out the contents of the
-      frame as needed. This allows us to ensure the above window code is loaded
-      once at startup. By default, show the status page.
-    -->
-    <div id="content">
-      <iframe
-        name="content_frame"
-        id="content_frame"
-        src="status.html"
-        width="100%"
-        height="100%"
-        frameborder="0"
-      ></iframe>
-    </div>
 
     <!-- setup the Shotgun panel extension -->
     <script>
@@ -70,5 +50,25 @@ are reserved by Shotgun Software Inc.
       // extension reload or shut down.
       window.unload = sg_panel.on_unload;
     </script>
+  </head>
+
+  <!-- TODO: stylesheet!!! sg design system? -->
+  <!-- TODO: can we remove the frame now that python is separate??? is it separate??-->
+  <body>
+    <!--
+      The frame where content is displayed. We'll swap out the contents of the
+      frame as needed. This allows us to ensure the above window code is loaded
+      once at startup. By default, show the status page.
+    -->
+    <div id="content">
+      <iframe
+        name="content_frame"
+        id="content_frame"
+        src="status.html"
+        width="100%"
+        height="100%"
+        frameborder="0"
+      ></iframe>
+    </div>
   </body>
 </html>

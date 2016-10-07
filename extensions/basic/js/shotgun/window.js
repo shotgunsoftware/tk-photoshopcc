@@ -10,43 +10,76 @@
 
 "use strict";
 
-
-// XXX TODO:
-//  * clean up status set_* methods
-//  * setup inheritance with Page classes
-//  * mock up some command buttons in the commands page
-
-
 // namespace
 var sg_window = sg_window || {};
 
 // ---------------------------------------------------------------------------
+// Module level values
+
+sg_window.content_frame_id = "content_frame";
+
+// ---------------------------------------------------------------------------
+// Module level functions
+
+sg_window.get_content_document = function() {
+    // Returns the document of the content frame of the main page (the iframe
+    // where the content is displayed. Used by pages to update their contents
+    // dynamically.
+    return document.getElementById(sg_window.content_frame_id).
+        contentWindow.document;
+};
+
+// ---------------------------------------------------------------------------
+// Pages displayed in the panel
 
 sg_window.AboutPage = new function() {
     // A singleton object representing the about page.
-
-    // ---- public vars
 
     // path to the page html
     this.path = "about.html";
 };
 
-// ---------------------------------------------------------------------------
-
 sg_window.CommandsPage = new function() {
     // A singleton object representing the commands page.
+
+    // ---- private vars
+
+    // The div id of the commands section of the page
+    var _command_section_id = "sg_commands_section";
 
     // ---- public vars
 
     // path to the page html
     this.path = "commands.html";
 
-    // TODO:
-    //  * clear
-    //  * set commands
-};
 
-// ---------------------------------------------------------------------------
+    this.set_commands = function(commands) {
+        // Display the supplied commands on the page.
+
+        var command_html = "<ul>";
+
+        for(var i = 0; i < commands.length; i++) {
+            var command = commands[i];
+            if (command.hasOwnProperty("id") &&
+                command.hasOwnProperty("display_name") &&
+                command.hasOwnProperty("icon_path")) {
+                    var command_id = command["id"];
+                    var display_name = command["display_name"];
+                    var icon_path = command["icon_path"];
+                    command_html +=
+                        "<li><a href='#' onclick='alert(\"" + command_id + "\")'>" +
+                        "<img src='" + icon_path + "' width='48'>" +
+                        display_name + "</a></li>";
+            }
+        }
+
+        command_html += "</ul>";
+
+        var content_document = sg_window.get_content_document();
+        content_document.getElementById(_command_section_id).innerHTML =
+            command_html;
+    };
+};
 
 sg_window.StatusPage = new function(path) {
     // A singleton object representing the status page.
@@ -72,8 +105,8 @@ sg_window.StatusPage = new function(path) {
     this.set_message = function(message) {
         // Set the display message for the status page.
 
-        document.getElementById("content_frame").contentWindow.
-            document.getElementById(_message_div_id).innerHTML = message;
+        var content_document = sg_window.get_content_document();
+        content_document.getElementById(_message_div_id).innerHTML = message;
 
         // log the message
         console.log(message)
@@ -86,9 +119,9 @@ sg_window.StatusPage = new function(path) {
         self.show_progress_bar(true);
 
         // set the progress percentage
-        document.getElementById("content_frame").contentWindow.
-            document.getElementById(_progress_div_id).style.width =
-                Math.min(percent, 100) + "%";
+        var content_document = sg_window.get_content_document();
+        content_document.getElementById(_progress_div_id).style.width =
+            Math.min(percent, 100) + "%";
 
         // message is optional. if supplied, set the message.
         if (typeof(message) !== "undefined") {
@@ -99,9 +132,9 @@ sg_window.StatusPage = new function(path) {
     this.set_title = function(title) {
         // Set the title for the status page.
 
-        document.getElementById("content_frame").contentWindow.
-            document.getElementById(_title_div_id).innerHTML =
-                "<strong>" + title + "</strong>";
+        var content_document = sg_window.get_content_document();
+        content_document.getElementById(_title_div_id).innerHTML =
+            "<strong>" + title + "</strong>";
     };
 
     this.show_progress_bar = function(show) {
@@ -114,16 +147,16 @@ sg_window.StatusPage = new function(path) {
         }
 
         // set the display style for the progress bar
-        document.getElementById("content_frame").contentWindow.
-            document.getElementById(_progress_bar_div_id).style.display =
-                display;
+        var content_document = sg_window.get_content_document();
+        content_document.getElementById(_progress_bar_div_id).style.display =
+            display;
     };
 
 };
 
 // ---------------------------------------------------------------------------
+// The panel
 
-// panel singleton.
 sg_window.PanelSingleton = new function() {
     // A singleton "class" to manage the state of the extension's panel display.
 
@@ -138,11 +171,15 @@ sg_window.PanelSingleton = new function() {
     // the current page
     var _current_page = sg_window.StatusPage;
 
-    // the div id of the iframe on the main page where content is displayed
-    var _content_frame_id = "content_frame";
-
-    // debug console url
-    var _debug_console_url = "http://localhost:45217";
+    // debug console urls. the ports should correspond to the ports defined in
+    // the extension's .debug file for the supported CC applications.
+    var _debug_console_urls = {
+        // Photoshop
+        "PHSP": "http://localhost:45216",
+        "PHXS": "http://localhost:45217",
+        // After effects
+        "AEFT": "http://localhost:45218"
+    };
 
     // ---- public methods
 
@@ -189,7 +226,7 @@ sg_window.PanelSingleton = new function() {
     this.make_persistent = function(persistent) {
         // Turns on/off persistence for the panel.
 
-        // TODO: different events based on the current app?
+        // Making the app persistent prevents it from reloading each time
         var event = undefined;
         if (persistent) {
             console.log("Making panel persistent (no reloading).");
@@ -205,66 +242,24 @@ sg_window.PanelSingleton = new function() {
     };
 
     this.on_load = function() {
-        // Runs when the extension is loaded.
+        // Setup the Shotgun integration within the app.
 
-        // build the flyout menu. always do this first so we can have access
-        // to the debug console no matter what happens during bootstrap.
-        self.build_flyout_menu();
-
-        // make the panel persistent
-        self.make_persistent(true);
-
-        // the status page is the default, so we know it is loaded.
-        var status_page = sg_window.StatusPage;
-        status_page.set_title("Loading Shotgun");
-        status_page.set_message("Shotgun will be ready in just a moment...");
-        status_page.show_progress_bar(false);
-        // TODO: show shotgun logo
-
-        // ensure this app is supported by our extension
-        if (!self.app_is_supported()) {
-
-            // this version of the sw is not supported by the extension.
-            // show an unsupported message.
-            status_page.set_title("Application Unsupported");
-            // TODO: link to support mail. link to engine docs?
-            status_page.set_message(
-                "Uh oh! The current version of this application is not " +
-                "supported by Shotgun. Please contact Shotgun support at " +
-                "support@shotgunsoftware.com if you have questions."
-            );
-            // TODO: show error icon.
-            return
+        // Execute the startup payload and catch *any* errors. If there are
+        // errors, display them on the status page.
+        try {
+            _on_load();
+        } catch(err) {
+            // show the error on the status page
+            _set_page(sg_window.StatusPage, function() {
+                sg_window.StatusPage.set_title("Error");
+                sg_window.StatusPage.set_message(
+                    "There was a problem loading the Adobe CC Shotgun " +
+                    "Integration. The error: <br><br>" + err.stack
+                );
+                sg_window.StatusPage.show_progress_bar(false);
+            });
         }
 
-        // the path to this extension
-        var ext_dir = _cs_interface.getSystemPath(SystemPath.EXTENSION);
-
-        // bootstrap toolkit and get a handle on the python process
-        self.python_process = sg_bootstrap.bootstrap(ext_dir);
-
-        // XXX begin temporary process communication
-
-        // log stdout from python process
-        self.python_process.stdout.on("data", function(data) {
-            console.log("stdout: " + data);
-        });
-
-        // log stderr from python process
-        self.python_process.stderr.on("data", function(data) {
-            console.log("stderr: " + data);
-        });
-
-        // XXX end temporary process communication
-
-        // python process streams disconnected
-        self.python_process.on("close", _on_python_connection_lost);
-
-        // TODO: this page should be shown after the python process has
-        //   communicated back the information about the commands to display.
-        _set_page(sg_window.CommandsPage);
-
-        console.log("Window finished loading.");
     };
 
     this.on_unload = function() {
@@ -293,6 +288,18 @@ sg_window.PanelSingleton = new function() {
         _cs_interface.requestOpenExtension(extension_id);
     };
 
+    this.set_commands = function(commands) {
+        // Set the current page and populate the supplied commands.
+        //
+        // TODO: document required command object contents.
+
+        _set_page(sg_window.CommandsPage, function () {
+            // on page load, setup the commands
+            sg_window.CommandsPage.set_commands(commands);
+        });
+
+    };
+
     // ---- private methods
 
     var _on_flyout_menu_clicked = function(event) {
@@ -302,10 +309,10 @@ sg_window.PanelSingleton = new function() {
 
             // debug console
             case "sg_dev_debug":
-                // TODO: go directly to console page instead of link page.
                 console.log("Opening debugger in default browser.");
-                // the port should correspond to the port defined in .debug
-                _cs_interface.openURLInDefaultBrowser(_debug_console_url);
+                var app_name = _cs_interface.getHostEnvironment().appName;
+                var debug_url = _debug_console_urls[app_name];
+                _cs_interface.openURLInDefaultBrowser(debug_url);
                 break;
 
             // reload extension
@@ -332,36 +339,122 @@ sg_window.PanelSingleton = new function() {
         }
     };
 
+    var _on_load = function() {
+        // The panel startup payload
+
+        // build the flyout menu. always do this first so we can have access
+        // to the debug console no matter what happens during bootstrap.
+        self.build_flyout_menu();
+
+        // make the panel persistent
+        self.make_persistent(true);
+
+        // the status page is the default, so we know it is loaded.
+        var status_page = sg_window.StatusPage;
+        status_page.set_title("Loading Shotgun");
+        status_page.set_message("Shotgun will be ready in just a moment...");
+        status_page.show_progress_bar(false);
+
+        // ensure this app is supported by our extension
+        if (!self.app_is_supported()) {
+
+            // this version of the sw is not supported by the extension.
+            // show an unsupported message.
+            status_page.set_title("Application Unsupported");
+            // TODO: link to engine docs?
+            status_page.set_message(
+                "Uh oh! The current version of this application is not " +
+                "supported by Shotgun. Please contact " +
+                "<a href='mailto:support@shotgunsoftware.com'>Shotgun " +
+                "Support</a> support at if you have questions."
+            );
+            return
+        }
+
+        // the path to this extension
+        var ext_dir = _cs_interface.getSystemPath(SystemPath.EXTENSION);
+
+        // bootstrap toolkit and get a handle on the python process
+        self.python_process = sg_bootstrap.bootstrap(ext_dir);
+
+        // XXX begin temporary process communication
+
+        // log stdout from python process
+        self.python_process.stdout.on("data", function (data) {
+            console.log("stdout: " + data);
+        });
+
+        // log stderr from python process
+        self.python_process.stderr.on("data", function (data) {
+            console.log("stderr: " + data);
+        });
+
+        // XXX end temporary process communication
+
+        // python process streams disconnected
+        self.python_process.on("close", _on_python_connection_lost);
+
+        // XXX This is temp sim of the commands being sent from python
+        var commands = [
+            {
+                "id": "command_id_1",
+                "display_name": "Python Console",
+                "icon_path": "../images/tmp/command1.png"
+            },
+            {
+                "id": "command_id_2",
+                "display_name": "Command B",
+                "icon_path": "../images/tmp/command2.png"
+            },
+            {
+                "id": "command_id_3",
+                "display_name": "Command C",
+                "icon_path": "../images/tmp/command3.png"
+            },
+            {
+                "id": "command_id_4",
+                "display_name": "Command D",
+                "icon_path": "../images/tmp/command4.png"
+            }
+        ];
+        self.set_commands(commands);
+        // XXX End temporary simulation
+
+        console.log("Panel finished loading.");
+    };
+
     var _on_python_connection_lost = function(code) {
         // Handles unexpected python process shutdown.
 
+        // TODO: show different page here? One specific to python shut down
+        // that prompts to reload the integration?
         var status_page = sg_window.StatusPage;
 
         // set the page and display some values after it is loaded.
         _set_page(status_page, function() {
             // TODO: better messages here...
-            status_page.set_title("Uh Oh! Shotgun Python Process Disconnected.");
-            status_page.set_message("Something happened... blah blah blah...");
+            status_page.set_title("Python Disconnected");
+            status_page.set_message("Something happened... ");
             status_page.show_progress_bar(false);
         });
     };
 
-    var _set_page = function (page, onload_function) {
+    var _set_page = function (page, on_load_function) {
         // Make the supplied page current.
         //
         // Args:
         //   page: The page to make current.
 
         // get a handle on the content frame within the main document.
-        var content_frame = document.getElementById(_content_frame_id);
+        var content_frame = document.getElementById(sg_window.content_frame_id);
 
         // set the source of the content frame to the path of the supplied page.
         content_frame.src = page.path;
 
         // if an onload function was supplied, set it up to be called when the
         // page is loaded.
-        if (typeof onload_function !== "undefined") {
-            content_frame.onload = onload_function;
+        if (typeof on_load_function !== "undefined") {
+            content_frame.onload = on_load_function;
         }
 
         console.log("Current page changed to: " + page.path);

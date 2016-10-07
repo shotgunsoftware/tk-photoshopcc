@@ -33,20 +33,34 @@ are reserved by Shotgun Software Inc.
   <body>
 
     <!-- Status Title -->
-    <strong>
-      <div id="sg_status_title">A default title.</div>
-    </strong><br>
+    <div id="sg_status_title" class="sg_title_text">
+    </div>
+    <br>
 
     <!-- Status message -->
-    <div id="sg_status_message">A default message.</div>
+    <div id="sg_status_message">
+    </div>
+    <br>
 
     <!-- Progress Bar -->
     <div id="sg_status_progress_bar" style="display:block;">
       <div id="sg_status_progress">
       </div>
     </div>
+    <br>
 
     <!-- TODO: Image -->
 
+    <script type="text/javascript">
+      var test_event = function() {
+        var _cs_interface = new CSInterface();
+        var event = new CSEvent("com.shotgunsoftware.PanelReady", "APPLICATION");
+        //event.extensionId = _cs_interface.getExtensionID();
+        _cs_interface.dispatchEvent(event);
+      };
+    </script>
+    <button class="sg_button" onclick="test_event();">
+      Ready!
+    </button>
   </body>
 </html>
