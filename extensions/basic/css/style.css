@@ -1,0 +1,35 @@
+/*
+Copyright (c) 2016 Shotgun Software Inc.
+
+CONFIDENTIAL AND PROPRIETARY
+
+This work is provided "AS IS" and subject to the Shotgun Pipeline Toolkit Source
+Code License included in this distribution package. See LICENSE. By accessing,
+using, copying or modifying this work you indicate your agreement to the Shotgun
+Pipeline Toolkit Source Code License. All rights not expressly granted therein
+are reserved by Shotgun Software Inc.
+*/
+
+/* XXX some quick, temporary styling during dev XXX */
+
+body {
+    background-color: #535353;
+    color: #F1F1F1;
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+}
+
+.sg_title_text {
+    color: #E1E1E1;
+    font-weight: bold;
+    text-transform: uppercase;
+}
+
+.sg_button {
+    background-color: #18A7E3;
+    border: none;
+    color: #E1E1E1;
+    padding: 4px 4px;
+    text-align: center;
+    text-decoration: none;
+    display: inline-block;
+}

@@ -37,13 +37,11 @@ class AdobeCCPython(QtGui.QApplication):
             logger.debug("Initialized dark look and feel!")
 
         # list the registered commands for debugging purposes
-        engine = sgtk.platform.current_engine()
         logger.debug("Registered Commands:")
         for (command_name, value) in engine.commands.iteritems():
             logger.debug(" %s: %s" % (command_name, value))
 
         # list the registered panels for debugging purposes
-        engine = sgtk.platform.current_engine()
         logger.debug("Registered Panels:")
         for (panel_name, value) in engine.panels.iteritems():
             logger.debug(" %s: %s" % (panel_name, value))
@@ -63,12 +61,15 @@ class AdobeCCPython(QtGui.QApplication):
 
         panel_widget.show()
 
-        adobecc = engine.import_module("adobecc")
+        # TODO: can we force raise windows as needed?
+        panel_widget.raise_()
 
-        app_factory = adobecc.AdobeCCAppFactory()
-        adobecc_app = app_factory.get_current_cc_app()
+        #adobecc = engine.import_module("adobecc")
 
-        logger.debug("Adobe CC App: %s" % (adobecc_app,))
+        #app_factory = adobecc.AdobeCCAppFactory()
+        #adobecc_app = app_factory.get_current_cc_app()
+
+        #logger.debug("Adobe CC App: %s" % (adobecc_app,))
 
         # TODO:
         #   * setup communications here

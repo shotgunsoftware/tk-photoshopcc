@@ -13,7 +13,7 @@ are reserved by Shotgun Software Inc.
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml">
   <head>
-    <link rel="stylesheet" type="text/css" href="../css/style.css" media="screen" />
+    <link rel="stylesheet" type="text/css" href="../../css/style.css" media="screen" />
     <!-- TODO: update styling here -->
     <style type="text/css">
       #sg_status_progress_bar {
@@ -34,11 +34,13 @@ are reserved by Shotgun Software Inc.
 
     <!-- Status Title -->
     <div id="sg_status_title" class="sg_title_text">
+        loading...
     </div>
     <br>
 
     <!-- Status message -->
     <div id="sg_status_message">
+        Shotgun integration is loading...
     </div>
     <br>
 
@@ -51,16 +53,5 @@ are reserved by Shotgun Software Inc.
 
     <!-- TODO: Image -->
 
-    <script type="text/javascript">
-      var test_event = function() {
-        var _cs_interface = new CSInterface();
-        var event = new CSEvent("com.shotgunsoftware.PanelReady", "APPLICATION");
-        //event.extensionId = _cs_interface.getExtensionID();
-        _cs_interface.dispatchEvent(event);
-      };
-    </script>
-    <button class="sg_button" onclick="test_event();">
-      Ready!
-    </button>
   </body>
 </html>

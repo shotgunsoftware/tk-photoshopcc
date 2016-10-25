@@ -63,7 +63,7 @@ def bootstrap_toolkit(root_path):
     sgtk_logger = sgtk.LogManager.get_logger("plugin")
 
     # add a bootstrap stream handler so that log messages make it back to the
-    # js console. TODO: swith this to a socket handler
+    # js console. TODO: switch this to a socket handler
     _add_bootstrap_log_handler(sgtk_logger)
 
     sgtk_logger.debug("Toolkit core path: %s" % (tk_core_path,))
@@ -80,7 +80,7 @@ def bootstrap_toolkit(root_path):
     sgtk_logger.info("Starting the Adobe CC engine.")
 
     # TODO: have the specific dcc supplied on command line so we can bootstrap
-    # into the right engine in the config. i.e. don't hardode here.
+    # into the right engine in the config. i.e. don't hardcode here.
     toolkit_mgr.bootstrap_engine("tk-photoshop", entity=None)
 
 

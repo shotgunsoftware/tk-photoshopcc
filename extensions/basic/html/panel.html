@@ -14,61 +14,48 @@ are reserved by Shotgun Software Inc.
 <html xmlns="http://www.w3.org/1999/xhtml">
   <head>
     <link rel="stylesheet" type="text/css" href="../css/style.css" media="screen" />
-    <style type="text/css">
-        body, html
-        {
-            margin: 0; padding: 0; height: 100%; overflow: hidden;
-        }
-
-        /* Make sure the content frame takes up the full window */
-        #content
-        {
-            position:absolute; left: 0; right: 0; bottom: 0; top: 0px;
-        }
-      </style>
-    <!-- source all the necessary javascript bits-->
 
     <!-- adobe -->
     <script src="../js/adobe/CSInterface.js"></script>
 
     <!-- shotgun -->
-    <script src="../js/shotgun/window.js"></script>
+    <script src="../js/shotgun/events.js"></script>
+    <script src="../js/shotgun/logging.js"></script>
+    <script src="../js/shotgun/manager_events.js"></script>
+    <script src="../js/shotgun/panel_events.js"></script>
+    <script src="../js/shotgun/panel.js"></script>
 
     <!-- setup the Shotgun panel extension -->
     <script>
       "use strict";
 
-      // get the SG extension panel
-      var sg_panel = sg_window.PanelSingleton;
-
       // Called after all resources and the DOM are fully loaded. Should only
       // run once since our extension is persistent.
-      window.onload = sg_panel.on_load;
+      window.onload = sg_panel.Panel.on_load;
 
       // Called when the user navigates away from the page. We keep the same
       // persistent page loaded throughout, so this will be called upon
       // extension reload or shut down.
-      window.unload = sg_panel.on_unload;
+      window.unload = sg_panel.Panel.on_unload;
     </script>
   </head>
 
   <!-- TODO: stylesheet!!! sg design system? -->
-  <!-- TODO: can we remove the frame now that python is separate??? is it separate??-->
   <body>
-    <!--
-      The frame where content is displayed. We'll swap out the contents of the
-      frame as needed. This allows us to ensure the above window code is loaded
-      once at startup. By default, show the status page.
-    -->
-    <div id="content">
-      <iframe
-        name="content_frame"
-        id="content_frame"
-        src="status.html"
-        width="100%"
-        height="100%"
-        frameborder="0"
-      ></iframe>
+
+    <!-- component divs for each of the elements we can render -->
+
+    <!-- context display -->
+    <div id="sg_context_display">
+      CONTEXT
     </div>
+
+    <br>
+
+    <!-- registered commands -->
+    <div id="sg_commands_display">
+      COMMANDS
+    </div>
+
   </body>
 </html>

@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <ExtensionManifest xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" ExtensionBundleId="com.shotgunsoftware.basic.adobecc" ExtensionBundleName="Shotgun Engine for AdobeCC" ExtensionBundleVersion="1.0" Version="6.0">
     <ExtensionList>
+        <Extension Id="com.shotgunsoftware.basic.adobecc.manager" Version="1.0"/>
         <Extension Id="com.shotgunsoftware.basic.adobecc.panel" Version="1.0"/>
-        <Extension Id="com.shotgunsoftware.basic.adobecc.python" Version="1.0"/>
     </ExtensionList>
     <ExecutionEnvironment>
         <HostList>
@@ -10,7 +10,7 @@
             <Host Name="PHSP" Version="14.0"/>
             <Host Name="PHXS" Version="14.0"/>
             <!-- After Effects -->
-            <!-- Host Name="AEFT" Version="13.0"/ -->
+            <Host Name="AEFT" Version="13.0"/>
         </HostList>
         <LocaleList>
             <Locale Code="All"/>
@@ -20,57 +20,47 @@
         </RequiredRuntimeList>
     </ExecutionEnvironment>
     <DispatchInfoList>
-        <Extension Id="com.shotgunsoftware.basic.adobecc.panel">
+        <Extension Id="com.shotgunsoftware.basic.adobecc.manager">
             <DispatchInfo>
                 <Resources>
-                    <MainPath>./html/index.html</MainPath>
+                    <MainPath>./html/manager.html</MainPath>
                     <CEFCommandLine>
                         <Parameter>--enable-nodejs</Parameter>
                     </CEFCommandLine>
                 </Resources>
                 <Lifecycle>
-                    <AutoVisible>true</AutoVisible>
+                    <!-- don't show. keep it secret. keep it safe. -->
+                    <AutoVisible>false</AutoVisible>
                     <StartOn>
-                    	<Event>applicationActivate</Event>
+                        <Event>applicationActivate</Event>
                     </StartOn>
+                </Lifecycle>
+                <UI>
+                    <!-- Custom keeps it hidden. -->
+                    <Type>Custom</Type>
+                    <Geometry>
+                        <Size>
+                            <Height>100</Height>
+                            <Width>100</Width>
+                        </Size>
+                    </Geometry>
+                </UI>
+            </DispatchInfo>
+        </Extension>
+        <Extension Id="com.shotgunsoftware.basic.adobecc.panel">
+            <DispatchInfo>
+                <Resources>
+                    <MainPath>./html/panel.html</MainPath>
+                    <CEFCommandLine>
+                        <Parameter>--enable-nodejs</Parameter>
+                    </CEFCommandLine>
+                </Resources>
+                <Lifecycle>
+                    <AutoVisible>false</AutoVisible>
                 </Lifecycle>
                 <UI>
                     <Type>Panel</Type>
                     <Menu>Shotgun</Menu>
-                    <Geometry>
-                        <Size>
-                            <Height>300</Height>
-                            <Width>300</Width>
-                        </Size>
-                    </Geometry>
-                    <Icons>
-                        <Icon Type="Normal">./images/IconLight.png</Icon>
-                        <Icon Type="RollOver">./images/IconLightRollOver.png</Icon>
-                        <Icon Type="DarkNormal">./images/IconDark.png</Icon>
-                        <Icon Type="DarkRollOver">./images/IconDarkRollOver.png</Icon>
-                    </Icons>
-                </UI>
-            </DispatchInfo>
-        </Extension>
-        <Extension Id="com.shotgunsoftware.basic.adobecc.python">
-            <DispatchInfo>
-                <Resources>
-                    <MainPath>./html/python.html</MainPath>
-                    <CEFCommandLine>
-                        <Parameter>--enable-nodejs</Parameter>
-                    </CEFCommandLine>
-                </Resources>
-                <Lifecycle>
-                    <!-- remove auto vixible -->
-                    <AutoVisible>true</AutoVisible>
-                    <StartOn>
-                    	<Event>applicationActivate</Event>
-                    </StartOn>
-                </Lifecycle>
-                <UI>
-                    <!-- change to hidden, remove menu, size, icons -->
-                    <Type>Panel</Type>
-                    <Menu>Shotgun Test</Menu>
                     <Geometry>
                         <Size>
                             <Height>300</Height>
