@@ -16,6 +16,8 @@
     # TODO: get remote objects/classes
     # TODO: wrap save as
 
+from .communicator import Communicator
+
 # MOCKUPS...
 class AdobeCCApplication(object):
 

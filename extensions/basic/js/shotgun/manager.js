@@ -58,10 +58,9 @@ sg_manager.Manager = new function() {
 
             // TODO: send the panel progress callback to the methods below
 
-            // TODO:
-            //   startup the socket.io server here.
-            //   forward the port and other info to python bootstrap call below.
-            // port = _socket_io_startup();
+            // TODO: Figure out how to autogenerate a port number.
+            var port = 8090;
+            sg_socket_io.SocketManager.start_socket_server(port, _cs_interface);
 
             // TODO: python process should send context/state once bootstrapped
 
