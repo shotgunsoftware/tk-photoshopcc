@@ -13,8 +13,14 @@ class ProxyScope(object):
         self.__register_data()
 
     def __register_data(self):
-        for item_name, item in self._data.iteritems():
-            self.__registry[item_name] = ProxyWrapper(item, self._communicator)
+        try:
+            for item_name, item in self._data.iteritems():
+                self.__registry[item_name] = ProxyWrapper(
+                    item,
+                    self._communicator,
+                )
+        except Exception:
+            raise ValueError("Unable to interpret data: \"%s\"" % self._data)
 
     def __getattr__(self, name):
         try:

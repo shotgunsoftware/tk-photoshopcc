@@ -14,43 +14,36 @@
 var sg_socket_io = sg_socket_io || {};
 
 sg_socket_io.SocketManager = new function() {
-    this.sanitize_path = function(file_path) {
+    var self = this;
+
+    var sanitize_path = function(file_path) {
         return file_path.replace(RegExp('\\\\', 'g'), '/');
     };
 
-    this.eval_file = function(file_path) {
-        var csLib = new CSInterface();
-        csLib.evalScript('$.evalFile("' + file_path + '")');
-    };
-
-    this.str = function(data) {
-        return JSON.stringify(data);
-    };
-
-    this._eval_callback = function(next, result) {
+    var _eval_callback = function(next, result) {
         next(false, result);
     };
 
-    this.start_socket_server = function(port, csLib) {
-        'use strict';
-
+    this.start_socket_server = function (port, csLib) {
         var path = require('path');
         var jrpc = require('jrpc');
         var io = require('socket.io').listen(port);
 
-        console.log('Listening on port ' + this.str(port));
+        sg_logging.info('Listening on port ' + JSON.stringify(port));
 
         // get the path to the extension
         var ext_dir = csLib.getSystemPath(SystemPath.APPLICATION);
-        var js_dir = path.join(ext_dir, "js");
-        var jsx_rpc_path = this.sanitize_path(path.join(js_dir, 'ECMA', 'rpc.jsx'));
-        this.eval_file(jsx_rpc_path);
+        var js_dir = path.join(ext_dir, "js", "shotgun");
+        var jsx_rpc_path = sanitize_path(path.join(js_dir, 'ECMA', 'rpc.jsx'));
+        csLib.evalScript('$.evalFile("' + jsx_rpc_path + '")');
+
+        sg_logging.info('Establishing jrpc interface.');
 
         function RPCInterface() {
             this.get_global_scope = function(params, next) {
                 csLib.evalScript(
                     'map_global_scope()',
-                    this._eval_callback.bind(this, next)
+                    _eval_callback.bind(self, next)
                 );
             };
 
@@ -63,11 +56,11 @@ sg_socket_io.SocketManager = new function() {
             this.new = function(params, next) {
                 var class_name = JSON.stringify(params.shift());
                 var cmd = 'rpc_new(' + class_name + ')';
-                console.log(cmd);
+                sg_logging.info(cmd);
 
                 csLib.evalScript(
                     cmd,
-                    this._eval_callback.bind(this, next)
+                    _eval_callback.bind(self, next)
                 );
             };
 
@@ -77,11 +70,11 @@ sg_socket_io.SocketManager = new function() {
                 var args = [base.__uniqueid, JSON.stringify(property)].join();
 
                 var cmd = 'rpc_get(' + args + ')';
-                console.log(cmd);
+                sg_logging.info(cmd);
 
                 csLib.evalScript(
                     cmd,
-                    this._eval_callback.bind(this, next)
+                    _eval_callback.bind(self, next)
                 );
             };
 
@@ -91,11 +84,11 @@ sg_socket_io.SocketManager = new function() {
                 var args = [base.__uniqueid, index].join();
 
                 var cmd = 'rpc_get_index(' + args + ')';
-                console.log(cmd);
+                sg_logging.info(cmd);
 
                 csLib.evalScript(
                     cmd,
-                    this._eval_callback.bind(this, next)
+                    _eval_callback.bind(self, next)
                 );
             };
 
@@ -110,11 +103,11 @@ sg_socket_io.SocketManager = new function() {
                 ].join();
 
                 var cmd = 'rpc_set(' + args + ')';
-                console.log(cmd);
+                sg_logging.info(cmd);
 
                 csLib.evalScript(
                     cmd,
-                    this._eval_callback.bind(this, next)
+                    _eval_callback.bind(self, next)
                 );
             };
 
@@ -133,22 +126,25 @@ sg_socket_io.SocketManager = new function() {
                 }
 
                 var cmd = 'rpc_call(' + args + ')';
-                console.log(cmd);
+                sg_logging.info(cmd);
 
                 csLib.evalScript(
                     cmd,
-                    this._eval_callback.bind(this, next)
+                    _eval_callback.bind(self, next)
                 );
             };
         };
 
+        sg_logging.info('Setting up connection handling...');
+
         io.on('connection', function(socket) {
-            console.log('Connection received!');
+            sg_logging.info('Connection received!');
 
             var remote = new jrpc();
             remote.expose(new RPCInterface());
 
             socket.on('execute_command', function(message) {
+                sg_logging.info(JSON.stringify(message));
                 remote.receive(message);
             });
 
