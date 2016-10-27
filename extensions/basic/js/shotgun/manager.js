@@ -33,7 +33,7 @@ sg_manager.Manager = new function() {
 
     // ---- public methods
 
-    this.on_load = function () {
+    this.on_load = function() {
         // Setup the Shotgun integration within the app.
 
         // Execute the startup payload and catch *any* errors. If there are
@@ -184,12 +184,12 @@ sg_manager.Manager = new function() {
 
         // log stdout from python process
         self.python_process.stdout.on("data", function (data) {
-            sg_logging.debug(data);
+            sg_logging.debug(data.toString());
         });
 
         // log stderr from python process
         self.python_process.stderr.on("data", function (data) {
-            sg_logging.debug(data);
+            sg_logging.debug(data.toString());
         });
 
         // XXX end temporary process communication
@@ -237,7 +237,7 @@ sg_manager.Manager = new function() {
         // python process is listening to. The python process should
         // process the request and send back to the server all the
         // state information (current context, registered commands, etc)
-        sg_panel.REQUEST_STATE.connect(_tmp_send_state_info());
+        sg_panel.REQUEST_STATE.connect(_tmp_send_state_info);
 
         // Handle python process disconnected
         sg_panel.REGISTERED_COMMAND_TRIGGERED.connect(

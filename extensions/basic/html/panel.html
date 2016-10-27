@@ -13,6 +13,7 @@ are reserved by Shotgun Software Inc.
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml">
   <head>
+    <!-- TODO: stylesheet!!! or sg design system? -->
     <link rel="stylesheet" type="text/css" href="../css/style.css" media="screen" />
 
     <!-- adobe -->
@@ -25,37 +26,34 @@ are reserved by Shotgun Software Inc.
     <script src="../js/shotgun/panel_events.js"></script>
     <script src="../js/shotgun/panel.js"></script>
 
-    <!-- setup the Shotgun panel extension -->
-    <script>
-      "use strict";
+    <!-- setup the Shotgun panel extension loading and unloading -->
 
-      // Called after all resources and the DOM are fully loaded. Should only
-      // run once since our extension is persistent.
-      window.onload = sg_panel.Panel.on_load;
-
-      // Called when the user navigates away from the page. We keep the same
-      // persistent page loaded throughout, so this will be called upon
-      // extension reload or shut down.
-      window.unload = sg_panel.Panel.on_unload;
-    </script>
   </head>
 
-  <!-- TODO: stylesheet!!! sg design system? -->
   <body>
 
-    <!-- component divs for each of the elements we can render -->
-
-    <!-- context display -->
-    <div id="sg_context_display">
-      CONTEXT
+    <!-- header -->
+    <div id="sg_panel_header">
     </div>
 
-    <br>
+    <!-- TODO: style so that the header is sticky at the top? -->
+    <br><br>
 
-    <!-- registered commands -->
-    <div id="sg_commands_display">
-      COMMANDS
+    <!-- main contents -->
+    <div id="sg_panel_contents">
     </div>
 
+    <!-- TODO: style so that the footer is always at the bottom -->
+    <br><br>
+
+    <!-- footer -->
+    <div id="sg_panel_footer">
+    </div>
+
+    <script>
+      "use strict";
+      window.onload = sg_panel.Panel.on_load;
+      window.unload = sg_panel.Panel.on_unload;
+    </script>
   </body>
 </html>

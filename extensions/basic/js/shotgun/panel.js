@@ -14,164 +14,6 @@
 var sg_panel = sg_panel || {};
 
 // ---------------------------------------------------------------------------
-// Module level values
-
-sg_panel.content_frame_id = "content_frame";
-
-// ---------------------------------------------------------------------------
-// Module level functions
-
-sg_panel.get_content_document = function() {
-    // Returns the document of the content frame of the main page (the iframe
-    // where the content is displayed. Used by pages to update their contents
-    // dynamically.
-    return document.getElementById(sg_panel.content_frame_id).
-        contentWindow.document;
-};
-
-// ---------------------------------------------------------------------------
-// Pages displayed in the panel
-
-sg_panel.AboutPage = new function() {
-    // A singleton object representing the about page.
-
-    // path to the page html
-    this.path = "about.html";
-};
-
-sg_panel.CommandsPage = new function() {
-    // A singleton object representing the commands page.
-
-    // ---- private vars
-
-    // The div id of the context section of the page
-    var _context_section_id = "sg_context_section";
-
-    // The div id of the commands section of the page
-    var _command_section_id = "sg_commands_section";
-
-    // ---- public vars
-
-    // path to the page html
-    this.path = "panel.html";
-
-    this.set_context_display = function(context_display) {
-
-        var content_document = sg_panel.get_content_document();
-        content_document.getElementById(_context_section_id).innerHTML =
-            context_display;
-    };
-
-    this.set_commands = function(commands) {
-        // Display the supplied commands on the page.
-
-        // XXX Temp implementation for testing.
-        var command_html = "";
-
-        for(var i = 0; i < commands.length; i++) {
-            var command = commands[i];
-            if (command.hasOwnProperty("id") &&
-                command.hasOwnProperty("display_name") &&
-                command.hasOwnProperty("icon_path")) {
-                    var command_id = command["id"];
-                    var display_name = command["display_name"];
-                    var icon_path = command["icon_path"];
-                    var data = {"command_id": command_id};
-                    command_html +=
-                        "<a href='#' onclick='" +
-                            "sg_panel.emit(" +
-                                "sg_panel.REGISTERED_COMMAND_TRIGGERED, \"" +
-                                encodeURI(JSON.stringify(data)) +
-                            "\")" +
-                        "'>" +
-                        "<img src='" + icon_path + "' width='48'>" + display_name +
-                        "</a><br><br>";
-            }
-        }
-
-        command_html += "";
-
-        var content_document = sg_panel.get_content_document();
-        content_document.getElementById(_command_section_id).innerHTML =
-            command_html;
-    };
-
-};
-
-sg_panel.StatusPage = new function() {
-    // A singleton object representing the status page.
-
-    // ---- public vars
-
-    // path to the page html
-    this.path = "status.html";
-
-    // ---- private vars
-
-    // keep a handle on the instance.
-    var self = this;
-
-    // div ids for the components of the status page
-    var _title_div_id = "sg_status_title";
-    var _message_div_id = "sg_status_message";
-    var _progress_bar_div_id = "sg_status_progress_bar";
-    var _progress_div_id = "sg_status_progress";
-
-    // ---- public methods
-
-    this.set_message = function(message) {
-        // Set the display message for the status page.
-
-        var content_document = sg_panel.get_content_document();
-        content_document.getElementById(_message_div_id).innerHTML = message;
-
-        // log the message
-        sg_logging.debug(message)
-    };
-
-    this.set_progress = function(percent, message) {
-        // Set the percentage of the progress bar
-
-        // make sure the progress bar is shown
-        self.show_progress_bar(true);
-
-        // set the progress percentage
-        var content_document = sg_panel.get_content_document();
-        content_document.getElementById(_progress_div_id).style.width =
-            Math.min(percent, 100) + "%";
-
-        // message is optional. if supplied, set the message.
-        if (typeof(message) !== "undefined") {
-            self.set_message(message)
-        }
-    };
-
-    this.set_title = function(title) {
-        // Set the title for the status page.
-
-        var content_document = sg_panel.get_content_document();
-        content_document.getElementById(_title_div_id).innerHTML =
-            "<strong>" + title + "</strong>";
-    };
-
-    this.show_progress_bar = function(show) {
-        // Show or hide the progress bar
-
-        // determine the proper display style
-        var display = "none";
-        if (show) {
-            display = "block";
-        }
-
-        // set the display style for the progress bar
-        var content_document = sg_panel.get_content_document();
-        content_document.getElementById(_progress_bar_div_id).style.display =
-            display;
-    };
-
-};
-
-// ---------------------------------------------------------------------------
 // The panel
 
 sg_panel.Panel = new function() {
@@ -180,14 +22,14 @@ sg_panel.Panel = new function() {
     // ---- private vars
 
     // keep a handle on the instance.
-    var self = this;
+    const self = this;
 
     // adobe interface
-    var _cs_interface = new CSInterface();
+    const _cs_interface = new CSInterface();
 
     // debug console urls. the ports should correspond to the ports defined in
     // the extension's .debug file for the supported CC applications.
-    var _debug_console_urls = {
+    const _debug_console_urls = {
         // TODO: externalize?
         // Photoshop
         "PHSP": "http://localhost:45216",
@@ -196,37 +38,23 @@ sg_panel.Panel = new function() {
         "AEFT": "http://localhost:45218"
     };
 
+    // panel contents divs
+    const _panel_div_ids = {
+        contents: "sg_panel_contents",
+        footer: "sg_panel_footer",
+        header: "sg_panel_header"
+    };
+
     // ---- public methods
 
-    this.build_flyout_menu = function() {
-        // Builds the flyout menu with the debug/reload options.
+    this.clear = function() {
+        // Clears the panel's contents and resets it to its default state.
+        //
+        // Since we don't really want to stay in this state, the panel shows
+        // a message to the user saying that the panel is loading.
 
-        // the xml that defines the flyout menu
-        var flyout_xml =
-            '<Menu> \
-                <MenuItem Id="sg_about" \
-                          Label="About..." \
-                          Enabled="true" \
-                          Checked="false"/> \
-                <MenuItem Label="---" /> \
-                <MenuItem Id="sg_dev_debug" \
-                          Label="Debug Console..." \
-                          Enabled="true" \
-                          Checked="false"/> \
-                <MenuItem Id="sg_dev_reload" \
-                          Label="Reload" \
-                          Enabled="true" \
-                          Checked="false"/> \
-            </Menu>';
-
-        // build the menu
-        _cs_interface.setPanelFlyoutMenu(flyout_xml);
-
-        // Listen for the Flyout menu clicks
-        _cs_interface.addEventListener(
-            "com.adobe.csxs.events.flyoutMenuClicked",
-            _on_flyout_menu_clicked
-        );
+        _set_header("Shotgun integration is loading...");
+        _set_contents("<img src='../images/sg_logo.png'>");
     };
 
     this.on_load = function() {
@@ -234,17 +62,23 @@ sg_panel.Panel = new function() {
 
         try {
 
+            // ensure the panel is in its default state.
+            self.clear();
+
             // build the flyout menu. always do this first so we can have access
             // to the debug console no matter what happens during bootstrap.
-            self.build_flyout_menu();
+            _build_flyout_menu();
 
-            // setup event listeners first so that we can react to various events
+            // setup event listeners first so we can react to various events
             _setup_event_listeners();
 
             // request new state from the manager. if the python process hasn't
             // started up yet, this may not result in a response. however, the
-            // python process should send the initial state anyway.
-            _request_state();
+            // python process should send the initial state after loading
+            // initially anyway.
+            // TODO: handle case where manager or python don't respond
+            // TODO: use setTimeout to display an error
+            sg_panel.REQUEST_STATE.emit();
 
         } catch(error) {
             sg_logging.error("Manager startup error: " + error.stack);
@@ -277,20 +111,20 @@ sg_panel.Panel = new function() {
     this.set_state = function(state) {
 
         // TODO: document required command object contents once settled.
-        const context_display = state["context"]["display"];
+        _set_header(state["context"]["display"]);
 
         // XXX Temp implementation for testing.
         var commands_html = "";
-        var commands = state["commands"];
+        const commands = state["commands"];
 
         for(var i = 0; i < commands.length; i++) {
-            var command = commands[i];
+            const command = commands[i];
             if (command.hasOwnProperty("id") &&
                 command.hasOwnProperty("display_name") &&
                 command.hasOwnProperty("icon_path")) {
-                    var command_id = command["id"];
-                    var display_name = command["display_name"];
-                    var icon_path = command["icon_path"];
+                    const command_id = command["id"];
+                    const display_name = command["display_name"];
+                    const icon_path = command["icon_path"];
                     commands_html +=
                         "<a href='#' onClick='sg_panel.REGISTERED_COMMAND_TRIGGERED.emit(\"" + command_id + "\")'>" +
                         "<img align='middle' src='" + icon_path + "' width='24'> " + display_name +
@@ -298,18 +132,52 @@ sg_panel.Panel = new function() {
             }
         }
 
-        commands_html += "";
+        _set_contents(commands_html);
 
-        document.getElementById("sg_context_display").innerHTML = context_display
-        document.getElementById("sg_commands_display").innerHTML = commands_html
     };
 
     // ---- private methods
 
-    var _on_flyout_menu_clicked = function(event) {
+    const _build_flyout_menu = function() {
+        // Builds the flyout menu with the debug/reload options.
+
+        // the xml that defines the flyout menu
+        const flyout_xml =
+            '<Menu> \
+                <MenuItem Id="sg_about" \
+                          Label="About..." \
+                          Enabled="true" \
+                          Checked="false"/> \
+                <MenuItem Label="---" /> \
+                <MenuItem Id="sg_dev_debug" \
+                          Label="Debug Console..." \
+                          Enabled="true" \
+                          Checked="false"/> \
+                <MenuItem Id="sg_dev_reload" \
+                          Label="Reload" \
+                          Enabled="true" \
+                          Checked="false"/> \
+            </Menu>';
+
+        // build the menu
+        _cs_interface.setPanelFlyoutMenu(flyout_xml);
+
+        // Listen for the Flyout menu clicks
+        _cs_interface.addEventListener(
+            "com.adobe.csxs.events.flyoutMenuClicked",
+            _on_flyout_menu_clicked
+        );
+    };
+
+    const _on_flyout_menu_clicked = function(event) {
         // Handles flyout menu clicks
 
         switch (event.data.menuId) {
+
+            // NOTE: Looks like you can't use `const` in the switch cases.
+            // The panel won't even load if you do. Perhaps some type of failed
+            // optimization when doing the menu callback? No obvious errors
+            // are displayed. Leaving this here as a warning.
 
             // debug console
             case "sg_dev_debug":
@@ -321,19 +189,19 @@ sg_panel.Panel = new function() {
 
             // reload extension
             case "sg_dev_reload":
-
                 // turn off persistence so we can reload, then turn it back
                 // on after the reload
                 self.reload();
-
                 break;
 
             // about the extension
             case "sg_about":
-
-                // show the about menu
-                //_set_page(sg_panel.AboutPage);
-                alert("Show about info!");
+                // TODO: show a Qt about dialog here.
+                // Send information about the current CC product to python and
+                // launch the about dialog from there. That will prevent us from
+                // having to navigate away from the current panel and its contents.
+                // Alternatively, display an overlay in the panel.
+                alert("ABOUT dialog goes here.");
                 break;
 
             default:
@@ -341,69 +209,33 @@ sg_panel.Panel = new function() {
         }
     };
 
-    var _on_load = function() {
-        // The panel startup payload
-
-        // make the panel persistent
-        // self.make_persistent(true);
-
-        // the status page is the default, so we know it is loaded.
-        //var status_page = sg_panel.StatusPage;
-        //status_page.set_title("Loading Shotgun");
-        //status_page.set_message("Shotgun will be ready in just a moment...");
-        //status_page.show_progress_bar(false);
-
-        // python process streams disconnected
-
-        sg_logging.debug("Panel finished loading.");
-    };
-
-    var _on_python_connection_lost = function(event) {
+    const _on_python_connection_lost = function(event) {
         // Handles unexpected python process shutdown.
 
         // TODO: show different page here?
         // TODO: prompt to try to reload the manager/panel?
 
-        //var status_page = sg_panel.StatusPage;
+        sg_logging.error("Python process unexpectedly closed.");
 
-        // set the page and display some values after it is loaded.
-        //_set_page(status_page, function() {
-        //    // TODO: better messages here...
-        //    status_page.set_title("Python Disconnected");
-        //    status_page.set_message("Something happened... ");
-        //    status_page.show_progress_bar(false);
-        //});
+        _set_header(
+            "<img src='../images/error.png' width='48'>&nbsp;&nbsp;" +
+            "Shotgun Error!"
+        );
 
-        alert("Python process connection lost.");
+        _set_contents(
+            "The Shotgun integration has unexpectedly shut down. Click the " +
+            "button below to restart the integration. If you encounter " +
+            "the problem consistently or have any other problems, please " +
+            "contact <a href='mailto:support@shotgunsoftware.com'>Shotgun " +
+            "Support</a>.<br><br>" +
+            "<button class='sg_button' onclick='sg_panel.Panel.reload()'><br>" +
+            "Restart Shotgun Integration" +
+            "</button>"
+        );
     };
 
-    var _request_state = function() {
-        // request panel state update
-        sg_panel.REQUEST_STATE.emit();
-    };
-
-    var _set_page = function (page, on_load_function) {
-        // Make the supplied page current.
-        //
-        // Args:
-        //   page: The page to make current.
-
-        // get a handle on the content frame within the main document.
-        //var content_frame = document.getElementById(sg_panel.content_frame_id);
-
-        // set the source of the content frame to the path of the supplied page.
-        //content_frame.src = page.path;
-
-        // if an onload function was supplied, set it up to be called when the
-        // page is loaded.
-        //if (typeof on_load_function !== "undefined") {
-        //    content_frame.onload = on_load_function;
-        //}
-
-        sg_logging.debug("Set page called: " + page);
-    };
-
-    var _setup_event_listeners = function() {
+    const _setup_event_listeners = function() {
+        // Sets up all the event handling callbacks.
 
         // Handle python process disconnected
         sg_manager.PYTHON_PROCESS_DISCONNECTED.connect(
@@ -425,6 +257,27 @@ sg_panel.Panel = new function() {
                 console[level](msg);
             }
         );
+    };
+
+    // ---- html update methods
+
+    const _set_contents = function(html) {
+        // Convenience method for updating panel contents with supplied html
+        _set_div_html(_panel_div_ids["contents"], html);
+    };
+
+    const _set_footer = function(html) {
+        // Convenience method for updating panel footer with supplied html
+        _set_div_html(_panel_div_ids["footer"], html);
+    };
+    const _set_header = function(html) {
+        // Convenience method for updating panel header with supplied html
+        _set_div_html(_panel_div_ids["header"], html);
+    };
+
+    const _set_div_html = function(div, html) {
+        // Updates the inner HTML of the supplied div with the supplied HTML
+        document.getElementById(div).innerHTML = html;
     };
 };
 
