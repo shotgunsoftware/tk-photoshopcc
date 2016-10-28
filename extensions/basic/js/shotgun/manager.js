@@ -23,13 +23,13 @@ sg_manager.Manager = new function() {
     // ---- private vars
 
     // keep a handle on the instance.
-    var self = this;
+    const self = this;
 
     // adobe interface
-    var _cs_interface = new CSInterface();
+    const _cs_interface = new CSInterface();
 
     // the name of the python process extension
-    var _panel_extension_name = "com.shotgunsoftware.basic.adobecc.panel";
+    const _panel_extension_name = "com.shotgunsoftware.basic.adobecc.panel";
 
     // ---- public methods
 
@@ -56,16 +56,10 @@ sg_manager.Manager = new function() {
             // running
             _panel_startup();
 
-            // TODO: send the panel progress callback to the methods below
-
-            // TODO: Figure out how to autogenerate a port number.
-            var port = 8090;
-            sg_socket_io.SocketManager.start_socket_server(port, _cs_interface);
-
-            // TODO: python process should send context/state once bootstrapped
-
-            // bootstrap the python process.
-            _python_bootstrap();
+            // Look for an open port to use for the server. Once a port has been
+            // found, this method will directly call the method to start up the
+            // server and then bootstrap python.
+            _get_open_port();
 
         } catch (error) {
             sg_logging.error("Manager startup error: " + error.stack);
@@ -111,16 +105,8 @@ sg_manager.Manager = new function() {
             host_capabilities.SUPPORT_HTML_EXTENSIONS;
     };
 
-    var _panel_startup = function() {
-        // Start up the panel
-
-        sg_logging.debug("Launching the panel extension...");
-        _cs_interface.requestOpenExtension(_panel_extension_name);
-    };
-
-
     // TODO: add a progress callback
-    var _python_bootstrap = function() {
+    var _bootstrap_python = function() {
         // Bootstrap the toolkit python process.
         //
         // Returns a `child_process.ChildProcess` object for the running
@@ -164,7 +150,7 @@ sg_manager.Manager = new function() {
                 [
                     // path to the python bootstrap script
                     plugin_bootstrap_py
-                    // TODO: other args here (ex: port)
+                    // TODO: port
                 ],
                 {
                     // start the process from this dir
@@ -199,12 +185,119 @@ sg_manager.Manager = new function() {
 
     };
 
-    var _on_python_connection_lost = function() {
+    const _get_open_port = function() {
+        // Given a starting port number, return the first available, open port
 
-        sg_manager.PYTHON_PROCESS_DISCONNECTED.emit();
+        // https://nodejs.org/api/http.html#http_class_http_server
+        const http = require('http');
+
+        // keep track of how many times we've tried to find an open port
+        var num_tries = 0;
+
+        // the number of times to try to find an open port
+        const max_tries = 25;
+
+        // function to try a port. recurses until a port is found or the max
+        // try limit is reached.
+        const _try_port = function() {
+
+            // check the current number of tries. if too many, emit a signal
+            // indicating that a port could not be found
+            if (num_tries > max_tries) {
+                sg_manager.CRITICAL_ERROR.emit(
+                    "Unable to set up the communication server that " +
+                    "allows the shotgun integration to work. Specifically, " +
+                    "there was a problem identifying a port to start up the " +
+                    "server."
+                );
+                return;
+            }
+
+            // our method to find an open port seems a bit hacky, and not
+            // entirely failsafe, but hopefully good enough. if you're reading
+            // this and know a better way to get an open port, please make
+            // changes here.
+
+            // the logic here is to create an http server, and listen on port 0.
+            // this is a random number provided by the OS. it is *NOT*
+            // guaranteed to be an open port, so we wait until the listening
+            // event is fired before presuming it can be used. we close the
+            // server before proceeding and there's no guarantee that some other
+            // process won't start using it before our communication server is
+            // started up.
+            var server = http.createServer();
+
+            // if we can listen to the port then we're using it and nobody else
+            // is. close out and forward the port on for use by the
+            // communication server
+            server.on(
+                "listening",
+                function() {
+                    const port = server.address().port;
+                    server.close();
+                    sg_logging.debug("Found available port: " + port);
+                    _on_server_port_found(port);
+                }
+            );
+
+            // if we get an error, we presume that the port is already in use.
+            // log a message for debugging purposes, shut the server down,
+            // increment the number of tries, and then try again.
+            server.on(
+                "error",
+                function(error) {
+                    const port = server.address().port;
+                    sg_logging.debug(
+                        "Could not listen on port: " + port + ". " +
+                        "Presumably in use."
+                    );
+                    server.close();
+                    num_tries += 1;
+                    _try_port();
+                }
+            );
+
+            // now that we've setup the event callbacks, tell the server to
+            // listen to a port assigned by the OS.
+            server.listen(0);
+        };
+
+        // initiate the port finding
+        _try_port();
     };
 
+    var _on_python_connection_lost = function() {
+        // TODO: anyting else to be done here?
+        sg_manager.CRITICAL_ERROR.emit(
+            "The Shotgun integration has unexpectedly shut down. " +
+            "Specifically, the python process that handles the communication " +
+            "with Shotgun has been terminated."
+        );
+    };
 
+    const _on_server_port_found = function(port) {
+
+        // startup the communication server on an open port
+        _setup_communication_server(
+            port
+            // TODO: send a progress callback here
+        );
+
+        // bootstrap the python process.
+        _bootstrap_python(
+            // port
+            // TODO: send a progress callback here
+        );
+
+        // TODO: python process should send context/state once bootstrapped
+    };
+
+    var _panel_startup = function() {
+        // Start up the panel
+
+        sg_logging.debug("Launching the panel extension...");
+        _cs_interface.requestOpenExtension(_panel_extension_name);
+    };
 
     var _reload = function(event) {
 
@@ -224,9 +317,18 @@ sg_manager.Manager = new function() {
         _cs_interface.requestOpenExtension(extension_id);
     };
 
+    const _setup_communication_server = function(port) {
+        // TODO: docs. anything else? channels?
+
+        sg_socket_io.SocketManager.start_socket_server(port, _cs_interface);
+
+    };
+
     var _setup_event_listeners = function() {
         // setup listeners for any events that need to be processed by the
         // manager
+
+        // ---- Events from the panel
 
         sg_panel.REQUEST_MANAGER_RELOAD.connect(_reload);
 
