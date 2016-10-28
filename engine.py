@@ -25,6 +25,14 @@ import tank
 # The Toolkit Adobe engine
 class AdobeEngine(tank.platform.Engine):
 
+    def pre_app_init(self):
+        pass
+        # adobecc = self.import_module("adobecc")
+        # self._communicator = adobecc.Communicator(
+        #     port=os.environ.get("SHOTGUN_ADOBE_PORT"),
+        #     disconnect_callback=self._disconnected,
+        # )
+
     def post_app_init(self):
         #print "Setting dark look and feel..."
         #sys.stdout.flush()
@@ -39,6 +47,10 @@ class AdobeEngine(tank.platform.Engine):
         # TODO: log
         # TODO: destroy the panel
         pass
+
+    def _disconnected(self):
+        # TODO: Handle disconnection gracefully.
+        self.log_info("Disconnected from Adobe product.")
 
     ##########################################################################################
     # UI

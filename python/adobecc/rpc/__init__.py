@@ -1,4 +1,4 @@
-# Copyright (c) 2013 Shotgun Software Inc.
+# Copyright (c) 2016 Shotgun Software Inc.
 #
 # CONFIDENTIAL AND PROPRIETARY
 #
@@ -8,7 +8,4 @@
 # agreement to the Shotgun Pipeline Toolkit Source Code License. All rights
 # not expressly granted therein are reserved by Shotgun Software Inc.
 
-# TODO: toolkit-specific apis
-    # TODO: logging console api
-    # TODO: panel generation/update api
-    # TODO: windows window management api
+from .communicator import Communicator

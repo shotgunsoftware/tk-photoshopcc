@@ -106,7 +106,7 @@ sg_manager.Manager = new function() {
     };
 
     // TODO: add a progress callback
-    var _bootstrap_python = function() {
+    var _bootstrap_python = function(port) {
         // Bootstrap the toolkit python process.
         //
         // Returns a `child_process.ChildProcess` object for the running
@@ -132,6 +132,10 @@ sg_manager.Manager = new function() {
             // no PYTHONPATH set. set it to the plugin python path
             process.env.PYTHONPATH = plugin_python_path;
         }
+
+        // Set the port in the environment. The engine will use this when
+        // establishing a socket client connection.
+        process.env.SHOTGUN_ADOBE_PORT = port
 
         // get the bootstrap python script from the bootstrap python dir
         var plugin_bootstrap_py = path.join(plugin_python_path,
@@ -195,7 +199,7 @@ sg_manager.Manager = new function() {
         var num_tries = 0;
 
         // the number of times to try to find an open port
-        const max_tries = 25;
+        const max_tries = 2;
 
         // function to try a port. recurses until a port is found or the max
         // try limit is reached.
@@ -285,7 +289,7 @@ sg_manager.Manager = new function() {
 
         // bootstrap the python process.
         _bootstrap_python(
-            // port
+            port
             // TODO: send a progress callback here
         );
 
