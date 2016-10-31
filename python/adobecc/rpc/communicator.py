@@ -32,6 +32,15 @@ class Communicator(object):
         if disconnect_callback:
             self._io.on("disconnect", disconnect_callback)
 
+        self._io.emit(
+            self._RPC_EXECUTE_COMMAND,
+            self._get_payload(
+                "log",
+                None,
+                ["We are live!!!"],
+            )
+        )
+
         self._get_global_scope()
 
     @property

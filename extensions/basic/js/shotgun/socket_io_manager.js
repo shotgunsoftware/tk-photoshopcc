@@ -40,6 +40,11 @@ sg_socket_io.SocketManager = new function() {
         sg_logging.info('Establishing jrpc interface.');
 
         function RPCInterface() {
+            this.log = function(params, next) {
+                sg_logging.info(JSON.stringify(params));
+                next(false, undefined);
+            };
+
             this.get_global_scope = function(params, next) {
                 csLib.evalScript(
                     'map_global_scope()',

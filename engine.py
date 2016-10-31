@@ -27,6 +27,9 @@ class AdobeEngine(tank.platform.Engine):
 
     def pre_app_init(self):
         pass
+        with open(r"d:/ADOBECC.log","w") as fh:
+            fh.write("WOOT")
+
         # adobecc = self.import_module("adobecc")
         # self._communicator = adobecc.Communicator(
         #     port=os.environ.get("SHOTGUN_ADOBE_PORT"),

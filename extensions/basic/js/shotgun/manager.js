@@ -190,84 +190,85 @@ sg_manager.Manager = new function() {
     };
 
     const _get_open_port = function() {
-        // Given a starting port number, return the first available, open port
+        _on_server_port_found(8090);
+        // // Given a starting port number, return the first available, open port
 
-        // https://nodejs.org/api/http.html#http_class_http_server
-        const http = require('http');
+        // // https://nodejs.org/api/http.html#http_class_http_server
+        // const http = require('http');
 
-        // keep track of how many times we've tried to find an open port
-        var num_tries = 0;
+        // // keep track of how many times we've tried to find an open port
+        // var num_tries = 0;
 
-        // the number of times to try to find an open port
-        const max_tries = 2;
+        // // the number of times to try to find an open port
+        // const max_tries = 2;
 
-        // function to try a port. recurses until a port is found or the max
-        // try limit is reached.
-        const _try_port = function() {
+        // // function to try a port. recurses until a port is found or the max
+        // // try limit is reached.
+        // const _try_port = function() {
 
-            // check the current number of tries. if too many, emit a signal
-            // indicating that a port could not be found
-            if (num_tries > max_tries) {
-                sg_manager.CRITICAL_ERROR.emit(
-                    "Unable to set up the communication server that " +
-                    "allows the shotgun integration to work. Specifically, " +
-                    "there was a problem identifying a port to start up the " +
-                    "server."
-                );
-                return;
-            }
+        //     // check the current number of tries. if too many, emit a signal
+        //     // indicating that a port could not be found
+        //     if (num_tries > max_tries) {
+        //         sg_manager.CRITICAL_ERROR.emit(
+        //             "Unable to set up the communication server that " +
+        //             "allows the shotgun integration to work. Specifically, " +
+        //             "there was a problem identifying a port to start up the " +
+        //             "server."
+        //         );
+        //         return;
+        //     }
 
-            // our method to find an open port seems a bit hacky, and not
-            // entirely failsafe, but hopefully good enough. if you're reading
-            // this and know a better way to get an open port, please make
-            // changes here.
+        //     // our method to find an open port seems a bit hacky, and not
+        //     // entirely failsafe, but hopefully good enough. if you're reading
+        //     // this and know a better way to get an open port, please make
+        //     // changes here.
 
-            // the logic here is to create an http server, and listen on port 0.
-            // this is a random number provided by the OS. it is *NOT*
-            // guaranteed to be an open port, so we wait until the listening
-            // event is fired before presuming it can be used. we close the
-            // server before proceeding and there's no guarantee that some other
-            // process won't start using it before our communication server is
-            // started up.
-            var server = http.createServer();
+        //     // the logic here is to create an http server, and listen on port 0.
+        //     // this is a random number provided by the OS. it is *NOT*
+        //     // guaranteed to be an open port, so we wait until the listening
+        //     // event is fired before presuming it can be used. we close the
+        //     // server before proceeding and there's no guarantee that some other
+        //     // process won't start using it before our communication server is
+        //     // started up.
+        //     var server = http.createServer();
 
-            // if we can listen to the port then we're using it and nobody else
-            // is. close out and forward the port on for use by the
-            // communication server
-            server.on(
-                "listening",
-                function() {
-                    const port = server.address().port;
-                    server.close();
-                    sg_logging.debug("Found available port: " + port);
-                    _on_server_port_found(port);
-                }
-            );
+        //     // if we can listen to the port then we're using it and nobody else
+        //     // is. close out and forward the port on for use by the
+        //     // communication server
+        //     server.on(
+        //         "listening",
+        //         function() {
+        //             const port = server.address().port;
+        //             server.close();
+        //             sg_logging.debug("Found available port: " + port);
+        //             _on_server_port_found(port);
+        //         }
+        //     );
 
-            // if we get an error, we presume that the port is already in use.
-            // log a message for debugging purposes, shut the server down,
-            // increment the number of tries, and then try again.
-            server.on(
-                "error",
-                function(error) {
-                    const port = server.address().port;
-                    sg_logging.debug(
-                        "Could not listen on port: " + port + ". " +
-                        "Presumably in use."
-                    );
-                    server.close();
-                    num_tries += 1;
-                    _try_port();
-                }
-            );
+        //     // if we get an error, we presume that the port is already in use.
+        //     // log a message for debugging purposes, shut the server down,
+        //     // increment the number of tries, and then try again.
+        //     server.on(
+        //         "error",
+        //         function(error) {
+        //             const port = server.address().port;
+        //             sg_logging.debug(
+        //                 "Could not listen on port: " + port + ". " +
+        //                 "Presumably in use."
+        //             );
+        //             server.close();
+        //             num_tries += 1;
+        //             _try_port();
+        //         }
+        //     );
 
-            // now that we've setup the event callbacks, tell the server to
-            // listen to a port assigned by the OS.
-            server.listen(0);
-        };
+        //     // now that we've setup the event callbacks, tell the server to
+        //     // listen to a port assigned by the OS.
+        //     server.listen(0);
+        // };
 
-        // initiate the port finding
-        _try_port();
+        // // initiate the port finding
+        // _try_port();
     };
 
     var _on_python_connection_lost = function() {
