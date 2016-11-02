@@ -16,7 +16,8 @@
     # TODO: get remote objects/classes
     # TODO: wrap save as
 
-from .communicator import Communicator
+from .rpc import Communicator
+from .heartbeat import HeartbeatMonitor
 
 # MOCKUPS...
 class AdobeCCApplication(object):

@@ -42,7 +42,8 @@ base_configuration:
 
   # DEV: uncomment these. comment out the app store descriptor args above
   type: dev
-  path: /Users/josh/dev/sg/38480_adobe_engine/tk-config-pluginbasic
+  # path: /Users/josh/dev/sg/38480_adobe_engine/tk-config-pluginbasic
+  path: d:\repositories\tk-config-pluginbasic
 
 # The Plugin Id helps uniquely identify this plugin and can be used to override
 # and customize it. For more information, see:

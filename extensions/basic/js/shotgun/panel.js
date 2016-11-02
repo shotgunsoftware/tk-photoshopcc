@@ -209,26 +209,27 @@ sg_panel.Panel = new function() {
         }
     };
 
-    const _on_python_connection_lost = function(event) {
-        // Handles unexpected python process shutdown.
+    const _on_critical_error = function(event) {
 
-        // TODO: show different page here?
-        // TODO: prompt to try to reload the manager/panel?
+        const message = event.data;
 
-        sg_logging.error("Python process unexpectedly closed.");
+        sg_logging.error("Critical: " + message);
 
         _set_header(
-            "<img src='../images/error.png' width='48'>&nbsp;&nbsp;" +
-            "Shotgun Error!"
+            "<img src='../images/error.png' align='bottom' width='24'>" +
+            "&nbsp;&nbsp;Uh oh! Something went wrong..."
         );
 
         _set_contents(
-            "The Shotgun integration has unexpectedly shut down. Click the " +
-            "button below to restart the integration. If you encounter " +
-            "the problem consistently or have any other problems, please " +
-            "contact <a href='mailto:support@shotgunsoftware.com'>Shotgun " +
-            "Support</a>.<br><br>" +
-            "<button class='sg_button' onclick='sg_panel.Panel.reload()'><br>" +
+            message +
+            "<br>" +
+            "If you encounter this problem consistently or have any other " +
+            "problems, please contact: " +
+            "<a href='mailto:support@shotgunsoftware.com'>Shotgun Support</a>" +
+            "<br>" +
+            "Click the button below to attempt to restart the integration." +
+            "<br>" +
+            "<button class='sg_button' onclick='sg_panel.Panel.reload()'>" +
             "Restart Shotgun Integration" +
             "</button>"
         );
@@ -238,9 +239,7 @@ sg_panel.Panel = new function() {
         // Sets up all the event handling callbacks.
 
         // Handle python process disconnected
-        sg_manager.PYTHON_PROCESS_DISCONNECTED.connect(
-            _on_python_connection_lost
-        );
+        sg_manager.CRITICAL_ERROR.connect(_on_critical_error);
 
         // Updates the panel with the current state from python
         sg_manager.UPDATE_STATE.connect(

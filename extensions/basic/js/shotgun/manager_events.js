@@ -13,9 +13,8 @@
 // namespace
 var sg_manager = sg_manager || {};
 
-// sent when it is detected that the python process is no longer connected
-sg_event.create_event(sg_manager, "PYTHON_PROCESS_DISCONNECTED");
-
 // typically as an async response to a REQUEST_STATE event from the panel
 sg_event.create_event(sg_manager, "UPDATE_STATE");
 
+// emits critical errors whereby the manager is not or can not function properly
+sg_event.create_event(sg_manager, "CRITICAL_ERROR");
