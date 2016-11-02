@@ -1,11 +1,13 @@
 from __future__ import absolute_import
+
 import datetime
 import logging
 import os
-import sys
 import socket
-from socket import error as SocketError, timeout as SocketTimeout
+import sys
 import warnings
+from socket import error as SocketError, timeout as SocketTimeout
+
 from .packages import six
 
 try:  # Python 3

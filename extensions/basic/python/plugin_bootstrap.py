@@ -16,6 +16,7 @@ import traceback
 # NOTE: this module becomes available once the plugin is built
 from sgtk_plugin_basic_adobecc import manifest
 
+# TODO: move this into the engine?
 class _PyToJsLogHandler(logging.StreamHandler):
     """
     Manually flushes emitted records for js to pickup.
@@ -48,16 +49,20 @@ class _PyToJsLogHandler(logging.StreamHandler):
 
 def plugin_bootstrap(root_path, port, engine_name):
 
-    # TODO: startup the socket communication layer here. should be singleton
-    #       the engine, once bootstrapped should be able to access the running
-    #       communicator instance. The instance should be a singleton, and
-    #       should be specific to the current CC product.
-    communicator_bootstrap(port, engine_name)
+    # set the port in the env so that the engine can pick it up. this also
+    # allows engine restarts to find the proper port.
+    os.environ["SHOTGUN_ADOBE_PORT"] = port
 
     # do the toolkit bootstrapping. this will replace the core imported via the
     # sys path with the one specified via the resolved config. it will startup
     # the engine and make Qt available to us.
     toolkit_bootstrap(root_path, engine_name)
+
+    # core may have been swapped. import sgtk
+    import sgtk
+
+    # get a handle on the newly bootstrapped engine
+    engine = sgtk.platform.current_engine()
 
     from sgtk.platform.qt import QtGui
 
@@ -76,24 +81,17 @@ def plugin_bootstrap(root_path, port, engine_name):
     app.setWindowIcon(app_icon)
     app.setQuitOnLastWindowClosed(False)
 
+    # since this is running in our own Qt event loop, we'll use the bundled
+    # dark look and feel. breaking encapsulation to do so.
+    engine.log_debug("Initializing dark look and feel...")
+    engine._initialize_dark_look_and_feel()
+
     # once the event loop starts, the bootstrap process is complete and
     # everything should be connected. this is a blocking call, so nothing else
     # can happen afterward.
     print "Starting Qt event loop..."
     sys.exit(app.exec_())
 
-def communicator_bootstrap(port, engine_name):
-    """
-    Starts up the socket io client for communicating back to js.
-
-    :param int port: The port the socket io server is listening on.
-    :return: The communicator instance.
-    """
-
-    # TODO: bootstrap the communicator for the supplied engine name, communicating
-    #       over the given port
-
-    pass
 
 def toolkit_bootstrap(root_path, engine_name):
     """
@@ -154,7 +152,7 @@ if __name__ == "__main__":
 
         # the communication port is supplied by javascript. the toolkit engine
         # env to bootstrap into is also supplied by javascript
-        port = int(sys.argv[1])
+        port = sys.argv[1]
         engine_name = sys.argv[2]
 
         # startup the plugin which includes setting up the socket io client,

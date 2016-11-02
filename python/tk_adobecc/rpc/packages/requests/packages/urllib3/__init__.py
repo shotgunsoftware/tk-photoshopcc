@@ -3,23 +3,22 @@ urllib3 - Thread-safe connection pooling and re-using.
 """
 
 from __future__ import absolute_import
+
 import warnings
 
+from . import exceptions
 from .connectionpool import (
     HTTPConnectionPool,
     HTTPSConnectionPool,
     connection_from_url
 )
-
-from . import exceptions
 from .filepost import encode_multipart_formdata
 from .poolmanager import PoolManager, ProxyManager, proxy_from_url
 from .response import HTTPResponse
 from .util.request import make_headers
-from .util.url import get_host
-from .util.timeout import Timeout
 from .util.retry import Retry
-
+from .util.timeout import Timeout
+from .util.url import get_host
 
 # Set default logging handler to avoid "No handler found" warnings.
 import logging

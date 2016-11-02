@@ -20,7 +20,6 @@
     # TODO: wrap save as
 
 from .rpc import Communicator
-from .heartbeat import HeartbeatMonitor
 
 class AdobeBridge(Communicator):
     pass

@@ -1,6 +1,7 @@
 from __future__ import absolute_import
-import time
+
 import logging
+import time
 
 from ..exceptions import (
     ConnectTimeoutError,
@@ -10,7 +11,6 @@ from ..exceptions import (
     ResponseError,
 )
 from ..packages import six
-
 
 log = logging.getLogger(__name__)
 

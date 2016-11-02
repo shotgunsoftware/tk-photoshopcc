@@ -27,6 +27,7 @@
 ######################### END LICENSE BLOCK #########################
 
 import sys
+
 from . import constants
 from .charsetprober import CharSetProber
 from .compat import wrap_ord

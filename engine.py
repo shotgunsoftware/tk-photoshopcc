@@ -12,28 +12,32 @@
 A Adobe engine for Toolkit.
 """
 
-import sgtk
+import os
 
+import sgtk
 
 ###############################################################################################
 # The Toolkit Adobe engine
 class AdobeEngine(sgtk.platform.Engine):
 
-    def pre_app_init(self):
-        adobecc = self.import_module("adobecc")
+    ENV_COMMUNICATION_PORT_NAME = "SHOTGUN_ADOBE_PORT"
 
-        self._adobe = adobecc.Communicator.new_communicator(
-            identifier="tk-adobecc",
-            port=os.environ.get("SHOTGUN_ADOBE_PORT"),
-            disconnect_callback=self.disconnected,
-        )
+    HEARTBEAT_TIMEOUT = 1500
+
+    def pre_app_init(self):
+
+        tk_adobecc = self.import_module("tk_adobecc")
+
+        # get the adobe instance. it may have been initialized already by a
+        # previous instance of the engine. if not, initialize a new one.
+        self._adobe = \
+            tk_adobecc.AdobeBridge.get_instance(self.instance_name) or \
+            tk_adobecc.AdobeBridge.initialize(
+                self.instance_name,
+                port=os.environ.get(self.ENV_COMMUNICATION_PORT_NAME),
+            )
 
     def post_app_init(self):
-
-        # since this is running in our own Qt event loop, we'll use the bundled
-        # dark look and feel.
-        self.log_debug("Initializing dark look and feel...")
-        self._initialize_dark_look_and_feel()
 
         # list the registered commands for debugging purposes
         self.log_debug("Registered Commands:")
@@ -52,7 +56,17 @@ class AdobeEngine(sgtk.platform.Engine):
         # TODO: get a handle on the remote CC instance and get the version
             # and any CC-specifics (ps vs premiere)
         # TODO: log user attribute metric
-        pass
+
+        from sgtk.platform.qt import QtCore
+
+        # setup the heartbeat timer. this listens to the adobe bridge for
+        # heartbeat events. if we haven't received a heartbeat from adobe in
+        # a while, it has probably shut down.
+        self._last_adobecc_heartbeat = -1
+        self._adobecc_heartbeat_timer = QtCore.QTimer(parent=self)
+        self._adobecc_heartbeat_timer.timeout.connect(self._check_heartbeat)
+        self._adobecc_heartbeat_timer.start(self.HEARTBEAT_TIMEOUT)
+
 
     def destroy_engine(self):
         # TODO: log
@@ -144,3 +158,15 @@ class AdobeEngine(sgtk.platform.Engine):
     # logging
 
     # TODO: logging
+
+    def _check_heartbeat(self):
+
+        self.log_debug("Checking heartbeat...")
+        current_heartbeat = self.adobe.last_heartbeat
+
+        if current_heartbeat == self._last_adobecc_heartbeat:
+            self.log_warning("Heartbeat not detected...")
+            # TODO: shut down the qapplication
+            #self.disconnected()
+        else:
+            self._last_adobecc_heartbeat = heartbeat

@@ -47,13 +47,14 @@ class Communicator(object):
         self._get_global_scope()
 
     @classmethod
-    def new_communicator(cls, identifier=None, *args, **kwargs):
-        if identifier is None:
-            return cls(*args, **kwargs)
-        elif identifier not in cls.__REGISTRY:
-            cls.__REGISTRY[identifier] = cls(*args, **kwargs)
+    def initialize(cls, identifier, *args, **kwargs):
+        instance = cls(*args, **kwargs)
+        cls.__REGISTRY[identifier] = instance
+        return instance
 
-        return cls.__REGISTRY[identifier]
+    @classmethod
+    def get_instance(cls, identifier):
+        return cls.__REGISTRY.get(identifier, None)
 
     @property
     def host(self):
