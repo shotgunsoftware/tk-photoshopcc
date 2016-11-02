@@ -10,8 +10,13 @@
 
 import json
 import threading
+import sys
+import os.path
 
-from socketIO_client import SocketIO
+# Add our third-party packages to sys.path.
+sys.path.append(os.path.join(os.path.dirname(__file__), "packages"))
+
+from socketIO_client import SocketIO, BaseNamespace
 from .proxy import ProxyScope, ProxyWrapper, ClassInstanceProxyWrapper
 
 class Communicator(object):
@@ -20,28 +25,35 @@ class Communicator(object):
     _LOCK = threading.Lock()
     _WAIT_INTERVAL = 0.01
     _RPC_EXECUTE_COMMAND = "execute_command"
+    __REGISTRY = dict()
 
     def __init__(self, port=8090, host="localhost", disconnect_callback=None):
         self._port = port
         self._host = host
+        self._last_heartbeat = -1
+
         self._io = SocketIO(host, port)
         self._io.on("return", self._handle_response)
+
+        self._heartbeat_io = self._io.define(BaseNamespace, path="/heartbeat")
+        self._heartbeat_io.on("heartbeat", self._handle_heartbeat)
+
         self._global_scope = None
         self._disconnect_callback = disconnect_callback
 
         if disconnect_callback:
             self._io.on("disconnect", disconnect_callback)
 
-        self._io.emit(
-            self._RPC_EXECUTE_COMMAND,
-            self._get_payload(
-                "log",
-                None,
-                ["We are live!!!"],
-            )
-        )
-
         self._get_global_scope()
+
+    @classmethod
+    def new_communicator(cls, identifier=None, *args, **kwargs):
+        if identifier is None:
+            return cls(*args, **kwargs)
+        elif identifier not in cls.__REGISTRY:
+            cls.__REGISTRY[identifier] = cls(*args, **kwargs)
+
+        return cls.__REGISTRY[identifier]
 
     @property
     def host(self):
@@ -50,6 +62,10 @@ class Communicator(object):
     @property
     def port(self):
         return self._port
+
+    def get_last_heartbeat(self):
+        self._io.wait(0.1)
+        return self._last_heartbeat
 
     def rpc_call(self, proxy_object, params=[], parent=None):
         if parent:
@@ -143,6 +159,9 @@ class Communicator(object):
 
         return payload
 
+    def _handle_heartbeat(self, response, *args):
+        self._last_heartbeat = int(response)
+
     def _handle_response(self, response, *args):
         with self._LOCK:
             result = json.loads(response)
@@ -151,7 +170,7 @@ class Communicator(object):
             try:
                 self._RESULTS[uid] = json.loads(result["result"])
             except ValueError:
-                self._RESULTS[uid] = result["result"]
+                self._RESULTS[uid] = result.get("result")
 
     def __get_uid(self):
         with self._LOCK:

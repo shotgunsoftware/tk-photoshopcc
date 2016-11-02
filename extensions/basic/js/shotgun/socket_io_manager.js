@@ -17,6 +17,7 @@ sg_socket_io.SocketManager = new function() {
     var self = this;
 
     var sanitize_path = function(file_path) {
+        // Replaces Windows-style backslash paths with forward slashes.
         return file_path.replace(RegExp('\\\\', 'g'), '/');
     };
 
@@ -31,15 +32,20 @@ sg_socket_io.SocketManager = new function() {
 
         sg_logging.info('Listening on port ' + JSON.stringify(port));
 
-        // get the path to the extension
+        // Get the path to the extension.
         var ext_dir = csLib.getSystemPath(SystemPath.APPLICATION);
         var js_dir = path.join(ext_dir, "js", "shotgun");
+
+        // Tell ExtendScript to load the rpc.jsx file that contains our
+        // helper functions.
         var jsx_rpc_path = sanitize_path(path.join(js_dir, 'ECMA', 'rpc.jsx'));
         csLib.evalScript('$.evalFile("' + jsx_rpc_path + '")');
 
         sg_logging.info('Establishing jrpc interface.');
 
         function RPCInterface() {
+            // TODO: Logging will most likely go into its own namespace with
+            // its own JSON-RPC interface. This is temporary as a result.
             this.log = function(params, next) {
                 sg_logging.info(JSON.stringify(params));
                 next(false, undefined);
@@ -142,6 +148,8 @@ sg_socket_io.SocketManager = new function() {
 
         sg_logging.info('Setting up connection handling...');
 
+        // Define the root namespace interface. This will receive all
+        // commands for interacting with ExtendScript.
         io.on('connection', function(socket) {
             sg_logging.info('Connection received!');
 
@@ -162,5 +170,14 @@ sg_socket_io.SocketManager = new function() {
                 }
             });
         });
+
+        // Heartbeat every second to the /heartbeat namespace.
+        var heartbeat_io = io.of('/heartbeat');
+        var _heartbeat = function() {
+            var time = Math.floor(new Date().getTime() / 1000);
+            sg_logging.debug('Heartbeat...' + JSON.stringify(time));
+            heartbeat_io.emit('heartbeat', time);
+        };
+        setInterval(_heartbeat, 1000);
     };
 };

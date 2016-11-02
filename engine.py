@@ -23,18 +23,17 @@ import tank
 
 ###############################################################################################
 # The Toolkit Adobe engine
+
 class AdobeEngine(tank.platform.Engine):
 
     def pre_app_init(self):
-        pass
-        with open(r"d:/ADOBECC.log","w") as fh:
-            fh.write("WOOT")
+        adobecc = self.import_module("adobecc")
 
-        # adobecc = self.import_module("adobecc")
-        # self._communicator = adobecc.Communicator(
-        #     port=os.environ.get("SHOTGUN_ADOBE_PORT"),
-        #     disconnect_callback=self._disconnected,
-        # )
+        self._adobe = adobecc.Communicator.new_communicator(
+            identifier="tk-adobecc",
+            port=os.environ.get("SHOTGUN_ADOBE_PORT"),
+            disconnect_callback=self.disconnected,
+        )
 
     def post_app_init(self):
         #print "Setting dark look and feel..."
@@ -51,9 +50,21 @@ class AdobeEngine(tank.platform.Engine):
         # TODO: destroy the panel
         pass
 
-    def _disconnected(self):
-        # TODO: Handle disconnection gracefully.
+    ##########################################################################################
+    # RPC
+
+    def disconnected(self):
+        # TODO: Implement real disconnection behavior. This may or may not
+        # make sense to do here. This is just a tribute.
         self.log_info("Disconnected from Adobe product.")
+        raise RuntimeError("DISCONNECTED")
+
+    ##########################################################################################
+    # properties
+
+    @property
+    def adobe(self):
+        return self._adobe
 
     ##########################################################################################
     # UI
