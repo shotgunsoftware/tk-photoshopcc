@@ -1,133 +1,23 @@
+# Copyright (c) 2016 Shotgun Software Inc.
+#
+# CONFIDENTIAL AND PROPRIETARY
+#
+# This work is provided "AS IS" and subject to the Shotgun Pipeline Toolkit
+# Source Code License included in this distribution package. See LICENSE.
+# By accessing, using, copying or modifying this work you indicate your
+# agreement to the Shotgun Pipeline Toolkit Source Code License. All rights
+# not expressly granted therein are reserved by Shotgun Software Inc.
 
 import json
 import threading
-import pprint
+import sys
+import os.path
 
-from socketIO_client import SocketIO
+# Add our third-party packages to sys.path.
+sys.path.append(os.path.join(os.path.dirname(__file__), "packages"))
 
-class ProxyScope(object):
-    def __init__(self, data, communicator):
-        self._data = data
-        self._communicator = communicator
-        self.__registry = dict()
-        self.__register_data()
-
-    def __register_data(self):
-        try:
-            for item_name, item in self._data.iteritems():
-                self.__registry[item_name] = ProxyWrapper(
-                    item,
-                    self._communicator,
-                )
-        except Exception:
-            raise ValueError("Unable to interpret data: \"%s\"" % self._data)
-
-    def __getattr__(self, name):
-        try:
-            return self.__registry[name]
-        except KeyError:
-            raise AttributeError("'%s' is not available in the requested scope." % name)
-
-
-class ProxyWrapper(object):
-    _LOCK = threading.Lock()
-    _REGISTRY = dict()
-
-    def __new__(cls, data, *args, **kwargs):
-        # These wrappers are singletones based on the unique id of
-        # the data being wrapped. We only wrap data that has a unique
-        # id, so anything that doesn't pass the test defined by the
-        # _needs_wrapping() class method is returned as is.
-        with cls._LOCK:
-            if not cls._needs_wrapping(data):
-                try:
-                    return json.loads(data)
-                except Exception:
-                    return data
-            elif data["__uniqueid"] in cls._REGISTRY:
-                # This data has already been wrapped, so we just need
-                # to return the object we already have stored in the
-                # registry.
-                return cls._REGISTRY[data["__uniqueid"]]
-            else:
-                # New data, so we go ahead and instantiate a new wrapper
-                # object.
-                return object.__new__(cls, data, *args, **kwargs)
-
-    def __init__(self, data, communicator, parent=None):
-        # We have to use super here because I've implemented a
-        # __setattr__ on this class. This will prevent infinite
-        # recursion when setting these attributes.
-        super(ProxyWrapper, self).__setattr__("_data", data)
-        super(ProxyWrapper, self).__setattr__("_serialized", json.dumps(data))
-        super(ProxyWrapper, self).__setattr__("_parent", parent)
-        super(ProxyWrapper, self).__setattr__("_communicator", communicator)
-        super(ProxyWrapper, self).__setattr__("_uid", data.get("__uniqueid"))
-
-        # Everything is registered by unique id. This allows us get
-        # JSON data back from CEP and map it to an existing ProxyWrapper.
-        self._REGISTRY[self._uid] = self
-
-    @property
-    def data(self):
-        return self._data
-
-    @property
-    def serialized(self):
-        return self._serialized
-
-    @property
-    def uid(self):
-        return self._uid
-
-    @classmethod
-    def _needs_wrapping(cls, data):
-        # If it has a unique id, then it needs to be wrapped. If it
-        # doesn't, then we don't really know what to do with it. Most
-        # cases like this will be basic data types like ints and strings.
-        if isinstance(data, dict) and "__uniqueid" in data:
-            return True
-        else:
-            return False
-
-    def __call__(self, *args): # TODO: support kwargs
-        return self._communicator.rpc_call(
-            self,
-            list(args),
-            parent=self._parent,
-        )
-
-    def __getattr__(self, name):
-        remote_names = self.data["properties"] + self.data["methods"].keys()
-
-        # TODO: Let's not hardcode this to Adobe-like behavior. We should
-        # allow for type-specific handlers that can be registered with the
-        # API in case higher-level code wants to customize how attribute
-        # lookup via RPC works.
-        if name in remote_names or self.data.get("instanceof") == "Enumerator":
-            return self._communicator.rpc_get(self, name)
-        else:
-            raise AttributeError("Attribute %s does not exist!" % name)
-
-    def __getitem__(self, key):
-        return self._communicator.rpc_get_index(self, key)
-
-    def __setattr__(self, name, value):
-        remote_names = self.data["properties"] + self.data["methods"].keys()
-
-        if name in remote_names:
-            self._communicator.rpc_set(self, name, value)
-        else:
-            super(ProxyWrapper, self).__setattr__(name, value)
-
-
-class ClassInstanceProxyWrapper(ProxyWrapper):
-    def __call__(self, *args, **kwargs):
-        # We don't actually call this. We're wrapping and returning
-        # instance objects as is. This is just to allow for the typical
-        # Python syntax of `adobe.SomeClassToInstantiate()`
-        return self
-
+from socketIO_client import SocketIO, BaseNamespace
+from .proxy import ProxyScope, ProxyWrapper, ClassInstanceProxyWrapper
 
 class Communicator(object):
     _RESULTS = dict()
@@ -135,15 +25,35 @@ class Communicator(object):
     _LOCK = threading.Lock()
     _WAIT_INTERVAL = 0.01
     _RPC_EXECUTE_COMMAND = "execute_command"
+    __REGISTRY = dict()
 
-    def __init__(self, port=8090, host='localhost'):
+    def __init__(self, port=8090, host="localhost", disconnect_callback=None):
         self._port = port
         self._host = host
+        self._last_heartbeat = -1
+
         self._io = SocketIO(host, port)
-        self._io.on('return', self._handle_response)
+        self._io.on("return", self._handle_response)
+
+        self._heartbeat_io = self._io.define(BaseNamespace, path="/heartbeat")
+        self._heartbeat_io.on("heartbeat", self._handle_heartbeat)
+
         self._global_scope = None
+        self._disconnect_callback = disconnect_callback
+
+        if disconnect_callback:
+            self._io.on("disconnect", disconnect_callback)
 
         self._get_global_scope()
+
+    @classmethod
+    def new_communicator(cls, identifier=None, *args, **kwargs):
+        if identifier is None:
+            return cls(*args, **kwargs)
+        elif identifier not in cls.__REGISTRY:
+            cls.__REGISTRY[identifier] = cls(*args, **kwargs)
+
+        return cls.__REGISTRY[identifier]
 
     @property
     def host(self):
@@ -152,6 +62,10 @@ class Communicator(object):
     @property
     def port(self):
         return self._port
+
+    def get_last_heartbeat(self):
+        self._io.wait(0.1)
+        return self._last_heartbeat
 
     def rpc_call(self, proxy_object, params=[], parent=None):
         if parent:
@@ -245,6 +159,9 @@ class Communicator(object):
 
         return payload
 
+    def _handle_heartbeat(self, response, *args):
+        self._last_heartbeat = int(response)
+
     def _handle_response(self, response, *args):
         with self._LOCK:
             result = json.loads(response)
@@ -253,7 +170,7 @@ class Communicator(object):
             try:
                 self._RESULTS[uid] = json.loads(result["result"])
             except ValueError:
-                self._RESULTS[uid] = result["result"]
+                self._RESULTS[uid] = result.get("result")
 
     def __get_uid(self):
         with self._LOCK:
@@ -306,12 +223,3 @@ class Communicator(object):
                 return instance
             else:
                 raise 
-
-
-
-
-
-
-
-
-    
