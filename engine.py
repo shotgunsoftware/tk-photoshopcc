@@ -11,20 +11,13 @@
 """
 A Adobe engine for Toolkit.
 """
-import os
-import sys
-import logging
 
-import tank
-
-# TODO:
-# logging
+import sgtk
 
 
 ###############################################################################################
 # The Toolkit Adobe engine
-
-class AdobeEngine(tank.platform.Engine):
+class AdobeEngine(sgtk.platform.Engine):
 
     def pre_app_init(self):
         adobecc = self.import_module("adobecc")
@@ -36,9 +29,25 @@ class AdobeEngine(tank.platform.Engine):
         )
 
     def post_app_init(self):
-        #print "Setting dark look and feel..."
-        #sys.stdout.flush()
-        #self._initialize_dark_look_and_feel()
+
+        # since this is running in our own Qt event loop, we'll use the bundled
+        # dark look and feel.
+        self.log_debug("Initializing dark look and feel...")
+        self._initialize_dark_look_and_feel()
+
+        # list the registered commands for debugging purposes
+        self.log_debug("Registered Commands:")
+        for (command_name, value) in self.commands.iteritems():
+            self.log_debug(" %s: %s" % (command_name, value))
+
+        # list the registered panels for debugging purposes
+        self.log_debug("Registered Panels:")
+        for (panel_name, value) in self.panels.iteritems():
+            self.log_debug(" %s: %s" % (panel_name, value))
+
+        # TODO: signal back to js that python startup is almost done. do this by
+        #       sending the current state. this should be a call to the engine.
+
         # TODO: initialize & populate the panel
         # TODO: get a handle on the remote CC instance and get the version
             # and any CC-specifics (ps vs premiere)

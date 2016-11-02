@@ -27,17 +27,6 @@ sg_panel.Panel = new function() {
     // adobe interface
     const _cs_interface = new CSInterface();
 
-    // debug console urls. the ports should correspond to the ports defined in
-    // the extension's .debug file for the supported CC applications.
-    const _debug_console_urls = {
-        // TODO: externalize?
-        // Photoshop
-        "PHSP": "http://localhost:45216",
-        "PHXS": "http://localhost:45217",
-        // After effects
-        "AEFT": "http://localhost:45218"
-    };
-
     // panel contents divs
     const _panel_div_ids = {
         contents: "sg_panel_contents",
@@ -150,7 +139,7 @@ sg_panel.Panel = new function() {
                           Checked="false"/> \
                 <MenuItem Label="---" /> \
                 <MenuItem Id="sg_dev_debug" \
-                          Label="Debug Console..." \
+                          Label="Debug Console (Requires Chrome)..." \
                           Enabled="true" \
                           Checked="false"/> \
                 <MenuItem Id="sg_dev_reload" \
@@ -183,7 +172,7 @@ sg_panel.Panel = new function() {
             case "sg_dev_debug":
                 sg_logging.debug("Opening debugger in default browser.");
                 var app_name = _cs_interface.getHostEnvironment().appName;
-                var debug_url = _debug_console_urls[app_name];
+                var debug_url = sg_constants.product_info[app_name].debug_url;
                 _cs_interface.openURLInDefaultBrowser(debug_url);
                 break;
 
@@ -237,6 +226,11 @@ sg_panel.Panel = new function() {
 
     const _setup_event_listeners = function() {
         // Sets up all the event handling callbacks.
+
+        // TODO: create an error object that can encapsulate
+        //       an error message as well as a stack trace.
+        //       make the panel UI able to display the stack
+        //       trace in a reasonable way.
 
         // Handle python process disconnected
         sg_manager.CRITICAL_ERROR.connect(_on_critical_error);

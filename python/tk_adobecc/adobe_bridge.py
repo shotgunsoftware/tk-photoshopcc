@@ -8,6 +8,9 @@
 # agreement to the Shotgun Pipeline Toolkit Source Code License. All rights
 # not expressly granted therein are reserved by Shotgun Software Inc.
 
+# TODO: subclass the communicator, expose the api we want to have for the
+# engine to communicate with javascript
+
 # TODO: expose direct CC DOM APIs here
 # TODO: factory to return proper API based on current DCC (ps, premiere, etc)
     # TODO: module level log methods?
@@ -19,16 +22,6 @@
 from .rpc import Communicator
 from .heartbeat import HeartbeatMonitor
 
-# MOCKUPS...
-class AdobeCCApplication(object):
+class AdobeBridge(Communicator):
+    pass
 
-    def __init__(self, name):
-        self._name = name
-
-    def __repr__(self):
-        return "<%s - %s>" % (self.__class__, self._name)
-
-class AdobeCCAppFactory(object):
-
-    def get_current_cc_app(self):
-        return AdobeCCApplication("photoshop")

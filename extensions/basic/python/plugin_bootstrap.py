@@ -11,131 +11,162 @@
 import logging
 import os
 import sys
+import traceback
 
+# NOTE: this module becomes available once the plugin is built
 from sgtk_plugin_basic_adobecc import manifest
 
-# toolkit logger
-sgtk_logger = None
-
-# TODO: switch to a SocketHandler?
-class _BootstrapLogHandler(logging.StreamHandler):
+class _PyToJsLogHandler(logging.StreamHandler):
     """
     Manually flushes emitted records for js to pickup.
     """
 
+    # TODO: this needs to be replaced with direct communication with the socket io server.
+    #       an instance of the engine name can be supplied and each emit() call can
+    #       get the communicator singleton instance in order to forward to js.
+
+    def __init__(self, engine_name):
+        """
+        Initializes the log handler.
+
+        :param engine_name: The name of the engine being wrapped.
+        """
+        super(_PyToJsLogHandler, self).__init__()
+        self._engine_name = engine_name
+
     # always flush to ensure its seen by the js process
     def emit(self, record):
-        super(_BootstrapLogHandler, self).emit(record)
+        """
+        Forwards the record back to to js via the engine communicator.
+
+        :param record: The record to log.
+        """
+        # TODO: replace these two lines with a call go get the communictor
+        #       singleton instance and make a call to its logging method
+        super(_PyToJsLogHandler, self).emit(record)
         self.flush()
 
-def _add_bootstrap_log_handler(logger):
+def plugin_bootstrap(root_path, port, engine_name):
+
+    # TODO: startup the socket communication layer here. should be singleton
+    #       the engine, once bootstrapped should be able to access the running
+    #       communicator instance. The instance should be a singleton, and
+    #       should be specific to the current CC product.
+    communicator_bootstrap(port, engine_name)
+
+    # do the toolkit bootstrapping. this will replace the core imported via the
+    # sys path with the one specified via the resolved config. it will startup
+    # the engine and make Qt available to us.
+    toolkit_bootstrap(root_path, engine_name)
+
+    from sgtk.platform.qt import QtGui
+
+    app_name = 'Shotgun Engine for Adobe CC'
+
+    # create and set up the Qt app. we don't want the app to close when the
+    # last window is shut down since it's running in parallel to the CC product.
+    # We'll manage shutdown
+    app = QtGui.QApplication([app_name])
+
+    # the icon that will display for the python process in the dock/task bar
+    app_icon = QtGui.QIcon(os.path.join(root_path, "icon_256.png"))
+
+    # set up the QApplication
+    app.setApplicationName(app_name)
+    app.setWindowIcon(app_icon)
+    app.setQuitOnLastWindowClosed(False)
+
+    # once the event loop starts, the bootstrap process is complete and
+    # everything should be connected. this is a blocking call, so nothing else
+    # can happen afterward.
+    print "Starting Qt event loop..."
+    sys.exit(app.exec_())
+
+def communicator_bootstrap(port, engine_name):
     """
-    Adds a custom stream logger to the supplied logger.
+    Starts up the socket io client for communicating back to js.
+
+    :param int port: The port the socket io server is listening on.
+    :return: The communicator instance.
     """
 
-    # prefix messages with "python" and the level name.
-    formatter = logging.Formatter("python %(levelname)s: %(message)s")
+    # TODO: bootstrap the communicator for the supplied engine name, communicating
+    #       over the given port
 
-    # create and add the handler
-    handler = _BootstrapLogHandler()
-    handler.setLevel(logger.level)
-    handler.setFormatter(formatter)
-    logger.addHandler(handler)
+    pass
 
-def bootstrap_toolkit(root_path):
+def toolkit_bootstrap(root_path, engine_name):
     """
     Business logic for bootstrapping toolkit.
     """
 
+    # setup the path to make toolkit importable
     tk_core_path = manifest.get_sgtk_pythonpath(root_path)
     sys.path.append(tk_core_path)
 
+    # once the path is setup, this should be valid
     import sgtk
 
     # ---- setup logging
 
+    # initializes the file where logging output will go
     sgtk.LogManager().initialize_base_file_handler("tk-adobecc")
 
-    if manifest.debug_logging:
-        sgtk.LogManager().global_debug = True
+    # allows for debugging to be turned on by the plugin build process
+    sgtk.LogManager().global_debug = manifest.debug_logging
 
-    global sgtk_logger
-    sgtk_logger = sgtk.LogManager.get_logger("plugin")
+    # add a custom handler to the root logger so that all toolkit log messages
+    # are forwarded back to python via the communicator
+    py_to_js_formatter = logging.Formatter("python %(levelname)s: %(message)s")
+    py_to_js_handler = _PyToJsLogHandler(engine_name)
+    py_to_js_handler.setFormatter(py_to_js_formatter)
+    sgtk.LogManager().initialize_custom_handler(py_to_js_handler)
 
-    # add a bootstrap stream handler so that log messages make it back to the
-    # js console. TODO: switch this to a socket handler
-    _add_bootstrap_log_handler(sgtk_logger)
-
+    # now get a logger use during bootstrap
+    sgtk_logger = sgtk.LogManager.get_logger("extension_bootstrap")
     sgtk_logger.debug("Toolkit core path: %s" % (tk_core_path,))
     sgtk_logger.debug("Booting up plugin with manifest %s" % manifest.BUILD_INFO)
 
-    # create boostrap manager
+    # set up the toolkit boostrap manager
     toolkit_mgr = sgtk.bootstrap.ToolkitManager()
     toolkit_mgr.plugin_id = manifest.plugin_id
     toolkit_mgr.base_configuration = manifest.base_configuration
     toolkit_mgr.bundle_cache_fallback_paths = [os.path.join(root_path, "bundle_cache")]
     sgtk_logger.debug("Toolkit Manager: " + str(toolkit_mgr))
 
-    # bootstrap the engine!
-    sgtk_logger.info("Starting the Adobe CC engine.")
-
-    # TODO: have the specific dcc supplied on command line so we can bootstrap
-    # into the right engine in the config. i.e. don't hardcode here.
-    toolkit_mgr.bootstrap_engine("tk-photoshop", entity=None)
-
-
-# TODO: need to setup server thread on this end to receive messages from the DCC.
-#       once we have those, we can respond and shut down when PS closes.
-def shutdown_toolkit():
-    """
-    Shutdown the Shotgun toolkit and its Photoshop engine.
-    """
-    import sgtk
-
-    # Turn off your engine! Step away from the car!
-    engine = sgtk.platform.current_engine()
-    if engine:
-        engine.destroy()
+    # the engine name comes from the adobe side. it will be tk-<name> where
+    # <name> is the name of the CC product in use. ex: tk-photoshop,
+    # tk-aftereffects, etc. The manager uses the engine name to locate the
+    # engine/app configuration to bootstrap into within the current context.
+    sgtk_logger.info("Bootstrapping toolkit...")
+    toolkit_mgr.bootstrap_engine(engine_name, entity=None)
+    sgtk_logger.info("Toolkit Bootstrapped!")
 
 
+# executed from javascript
 if __name__ == "__main__":
 
-    # ---- BOOTSTRAP!!!
-
-    # root path is the 'sgtk' directory 2 levels up from this file
-    root_path = os.path.dirname(os.path.dirname(__file__))
-
+    # wrap the entire plugin boostrap process so that we can respond to any
+    # errors and display them in the panel.
     try:
-        bootstrap_toolkit(root_path)
+        # root path is the 'sgtk' directory 2 levels up from this file
+        root_path = os.path.dirname(os.path.dirname(__file__))
+
+        # the communication port is supplied by javascript. the toolkit engine
+        # env to bootstrap into is also supplied by javascript
+        port = int(sys.argv[1])
+        engine_name = sys.argv[2]
+
+        # startup the plugin which includes setting up the socket io client,
+        # bootstrapping the engine, and starting the Qt event loop
+        plugin_bootstrap(root_path, port, engine_name)
     except Exception, e:
-        # TODO: temporary communication back to js.
-        print "CRITICAL: Shotgun Toolkit failed to bootstrap.\n Error: %s" % (e,)
+        print "Shotgun Toolkit failed to bootstrap."
+
+        # TODO: possible to communicate this back via socket.io client?
+        #       try to get a handle on the instance. if can't just print trace
+        traceback.print_exc()
         sys.stdout.flush()
         sys.exit(1)
 
-    # if we're bootstrapped, this should work!
-    import sgtk
-
-    # now that we've bootstrapped, we can import our Application (requires
-    # sgtk.platform.qt.QtGui)
-    from app_integration import AdobeCCPython
-
-    # create global app
-    try:
-        from sgtk.platform.qt import QtGui
-        app = AdobeCCPython(
-            "Shotgun Engine for Adobe CC",
-            logger=sgtk_logger,
-            icon_path=os.path.join(root_path, "icon_256.png")
-        )
-    except Exception, e:
-        # TODO: send message to display in console
-        sgtk_logger.critical(
-            "Could not create global PySide app instance."
-            " Error: %s" % (e,)
-        )
-        sys.exit(1)
-
-    sgtk_logger.info("Starting PySide event loop: %s", app)
-    sys.exit(app.exec_())
 

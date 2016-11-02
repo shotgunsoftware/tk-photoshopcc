@@ -20,7 +20,12 @@ sg_manager.Manager = new function() {
     //   * communication with the panel
     //   * communication with adobe api (extendscript) via socket.io
 
-    // ---- private vars
+    // ---- public data members
+
+    // the port we'll be communicating over
+    this.communication_port = undefined;
+
+    // ---- private
 
     // keep a handle on the instance.
     const self = this;
@@ -57,9 +62,9 @@ sg_manager.Manager = new function() {
             _panel_startup();
 
             // Look for an open port to use for the server. Once a port has been
-            // found, this method will directly call the method to start up the
-            // server and then bootstrap python.
-            _get_open_port();
+            // found, this method will directly call the supplied callback
+            // method to start up the server and then bootstrap python.
+            _get_open_port(_on_server_port_found);
 
         } catch (error) {
             sg_logging.error("Manager startup error: " + error.stack);
@@ -80,7 +85,7 @@ sg_manager.Manager = new function() {
             // (send event to tell it to shut itself down since we can't do it from here)
     };
 
-    var _shutdown_py_process = function() {
+    const _shutdown_py_process = function() {
 
         // make sure the python process is shut down
         if (typeof self.python_process !== "undefined") {
@@ -96,36 +101,37 @@ sg_manager.Manager = new function() {
 
     // ---- private methods
 
-    var _app_is_supported = function() {
+    const _app_is_supported = function() {
         // Tests whether the extension can run with the current application
 
         // supported if the panel menu and html extensions are available
-        var host_capabilities = _cs_interface.getHostCapabilities();
+        const host_capabilities = _cs_interface.getHostCapabilities();
         return host_capabilities.EXTENDED_PANEL_MENU &&
             host_capabilities.SUPPORT_HTML_EXTENSIONS;
     };
 
     // TODO: add a progress callback
-    var _bootstrap_python = function(port) {
+    const _bootstrap_python = function(port) {
         // Bootstrap the toolkit python process.
         //
         // Returns a `child_process.ChildProcess` object for the running
         // python process with a bootstrapped toolkit core.
 
+        const app_id = _cs_interface.hostEnvironment.appId;
         const child_process = require("child_process");
         const path = require('path');
+        const engine_name = sg_constants.product_info[app_id].tk_engine_name;
 
         // the path to this extension
-        var ext_dir = _cs_interface.getSystemPath(SystemPath.EXTENSION);
+        const ext_dir = _cs_interface.getSystemPath(SystemPath.EXTENSION);
 
         // path to the python folder within the extension
-        var plugin_python_path = path.join(ext_dir, "python");
+        const plugin_python_path = path.join(ext_dir, "python");
 
         // get a copy of the current environment and append to PYTHONPATH.
         // we need to append the plugin's python path so that it can locate the
         // manifest and other files necessary for the bootstrap.
-        var current_env = process.env;
-        if (process.env["PYTHONPATH"]) {
+        if (process.env.PYTHONPATH) {
             // append the plugin's python path to the existing env var
             process.env.PYTHONPATH += ":" + plugin_python_path;
         } else {
@@ -138,7 +144,7 @@ sg_manager.Manager = new function() {
         process.env.SHOTGUN_ADOBE_PORT = port
 
         // get the bootstrap python script from the bootstrap python dir
-        var plugin_bootstrap_py = path.join(plugin_python_path,
+        const plugin_bootstrap_py = path.join(plugin_python_path,
             "plugin_bootstrap.py");
 
         sg_logging.debug("Bootstrapping: " + plugin_bootstrap_py);
@@ -161,8 +167,9 @@ sg_manager.Manager = new function() {
                 python_exe_path,
                 [
                     // path to the python bootstrap script
-                    plugin_bootstrap_py
-                    // TODO: port
+                    plugin_bootstrap_py,
+                    port,
+                    engine_name
                 ],
                 {
                     // start the process from this dir
@@ -197,8 +204,11 @@ sg_manager.Manager = new function() {
 
     };
 
-    const _get_open_port = function() {
-        // Given a starting port number, return the first available, open port
+    const _get_open_port = function(port_found_callback) {
+        // Find an open port and send it to the supplied callback
+
+        // TODO: allow specification of an explicit port to use for debugging
+        //    perhaps something that is exposed during the build process?
 
         // https://nodejs.org/api/http.html#http_class_http_server
         const http = require('http');
@@ -207,11 +217,21 @@ sg_manager.Manager = new function() {
         var num_tries = 0;
 
         // the number of times to try to find an open port
-        const max_tries = 2;
+        const max_tries = 25;
 
         // function to try a port. recurses until a port is found or the max
         // try limit is reached.
         const _try_port = function() {
+
+            num_tries += 1;
+
+            // double checking whether we need to continue here. this should
+            // prevent this method from being called after a suitable port has
+            // been identified.
+            if (typeof self.communication_port !== "undefined") {
+                // the port is defined. no need to continue
+                return;
+            }
 
             // check the current number of tries. if too many, emit a signal
             // indicating that a port could not be found
@@ -228,16 +248,16 @@ sg_manager.Manager = new function() {
             // our method to find an open port seems a bit hacky, and not
             // entirely failsafe, but hopefully good enough. if you're reading
             // this and know a better way to get an open port, please make
-            // changes here.
+            // changes.
 
-            // the logic here is to create an http server, and listen on port 0.
-            // this is a random number provided by the OS. it is *NOT*
+            // the logic here is to create an http server, and provide 0 to
+            // listen(). the OS will provide a random port number. it is *NOT*
             // guaranteed to be an open port, so we wait until the listening
             // event is fired before presuming it can be used. we close the
             // server before proceeding and there's no guarantee that some other
             // process won't start using it before our communication server is
             // started up.
-            var server = http.createServer();
+            const server = http.createServer();
 
             // if we can listen to the port then we're using it and nobody else
             // is. close out and forward the port on for use by the
@@ -245,27 +265,44 @@ sg_manager.Manager = new function() {
             server.on(
                 "listening",
                 function() {
-                    const port = server.address().port;
+                    // listening, so the port is available
+                    self.communication_port = server.address().port;
                     server.close();
-                    sg_logging.debug("Found available port: " + port);
-                    _on_server_port_found(port);
                 }
             );
 
             // if we get an error, we presume that the port is already in use.
-            // log a message for debugging purposes, shut the server down,
-            // increment the number of tries, and then try again.
             server.on(
                 "error",
                 function(error) {
                     const port = server.address().port;
-                    sg_logging.debug(
-                        "Could not listen on port: " + port + ". " +
-                        "Presumably in use."
-                    );
-                    server.close();
-                    num_tries += 1;
-                    _try_port();
+                    sg_logging.debug("Could not listen on port: " + port);
+                    // will close after this event
+                }
+            );
+
+            // when the server is closed, check to see if we got a port number.
+            // if so, call the callback. if not, try again
+            server.on(
+                "close",
+                function() {
+                    if (typeof self.communication_port !== "undefined") {
+                        // the port is defined. no need to continue
+                        const port = self.communication_port;
+                        sg_logging.debug("Found available port: " + port);
+                        try {
+                            port_found_callback(port);
+                        } catch(error) {
+                            sg_manager.CRITICAL_ERROR.emit(
+                                "Unable to set up the communication server " +
+                                "that allows the shotgun integration to " +
+                                "work."
+                            );
+                        }
+                    } else {
+                        // still no port. try again
+                        _try_port();
+                    }
                 }
             );
 
@@ -278,7 +315,7 @@ sg_manager.Manager = new function() {
         _try_port();
     };
 
-    var _on_python_connection_lost = function() {
+    const _on_python_connection_lost = function() {
         // TODO: anyting else to be done here?
         sg_manager.CRITICAL_ERROR.emit(
             "The Shotgun integration has unexpectedly shut down. " +
@@ -304,39 +341,40 @@ sg_manager.Manager = new function() {
         // TODO: python process should send context/state once bootstrapped
     };
 
-    var _panel_startup = function() {
+    const _panel_startup = function() {
         // Start up the panel
 
         sg_logging.debug("Launching the panel extension...");
         _cs_interface.requestOpenExtension(_panel_extension_name);
     };
 
-    var _reload = function(event) {
+    const _reload = function(event) {
+
+        sg_logging.debug("Reloading the manager...");
 
         // shutdown the python process
         _shutdown_py_process();
 
         // remember this extension id to reload it
-        var extension_id = _cs_interface.getExtensionID();
+        const extension_id = _cs_interface.getExtensionID();
 
         // close the extension
         self.on_unload();
-        sg_logging.debug("Closing the python extension.");
+        sg_logging.debug(" Closing the python extension.");
         _cs_interface.closeExtension();
 
         // request relaunch
-        sg_logging.debug("Relaunching the manager...");
+        sg_logging.debug(" Relaunching the manager...");
         _cs_interface.requestOpenExtension(extension_id);
     };
 
     const _setup_communication_server = function(port) {
+
         // TODO: docs. anything else? channels?
-
         sg_socket_io.SocketManager.start_socket_server(port, _cs_interface);
-
     };
 
-    var _setup_event_listeners = function() {
+    const _setup_event_listeners = function() {
         // setup listeners for any events that need to be processed by the
         // manager
 
@@ -363,10 +401,10 @@ sg_manager.Manager = new function() {
 
     };
 
-    var _tmp_send_state_info = function(event) {
+    const _tmp_send_state_info = function(event) {
 
         // XXX This is temp sim of the state being sent from python
-        var state = {
+        const state = {
             context: {
                 display: "Awesome Asset 01"
             },
