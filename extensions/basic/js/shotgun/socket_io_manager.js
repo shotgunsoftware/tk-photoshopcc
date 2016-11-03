@@ -170,14 +170,5 @@ sg_socket_io.SocketManager = new function() {
                 }
             });
         });
-
-        // Heartbeat every second to the /heartbeat namespace.
-        var heartbeat_io = io.of('/heartbeat');
-        var _heartbeat = function() {
-            var time = Math.floor(new Date().getTime() / 1000);
-            sg_logging.debug('Heartbeat...' + JSON.stringify(time));
-            heartbeat_io.emit('heartbeat', time);
-        };
-        setInterval(_heartbeat, 1000);
     };
 };

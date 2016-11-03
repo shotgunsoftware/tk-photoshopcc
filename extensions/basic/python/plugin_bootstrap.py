@@ -81,10 +81,8 @@ def plugin_bootstrap(root_path, port, engine_name):
     app.setWindowIcon(app_icon)
     app.setQuitOnLastWindowClosed(False)
 
-    # since this is running in our own Qt event loop, we'll use the bundled
-    # dark look and feel. breaking encapsulation to do so.
-    engine.log_debug("Initializing dark look and feel...")
-    engine._initialize_dark_look_and_feel()
+    # some operations can't be done until a qapplication exists.
+    engine.post_qt_init()
 
     # once the event loop starts, the bootstrap process is complete and
     # everything should be connected. this is a blocking call, so nothing else

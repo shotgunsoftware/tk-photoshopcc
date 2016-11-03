@@ -22,7 +22,7 @@ class AdobeEngine(sgtk.platform.Engine):
 
     ENV_COMMUNICATION_PORT_NAME = "SHOTGUN_ADOBE_PORT"
 
-    HEARTBEAT_TIMEOUT = 1500
+    CHECK_CONNECTION_TIMEOUT = 1000
 
     def pre_app_init(self):
 
@@ -30,9 +30,7 @@ class AdobeEngine(sgtk.platform.Engine):
 
         # get the adobe instance. it may have been initialized already by a
         # previous instance of the engine. if not, initialize a new one.
-        self._adobe = \
-            tk_adobecc.AdobeBridge.get_instance(self.instance_name) or \
-            tk_adobecc.AdobeBridge.initialize(
+        self._adobe = tk_adobecc.AdobeBridge.get_or_create(
                 self.instance_name,
                 port=os.environ.get(self.ENV_COMMUNICATION_PORT_NAME),
             )
@@ -57,16 +55,20 @@ class AdobeEngine(sgtk.platform.Engine):
             # and any CC-specifics (ps vs premiere)
         # TODO: log user attribute metric
 
+    def post_qt_init(self):
+
         from sgtk.platform.qt import QtCore
 
-        # setup the heartbeat timer. this listens to the adobe bridge for
-        # heartbeat events. if we haven't received a heartbeat from adobe in
-        # a while, it has probably shut down.
-        self._last_adobecc_heartbeat = -1
-        self._adobecc_heartbeat_timer = QtCore.QTimer(parent=self)
-        self._adobecc_heartbeat_timer.timeout.connect(self._check_heartbeat)
-        self._adobecc_heartbeat_timer.start(self.HEARTBEAT_TIMEOUT)
+        # since this is running in our own Qt event loop, we'll use the bundled
+        # dark look and feel. breaking encapsulation to do so.
+        self.log_debug("Initializing dark look and feel...")
+        self._initialize_dark_look_and_feel()
 
+        # setup the check connection timer.
+        self._check_connection_timer = QtCore.QTimer(
+            parent=QtCore.QCoreApplication.instance())
+        self._check_connection_timer.timeout.connect(self._check_connection)
+        self._check_connection_timer.start(self.CHECK_CONNECTION_TIMEOUT)
 
     def destroy_engine(self):
         # TODO: log
@@ -79,8 +81,9 @@ class AdobeEngine(sgtk.platform.Engine):
     def disconnected(self):
         # TODO: Implement real disconnection behavior. This may or may not
         # make sense to do here. This is just a tribute.
-        self.log_info("Disconnected from Adobe product.")
-        raise RuntimeError("DISCONNECTED")
+        from sgtk.platform.qt import QtCore
+        app = QtCore.QCoreApplication.instance()
+        app.quit()
 
     ##########################################################################################
     # properties
@@ -159,14 +162,10 @@ class AdobeEngine(sgtk.platform.Engine):
 
     # TODO: logging
 
-    def _check_heartbeat(self):
+    def _check_connection(self):
 
-        self.log_debug("Checking heartbeat...")
-        current_heartbeat = self.adobe.last_heartbeat
+        try:
+            self.adobe._io._ping()
+        except:
+            self.disconnected()
 
-        if current_heartbeat == self._last_adobecc_heartbeat:
-            self.log_warning("Heartbeat not detected...")
-            # TODO: shut down the qapplication
-            #self.disconnected()
-        else:
-            self._last_adobecc_heartbeat = heartbeat

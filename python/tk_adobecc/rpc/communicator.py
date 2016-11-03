@@ -30,13 +30,9 @@ class Communicator(object):
     def __init__(self, port=8090, host="localhost", disconnect_callback=None):
         self._port = port
         self._host = host
-        self._last_heartbeat = -1
 
         self._io = SocketIO(host, port)
         self._io.on("return", self._handle_response)
-
-        self._heartbeat_io = self._io.define(BaseNamespace, path="/heartbeat")
-        self._heartbeat_io.on("heartbeat", self._handle_heartbeat)
 
         self._global_scope = None
         self._disconnect_callback = disconnect_callback
@@ -47,14 +43,13 @@ class Communicator(object):
         self._get_global_scope()
 
     @classmethod
-    def initialize(cls, identifier, *args, **kwargs):
-        instance = cls(*args, **kwargs)
-        cls.__REGISTRY[identifier] = instance
+    def get_or_create(cls, identifier, *args, **kwargs):
+        if identifier in cls.__REGISTRY:
+            instance = cls.__REGISTRY[identifier]
+        else:
+            instance = cls(*args, **kwargs)
+            cls.__REGISTRY[identifier] = instance
         return instance
-
-    @classmethod
-    def get_instance(cls, identifier):
-        return cls.__REGISTRY.get(identifier, None)
 
     @property
     def host(self):
@@ -63,10 +58,6 @@ class Communicator(object):
     @property
     def port(self):
         return self._port
-
-    def get_last_heartbeat(self):
-        self._io.wait(0.1)
-        return self._last_heartbeat
 
     def rpc_call(self, proxy_object, params=[], parent=None):
         if parent:
@@ -159,9 +150,6 @@ class Communicator(object):
             payload["params"] = self.__prepare_params(params)
 
         return payload
-
-    def _handle_heartbeat(self, response, *args):
-        self._last_heartbeat = int(response)
 
     def _handle_response(self, response, *args):
         with self._LOCK:

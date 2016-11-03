@@ -38,6 +38,16 @@ sg_manager.Manager = new function() {
 
     // ---- public methods
 
+    this.clean_exit = function() {
+
+        // TODO: shut down socket.io server
+        // TODO: close the panel extension
+        // (send event to tell it to shut itself down since we can't do it from here)
+
+        // ensure the python process is shut down
+        _shutdown_py_process();
+    };
+
     this.on_load = function() {
         // Setup the Shotgun integration within the app.
 
@@ -77,12 +87,8 @@ sg_manager.Manager = new function() {
         // code to run when the extension panel is unloaded
 
         // TODO: not sure this is ever called!
+        self.clean_exit();
 
-        _shutdown_py_process();
-
-        // TODO: shut down socket.io server
-        // TODO: close the panel extension
-            // (send event to tell it to shut itself down since we can't do it from here)
     };
 
     const _shutdown_py_process = function() {
@@ -175,15 +181,16 @@ sg_manager.Manager = new function() {
                     // start the process from this dir
                     cwd: plugin_python_path,
                     // the environment to use for bootstrapping
-                    env: process.env
+                    env: process.env,
                 }
             );
-            sg_logging.debug("Child process spawned! PID: " + self.python_process.pid)
         }
         catch (error) {
             sg_logging.error("Child process failed to spawn:  " + error);
             throw error;
         }
+
+        sg_logging.debug("Child process spawned! PID: " + self.python_process.pid)
 
         // XXX begin temporary process communication
 
@@ -353,7 +360,7 @@ sg_manager.Manager = new function() {
         sg_logging.debug("Reloading the manager...");
 
         // shutdown the python process
-        _shutdown_py_process();
+        self.clean_exit();
 
         // remember this extension id to reload it
         const extension_id = _cs_interface.getExtensionID();
