@@ -60,8 +60,15 @@ import warnings
 from .packages.urllib3.exceptions import DependencyWarning
 warnings.simplefilter('ignore', DependencyWarning)
 
+from . import utils
+from .models import Request, Response, PreparedRequest
+from .api import request, get, head, post, patch, put, delete, options
+from .sessions import session, Session
+from .status_codes import codes
 from .exceptions import (
-    FileModeWarning
+    RequestException, Timeout, URLRequired,
+    TooManyRedirects, HTTPError, ConnectionError,
+    FileModeWarning, ConnectTimeout, ReadTimeout
 )
 
 # Set default logging handler to avoid "No handler found" warnings.

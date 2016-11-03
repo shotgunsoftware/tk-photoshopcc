@@ -25,8 +25,8 @@ from .compat import (quote, urlparse, bytes, str, OrderedDict, unquote, is_py2,
                      builtin_str, getproxies, proxy_bypass, urlunparse,
                      basestring)
 from .cookies import RequestsCookieJar, cookiejar_from_dict
-from .exceptions import InvalidURL, InvalidHeader, FileModeWarning
 from .structures import CaseInsensitiveDict
+from .exceptions import InvalidURL, InvalidHeader, FileModeWarning
 
 _hush_pyflakes = (RequestsCookieJar,)
 

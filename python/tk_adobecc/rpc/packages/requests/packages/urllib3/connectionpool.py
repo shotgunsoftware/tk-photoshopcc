@@ -1,11 +1,11 @@
 from __future__ import absolute_import
-
 import errno
 import logging
-import socket
 import sys
 import warnings
+
 from socket import error as SocketError, timeout as SocketTimeout
+import socket
 
 try:  # Python 3
     from queue import LifoQueue, Empty, Full
