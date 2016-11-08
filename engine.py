@@ -16,6 +16,7 @@ import os
 
 import sgtk
 
+
 ###############################################################################################
 # The Toolkit Adobe engine
 class AdobeEngine(sgtk.platform.Engine):
@@ -69,6 +70,10 @@ class AdobeEngine(sgtk.platform.Engine):
             parent=QtCore.QCoreApplication.instance())
         self._check_connection_timer.timeout.connect(self._check_connection)
         self._check_connection_timer.start(self.CHECK_CONNECTION_TIMEOUT)
+
+        # now that qt is setup and the engine is ready to go, forward the
+        # current state back to the adobe side.
+        self.adobe.send_state()
 
     def destroy_engine(self):
         # TODO: log
@@ -164,6 +169,7 @@ class AdobeEngine(sgtk.platform.Engine):
 
     def _check_connection(self):
 
+        # TODO: refactor this into appropriate calls
         try:
             self.adobe._io._ping()
         except:

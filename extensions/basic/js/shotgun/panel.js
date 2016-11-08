@@ -92,9 +92,6 @@ sg_panel.Panel = new function() {
 
         // request manager reload
         sg_panel.REQUEST_MANAGER_RELOAD.emit();
-
-        // close this extension
-        _cs_interface.closeExtension();
     };
 
     this.set_state = function(state) {
@@ -200,7 +197,10 @@ sg_panel.Panel = new function() {
 
     const _on_critical_error = function(event) {
 
-        const message = event.data;
+        const message = event.data.message;
+
+        // TODO: show the stack trace somewhere!
+        const stack = event.data.stack;
 
         sg_logging.error("Critical: " + message);
 
@@ -242,6 +242,13 @@ sg_panel.Panel = new function() {
             }
         );
 
+        // Handle the manager shutting down.
+        sg_manager.SHUTTING_DOWN.connect(
+            function(event) {
+                _cs_interface.closeExtension();
+            }
+        );
+
         // Handle log messages from python process
         sg_logging.LOG_MESSAGE.connect(
             function(event) {
@@ -250,6 +257,7 @@ sg_panel.Panel = new function() {
                 console[level](msg);
             }
         );
+
     };
 
     // ---- html update methods

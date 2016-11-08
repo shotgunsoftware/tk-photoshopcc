@@ -16,5 +16,17 @@ var sg_manager = sg_manager || {};
 // typically as an async response to a REQUEST_STATE event from the panel
 sg_event.create_event(sg_manager, "UPDATE_STATE");
 
-// emits critical errors whereby the manager is not or can not function properly
+// emits critical errors whereby the manager is not or can not function
+// properly. the emitted event will contain a dictionary of the following form:
+//
+//      {
+//         message: <the user-friendly error message>
+//         stack: <the stack trace for debugging>
+//      }
+//
+// this event is only emitted when something happens that prevents the manager
+// from continuing to function properly.
 sg_event.create_event(sg_manager, "CRITICAL_ERROR");
+
+// emitted when the manager is shutting down. allows listeners to act accordingly
+sg_event.create_event(sg_manager, "SHUTTING_DOWN");

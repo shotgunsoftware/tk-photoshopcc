@@ -144,6 +144,13 @@ sg_socket_io.SocketManager = new function() {
                     _eval_callback.bind(self, next)
                 );
             };
+
+        };
+
+        this.stop_socket_server = function() {
+            sg_logging.debug("Shutting down socket server.")
+
+            // TODO: properly shut down the socket server
         };
 
         sg_logging.info('Setting up connection handling...');
@@ -159,6 +166,20 @@ sg_socket_io.SocketManager = new function() {
             socket.on('execute_command', function(message) {
                 sg_logging.info(JSON.stringify(message));
                 remote.receive(message);
+            });
+
+            socket.on("set_state", function(json_state) {
+                // The client is setting the state.
+                var state = JSON.parse(json_state);
+                sg_logging.debug("Setting state from client: " +
+                    state["context"]["display"]);
+
+                // TODO: we're emitting a manager event. perhaps we should
+                // have a set of events that come from socket.io? or perhaps
+                // this should call a method on the manager (tried, but doesn't
+                // seem to work!)? but this shouldn't really know about the
+                // manager. anyway, this works, so revisit as time permits.
+                sg_manager.UPDATE_STATE.emit(state);
             });
 
             remote.setTransmitter(function(message, next) {

@@ -6,6 +6,8 @@
     </ExtensionList>
     <ExecutionEnvironment>
         <HostList>
+            <!-- TODO: update with all products we want to provide access to. -->
+            <!-- TODO: make sure the minimum version is specified properly. -->
             <!-- Photoshop -->
             <Host Name="PHSP" Version="14.0"/>
             <Host Name="PHXS" Version="14.0"/>

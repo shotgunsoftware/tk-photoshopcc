@@ -38,27 +38,21 @@ sg_manager.Manager = new function() {
 
     // ---- public methods
 
-    this.clean_exit = function() {
-
-        // TODO: shut down socket.io server
-        // TODO: close the panel extension
-        // (send event to tell it to shut itself down since we can't do it from here)
-
-        // ensure the python process is shut down
-        _shutdown_py_process();
-    };
-
     this.on_load = function() {
         // Setup the Shotgun integration within the app.
 
         // Execute the startup payload and catch *any* errors. If there are
-        // errors, display them on the status page.
+        // errors, display them in the panel if possible.
         try {
 
             // ensure this app is supported by our extension
             if (!_app_is_supported()) {
-                // TODO: more information about why
-                sg_logging.warning("This application does not support the Shotgun extension.");
+                sg_logging.warning(
+                    "This CC product does not meet the minimum requirements " +
+                    "to run the Shotgun integration. The Shotgun integration " +
+                    "requires support for HTML panels and the extended panel " +
+                    "menu."
+                );
                 return;
             }
 
@@ -69,7 +63,8 @@ sg_manager.Manager = new function() {
             // start up the panel in the adobe product first. we can display
             // messages and information to the user while functions below are
             // running
-            _panel_startup();
+            sg_logging.debug("Launching the panel extension...");
+            _cs_interface.requestOpenExtension(_panel_extension_name);
 
             // Look for an open port to use for the server. Once a port has been
             // found, this method will directly call the supplied callback
@@ -77,30 +72,66 @@ sg_manager.Manager = new function() {
             _get_open_port(_on_server_port_found);
 
         } catch (error) {
-            sg_logging.error("Manager startup error: " + error.stack);
-            alert("Manager startup error: " + error.stack); // XXX temp
-            // TODO: send failure event with error data to display in panel if it is running.
+            const message = "There was an unexpected error startup of the " +
+                "startup of the Shotgun integration. Please see the " +
+                "attached stack trace.";
+
+            // log the error in the event that the panel has started and the
+            // user can click the console
+            sg_logging.error(message);
+            sg_logging.error(error.stack);
+
+            // emit the critical error for any listeners to display
+            sg_manager.CRITICAL_ERROR.emit({
+                message: message,
+                stack: error.stack
+            });
+
+            // There are no guarantees that the panel has started up, and
+            // therefore no guarantees that the user has easy access to the
+            // debug console. Go ahead and display an old school alert box here
+            // to ensure that they get something. This may look like crap.
+            alert(message + "\n\n" + error.stack);
         }
     };
 
     this.on_unload = function() {
-        // code to run when the extension panel is unloaded
+        // Code to run when the manager extension is unloaded
 
-        // TODO: not sure this is ever called!
-        self.clean_exit();
-
+        // This callback never seems to run. This could be because this is an
+        // "invisible" extension, but it seems like even regular panels never
+        // have their page "unload" callbacks called. Leaving this here for now
+        // in the event that this becomes called at some point in the future.
+        self.shutdown();
     };
 
-    const _shutdown_py_process = function() {
+    this.set_state = function(state) {
+        // Sets the manager state.
 
-        // make sure the python process is shut down
+        // emits the state update for listeners to respond to
+        sg_manager.UPDATE_STATE.emit(state);
+    };
+
+    this.shutdown = function() {
+        // Ensure all the manager's components are shutdown properly
+        //
+        // Also emits an event for listeners to respond to manager shutdown.
+
+        // shut down socket.io server
+        sg_socket_io.SocketManager.stop_socket_server();
+
+        // alert listeners that the manager is shutting down
+        sg_manager.SHUTTING_DOWN.emit();
+
+        // ensure the python process is shut down
         if (typeof self.python_process !== "undefined") {
             sg_logging.debug("Terminating python process...");
             try {
                 self.python_process.kill();
                 sg_logging.debug("Python process terminated successfully.");
             } catch(error) {
-                sg_logging.warning("Unable to terminate python process: " + error.stack);
+                sg_logging.warning(
+                    "Unable to terminate python process: " + error.stack);
             }
         }
     };
@@ -147,13 +178,15 @@ sg_manager.Manager = new function() {
 
         // Set the port in the environment. The engine will use this when
         // establishing a socket client connection.
-        process.env.SHOTGUN_ADOBE_PORT = port
+        process.env.SHOTGUN_ADOBE_PORT = port;
 
         // get the bootstrap python script from the bootstrap python dir
         const plugin_bootstrap_py = path.join(plugin_python_path,
             "plugin_bootstrap.py");
 
         sg_logging.debug("Bootstrapping: " + plugin_bootstrap_py);
+
+        // TODO: proper python executable discovery
 
         // launch a separate process to bootstrap python with toolkit running...
         // > cd $ext_dir
@@ -207,8 +240,18 @@ sg_manager.Manager = new function() {
         // XXX end temporary process communication
 
         // handle python process disconnection
-        self.python_process.on("close", _on_python_connection_lost);
-
+        self.python_process.on(
+            "close",
+            function() {
+                sg_manager.CRITICAL_ERROR.emit({
+                    message: "The Shotgun integration has unexpectedly shut " +
+                             "down. Specifically, the python process that " +
+                             "handles the communication with Shotgun has " +
+                             "been terminated.",
+                    stack: undefined
+                });
+            }
+        );
     };
 
     const _get_open_port = function(port_found_callback) {
@@ -243,12 +286,13 @@ sg_manager.Manager = new function() {
             // check the current number of tries. if too many, emit a signal
             // indicating that a port could not be found
             if (num_tries > max_tries) {
-                sg_manager.CRITICAL_ERROR.emit(
-                    "Unable to set up the communication server that " +
-                    "allows the shotgun integration to work. Specifically, " +
-                    "there was a problem identifying a port to start up the " +
-                    "server."
-                );
+                sg_manager.CRITICAL_ERROR.emit({
+                    message: "Unable to set up the communication server that " +
+                             "allows the shotgun integration to work. " +
+                             "Specifically, there was a problem identifying " +
+                             "a port to start up the server.",
+                    stack: undefined
+                });
                 return;
             }
 
@@ -300,11 +344,12 @@ sg_manager.Manager = new function() {
                         try {
                             port_found_callback(port);
                         } catch(error) {
-                            sg_manager.CRITICAL_ERROR.emit(
-                                "Unable to set up the communication server " +
-                                "that allows the shotgun integration to " +
-                                "work."
-                            );
+                            sg_manager.CRITICAL_ERROR.emit({
+                                message: "Unable to set up the communication " +
+                                         "server that allows the shotgun " +
+                                         "integration to work.",
+                                stack: error.stack
+                            });
                         }
                     } else {
                         // still no port. try again
@@ -322,22 +367,10 @@ sg_manager.Manager = new function() {
         _try_port();
     };
 
-    const _on_python_connection_lost = function() {
-        // TODO: anyting else to be done here?
-        sg_manager.CRITICAL_ERROR.emit(
-            "The Shotgun integration has unexpectedly shut down. " +
-            "Specifically, the python process that handles the communication " +
-            "with Shotgun has been terminated."
-        );
-    };
-
     const _on_server_port_found = function(port) {
 
-        // startup the communication server on an open port
-        _setup_communication_server(
-            port
-            // TODO: send a progress callback here
-        );
+        // TODO: docs. anything else? channels?
+        sg_socket_io.SocketManager.start_socket_server(port, _cs_interface);
 
         // bootstrap the python process.
         _bootstrap_python(
@@ -348,19 +381,12 @@ sg_manager.Manager = new function() {
         // TODO: python process should send context/state once bootstrapped
     };
 
-    const _panel_startup = function() {
-        // Start up the panel
-
-        sg_logging.debug("Launching the panel extension...");
-        _cs_interface.requestOpenExtension(_panel_extension_name);
-    };
-
     const _reload = function(event) {
 
         sg_logging.debug("Reloading the manager...");
 
         // shutdown the python process
-        self.clean_exit();
+        self.shutdown();
 
         // remember this extension id to reload it
         const extension_id = _cs_interface.getExtensionID();
@@ -375,32 +401,17 @@ sg_manager.Manager = new function() {
         _cs_interface.requestOpenExtension(extension_id);
     };
 
-    const _setup_communication_server = function(port) {
-
-        // TODO: docs. anything else? channels?
-        sg_socket_io.SocketManager.start_socket_server(port, _cs_interface);
-    };
-
     const _setup_event_listeners = function() {
         // setup listeners for any events that need to be processed by the
         // manager
 
         // ---- Events from the panel
-
         sg_panel.REQUEST_MANAGER_RELOAD.connect(_reload);
-
-        // TODO:
-        // until the socket.io layer is inserted, simply send
-        // back some mock state info for the panel. eventually this
-        // should post the request to the socket.io channel that the
-        // python process is listening to. The python process should
-        // process the request and send back to the server all the
-        // state information (current context, registered commands, etc)
-        sg_panel.REQUEST_STATE.connect(_tmp_send_state_info);
 
         // Handle python process disconnected
         sg_panel.REGISTERED_COMMAND_TRIGGERED.connect(
             // TODO: do the proper thing here...
+            // TODO: post an event for the client to handle
             function(event) {
                 alert("panel.js: Registered Command Triggered: " + event.data)
             }
