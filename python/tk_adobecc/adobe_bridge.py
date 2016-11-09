@@ -16,6 +16,7 @@
     # TODO: get remote objects/classes
     # TODO: wrap save as
 
+import json
 import sgtk
 
 # use api json to cover py 2.5
@@ -32,11 +33,28 @@ class AdobeBridge(Communicator):
     This is where we put logic that allows the two ends to communicate.
     """
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, engine, *args, **kwargs):
 
         super(AdobeBridge, self).__init__(*args, **kwargs)
 
         self._commands_by_id = {}
+        self._engine = engine
+        self._io.on("logging", self._forward_logging)
+
+    def _forward_logging(self, response):
+        command_map = dict(
+            debug=self._engine.log_debug,
+            error=self._engine.log_error,
+            info=self._engine.log_info,
+            warn=self._engine.log_warning,
+        )
+
+        response = json.loads(response)
+
+        if response.get("level") in command_map:
+            command_map[response["level"]](
+                "[ADOBE] %s" % response.get("message")
+            )
 
     def send_state(self):
         """

@@ -32,9 +32,14 @@ class AdobeEngine(sgtk.platform.Engine):
         # get the adobe instance. it may have been initialized already by a
         # previous instance of the engine. if not, initialize a new one.
         self._adobe = tk_adobecc.AdobeBridge.get_or_create(
-                self.instance_name,
-                port=os.environ.get(self.ENV_COMMUNICATION_PORT_NAME),
-            )
+            identifier=self.instance_name,
+            port=os.environ.get(self.ENV_COMMUNICATION_PORT_NAME),
+            engine=self,
+        )
+
+        # NOTE: This can be uncommented to trigger a simple bit of RPC
+        # work to be done for testing purposes. <jbee>
+        # self._adobe.app.openDialog()
 
     def post_app_init(self):
 
@@ -174,4 +179,8 @@ class AdobeEngine(sgtk.platform.Engine):
             self.adobe._io._ping()
         except:
             self.disconnected()
+        else:
+            # Will allow queued up messages (like logging calls)
+            # to be handled on the Python end.
+            self.adobe._io.wait(0.01)
 

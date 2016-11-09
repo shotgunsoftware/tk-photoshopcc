@@ -113,7 +113,7 @@ def toolkit_bootstrap(root_path, engine_name):
 
     # add a custom handler to the root logger so that all toolkit log messages
     # are forwarded back to python via the communicator
-    py_to_js_formatter = logging.Formatter("python %(levelname)s: %(message)s")
+    py_to_js_formatter = logging.Formatter("%(levelname)s: %(message)s")
     py_to_js_handler = _PyToJsLogHandler(engine_name)
     py_to_js_handler.setFormatter(py_to_js_formatter)
     sgtk.LogManager().initialize_custom_handler(py_to_js_handler)

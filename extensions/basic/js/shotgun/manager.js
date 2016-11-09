@@ -229,12 +229,12 @@ sg_manager.Manager = new function() {
 
         // log stdout from python process
         self.python_process.stdout.on("data", function (data) {
-            sg_logging.debug(data.toString());
+            sg_logging.log(data.toString());
         });
 
         // log stderr from python process
         self.python_process.stderr.on("data", function (data) {
-            sg_logging.debug(data.toString());
+            sg_logging.log(data.toString());
         });
 
         // XXX end temporary process communication
@@ -371,6 +371,9 @@ sg_manager.Manager = new function() {
 
         // TODO: docs. anything else? channels?
         sg_socket_io.SocketManager.start_socket_server(port, _cs_interface);
+
+        // Register the socket manager for logging.
+        sg_logging.rpc = sg_socket_io;
 
         // bootstrap the python process.
         _bootstrap_python(
