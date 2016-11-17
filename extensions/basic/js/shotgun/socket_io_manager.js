@@ -15,13 +15,31 @@ var sg_socket_io = sg_socket_io || {};
 
 sg_socket_io.io = undefined;
 
-sg_socket_io.rpc_log = function(level, message) {
+sg_socket_io.emit = function(message_type, payload) {
+    // Emits the provided payload stringified as JSON via the
+    // currently open socket.io server.
     if ( sg_socket_io.io != undefined ) {
-        var msg = {};
-        msg.level = level;
-        msg.message = message;
-        sg_socket_io.io.emit("logging", JSON.stringify(msg));
+        sg_socket_io.io.emit(message_type, JSON.stringify(payload));
     }
+};
+
+sg_socket_io.rpc_log = function(level, message) {
+    // Emits a "logging" message from the currently open socket.io
+    // server. The log message string and level are combined into
+    // a single payload object with "level" and "message" properties
+    // that is JSON encoded before emission.
+    var msg = {};
+    msg.level = level;
+    msg.message = message;
+    sg_socket_io.emit("logging", msg);
+};
+
+sg_socket_io.rpc_command = function(uid) {
+    // Emits a "command" message from the currently open socket.io
+    // server. The given uid references an SGTK engine command by
+    // the same id, which will be used to look up the appropriate
+    // callback once the message is handled by a client.
+    sg_socket_io.emit("command", uid);
 };
 
 sg_socket_io.SocketManager = new function() {
@@ -43,16 +61,10 @@ sg_socket_io.SocketManager = new function() {
     };
 
     this.start_socket_server = function (port, csLib) {
-<<<<<<< HEAD
-        var path = require("path");
-        var jrpc = require("jrpc");
-        io = require("socket.io").listen(port);
-=======
         var path = require('path');
         var jrpc = require('jrpc');
         var io = require('socket.io').listen(port);
         sg_socket_io.io = io;
->>>>>>> master
 
         sg_logging.info("Listening on port " + JSON.stringify(port));
 
