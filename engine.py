@@ -53,12 +53,6 @@ class AdobeEngine(sgtk.platform.Engine):
         for (panel_name, value) in self.panels.iteritems():
             self.log_debug(" %s: %s" % (panel_name, value))
 
-        # TODO: signal back to js that python startup is almost done. do this by
-        #       sending the current state. this should be a call to the engine.
-
-        # TODO: initialize & populate the panel
-        # TODO: get a handle on the remote CC instance and get the version
-            # and any CC-specifics (ps vs premiere)
         # TODO: log user attribute metric
 
     def post_qt_init(self):
@@ -118,7 +112,6 @@ class AdobeEngine(sgtk.platform.Engine):
 
         :returns: dict
         """
-        # TODO: require Desktop to use Adobe integration? Always launch with desktop's python?
         base = {}
         from PySide import QtCore, QtGui
         base["qt_core"] = QtCore

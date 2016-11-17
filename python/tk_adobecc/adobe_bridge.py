@@ -98,6 +98,6 @@ class AdobeBridge(Communicator):
         # encode the python dict as json
         json_state = json.dumps(state)
 
-        # TODO: send to javascript
+        # send to javascript
         self._io.emit("set_state", json_state)
 

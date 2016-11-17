@@ -381,7 +381,6 @@ sg_manager.Manager = new function() {
             // TODO: send a progress callback here
         );
 
-        // TODO: python process should send context/state once bootstrapped
     };
 
     const _reload = function(event) {
@@ -402,6 +401,7 @@ sg_manager.Manager = new function() {
         // request relaunch
         sg_logging.debug(" Relaunching the manager...");
         _cs_interface.requestOpenExtension(extension_id);
+
     };
 
     const _setup_event_listeners = function() {
@@ -422,6 +422,7 @@ sg_manager.Manager = new function() {
 
     };
 
+    // TODO: remove this, but save as an example of the expected "state" structure
     const _tmp_send_state_info = function(event) {
 
         // XXX This is temp sim of the state being sent from python

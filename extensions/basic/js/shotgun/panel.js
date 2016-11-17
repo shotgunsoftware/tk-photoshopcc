@@ -96,6 +96,9 @@ sg_panel.Panel = new function() {
 
     this.set_state = function(state) {
 
+        // TODO: display the description as a tooltip or expandable content?
+        // TODO: handle case where no icon is provided
+
         // TODO: document required command object contents once settled.
         _set_header(state["context"]["display"]);
 
@@ -103,23 +106,21 @@ sg_panel.Panel = new function() {
         var commands_html = "";
         const commands = state["commands"];
 
-        for(var i = 0; i < commands.length; i++) {
-            const command = commands[i];
+        commands.forEach(function(command) {
             if (command.hasOwnProperty("id") &&
                 command.hasOwnProperty("display_name") &&
                 command.hasOwnProperty("icon_path")) {
-                    const command_id = command["id"];
-                    const display_name = command["display_name"];
-                    const icon_path = command["icon_path"];
-                    commands_html +=
-                        "<a href='#' onClick='sg_panel.REGISTERED_COMMAND_TRIGGERED.emit(\"" + command_id + "\")'>" +
-                        "<img align='middle' src='" + icon_path + "' width='24'> " + display_name +
-                        "</a><br><br>";
+                const command_id = command["id"];
+                const display_name = command["display_name"];
+                const icon_path = command["icon_path"];
+                commands_html +=
+                    "<a href='#' onClick='sg_panel.REGISTERED_COMMAND_TRIGGERED.emit(\"" + command_id + "\")'>" +
+                    "<img align='middle' src='" + icon_path + "' width='24'> " + display_name +
+                    "</a><br><br>";
             }
-        }
+        });
 
         _set_contents(commands_html);
-
     };
 
     // ---- private methods
@@ -227,11 +228,6 @@ sg_panel.Panel = new function() {
     const _setup_event_listeners = function() {
         // Sets up all the event handling callbacks.
 
-        // TODO: create an error object that can encapsulate
-        //       an error message as well as a stack trace.
-        //       make the panel UI able to display the stack
-        //       trace in a reasonable way.
-
         // Handle python process disconnected
         sg_manager.CRITICAL_ERROR.connect(_on_critical_error);
 
@@ -262,23 +258,21 @@ sg_panel.Panel = new function() {
 
     // ---- html update methods
 
-    const _set_contents = function(html) {
-        // Convenience method for updating panel contents with supplied html
-        _set_div_html(_panel_div_ids["contents"], html);
-    };
-
-    const _set_footer = function(html) {
-        // Convenience method for updating panel footer with supplied html
-        _set_div_html(_panel_div_ids["footer"], html);
-    };
-    const _set_header = function(html) {
-        // Convenience method for updating panel header with supplied html
-        _set_div_html(_panel_div_ids["header"], html);
-    };
-
-    const _set_div_html = function(div, html) {
+    const _set_div_html = function(div_id, html) {
         // Updates the inner HTML of the supplied div with the supplied HTML
-        document.getElementById(div).innerHTML = html;
+        document.getElementById(div_id).innerHTML = html;
     };
+
+    const _set_div_html_by_id = function(div_id) {
+        return function(html) {
+            // Convenience method for updating panel contents with supplied html
+            _set_div_html(_panel_div_ids[div_id], html);
+        };
+    };
+
+    const _set_contents = _set_div_html_by_id("contents");
+    const _set_header = _set_div_html_by_id("header");
+    const _set_footer = _set_div_html_by_id("footer");
+
 };
 
