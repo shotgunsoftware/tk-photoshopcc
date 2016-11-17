@@ -13,6 +13,17 @@
 // namespace
 var sg_socket_io = sg_socket_io || {};
 
+sg_socket_io.io = undefined;
+
+sg_socket_io.rpc_log = function(level, message) {
+    if ( sg_socket_io.io != undefined ) {
+        var msg = {};
+        msg.level = level;
+        msg.message = message;
+        sg_socket_io.io.emit("logging", JSON.stringify(msg));
+    }
+};
+
 sg_socket_io.SocketManager = new function() {
     var self = this;
     var io = undefined;
@@ -32,9 +43,16 @@ sg_socket_io.SocketManager = new function() {
     };
 
     this.start_socket_server = function (port, csLib) {
+<<<<<<< HEAD
         var path = require("path");
         var jrpc = require("jrpc");
         io = require("socket.io").listen(port);
+=======
+        var path = require('path');
+        var jrpc = require('jrpc');
+        var io = require('socket.io').listen(port);
+        sg_socket_io.io = io;
+>>>>>>> master
 
         sg_logging.info("Listening on port " + JSON.stringify(port));
 

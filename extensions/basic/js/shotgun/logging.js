@@ -21,40 +21,43 @@ sg_event.create_event(sg_logging, "LOG_MESSAGE");
 
 // ---- Interface
 
-sg_logging.debug = function(message) {
-    // Debug logging
-    sg_logging._log('debug', message);
+// The rpc interface will be assigned by the manager once
+// the server has been spun up.
+sg_logging.rpc = undefined;
+
+sg_logging._get_logger_by_level = function(level, send_to_rpc) {
+    return function(message) {
+        sg_logging._log(level, message, send_to_rpc);
+    };
 };
 
-sg_logging.error = function(message) {
-    // Error logging
-    sg_logging._log('error', message);
+sg_logging._log_rpc = function(level, message) {
+    if ( sg_logging.rpc != undefined ) {
+        sg_logging.rpc.rpc_log(level, message);
+    }
 };
 
-sg_logging.info = function(message) {
-    // Info logging
-    sg_logging._log('info', message);
+sg_logging._log = function(level, message, send_to_rpc) {
+    // Attempt to send the log message to the socket.io server to
+    // be emitted to clients.
+    if ( send_to_rpc && sg_logging.rpc != undefined ) {
+        sg_logging._log_rpc(level, message);
+    }
+    else {
+        // send a log message. this should be received and processed by the
+        // panel extension. that's where the user will have access to the
+        // flyout menu where they can click and go to the console.
+        sg_logging.LOG_MESSAGE.emit(
+            {
+                level: level,
+                message: message
+            }
+        );
+    }
 };
 
-sg_logging.log = function(message) {
-    // Standard logging
-    sg_logging._log('log', message);
-};
-
-sg_logging.warn = function(message) {
-    // Warning logging
-    sg_logging._log('warn', message);
-};
-
-sg_logging._log = function(level, message) {
-
-    // send a log message. this should be received and processed by the
-    // panel extension. that's where the user will have access to the
-    // flyout menu where they can click and go to the console.
-    sg_logging.LOG_MESSAGE.emit(
-        {
-            level: level,
-            message: message
-        }
-    );
-};
+sg_logging.debug = sg_logging._get_logger_by_level("debug", true);
+sg_logging.error = sg_logging._get_logger_by_level("error", true);
+sg_logging.info = sg_logging._get_logger_by_level("info", true);
+sg_logging.log = sg_logging._get_logger_by_level("log", false);
+sg_logging.warn = sg_logging._get_logger_by_level("warn", true);
