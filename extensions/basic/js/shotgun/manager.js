@@ -416,46 +416,11 @@ sg_manager.Manager = new function() {
             // TODO: do the proper thing here...
             // TODO: post an event for the client to handle
             function(event) {
-                alert("panel.js: Registered Command Triggered: " + event.data)
+                sg_logging.debug("Registered Command Triggered: " + event.data)
+                sg_socket_io.rpc_command(event.data)
             }
         );
 
-    };
-
-    // TODO: remove this, but save as an example of the expected "state" structure
-    const _tmp_send_state_info = function(event) {
-
-        // XXX This is temp sim of the state being sent from python
-        const state = {
-            context: {
-                display: "Awesome Asset 01"
-            },
-            commands: [
-                {
-                    id: "command_id_1",
-                    display_name: "Python Console",
-                    icon_path: "../images/tmp/command1.png"
-                },
-                {
-                    id: "command_id_2",
-                    display_name: "Command B",
-                    icon_path: "../images/tmp/command2.png"
-                },
-                {
-                    id: "command_id_3",
-                    display_name: "Command C",
-                    icon_path: "../images/tmp/command3.png"
-                },
-                {
-                    id: "command_id_4",
-                    display_name: "Command D",
-                    icon_path: "../images/tmp/command4.png"
-                }
-            ]
-        };
-
-        sg_manager.UPDATE_STATE.emit(state);
-        // XXX End temporary simulation
     };
 };
 

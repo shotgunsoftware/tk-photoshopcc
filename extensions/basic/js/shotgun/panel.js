@@ -107,16 +107,16 @@ sg_panel.Panel = new function() {
         const commands = state["commands"];
 
         commands.forEach(function(command) {
-            if (command.hasOwnProperty("id") &&
+            if (command.hasOwnProperty("uid") &&
                 command.hasOwnProperty("display_name") &&
                 command.hasOwnProperty("icon_path")) {
-                const command_id = command["id"];
-                const display_name = command["display_name"];
-                const icon_path = command["icon_path"];
-                commands_html +=
-                    "<a href='#' onClick='sg_panel.REGISTERED_COMMAND_TRIGGERED.emit(\"" + command_id + "\")'>" +
-                    "<img align='middle' src='" + icon_path + "' width='24'> " + display_name +
-                    "</a><br><br>";
+                    const command_id = command["uid"];
+                    const display_name = command["display_name"];
+                    const icon_path = command["icon_path"];
+                    commands_html +=
+                        "<a href='#' onClick='sg_panel.REGISTERED_COMMAND_TRIGGERED.emit(\"" + command_id + "\")'>" +
+                        "<img align='middle' src='" + icon_path + "' width='24'> " + display_name +
+                        "</a><br><br>";
             }
         });
 

@@ -16,14 +16,55 @@
     # TODO: get remote objects/classes
     # TODO: wrap save as
 
-import json
+import os
+import functools
+import threading
+
 import sgtk
+from sgtk.platform.qt import QtCore
 
 # use api json to cover py 2.5
 from tank_vendor import shotgun_api3
 json = shotgun_api3.shotgun.json
 
 from .rpc import Communicator
+
+##########################################################################################
+# functions
+
+def timeout(seconds=5.0, error_message="Timed out."):
+    """
+    A timeout decorator. When the given amount of time has passed
+    after the decorated callable is called, if it has not completed
+    an RPCTimeoutError is raised.
+
+    :param float seconds: The timeout duration, in seconds.
+    :param str error_message: The error message to raise once timed out.
+    """
+    def decorator(func):
+        def _handle_timeout():
+            raise RPCTimeoutError(error_message)
+
+        def wrapper(*args, **kwargs):
+            timer = threading.Timer(float(seconds), _handle_timeout)
+            try:
+                result = func(*args, **kwargs)
+            finally:
+                timer.cancel()
+            return result
+
+        return functools.wraps(func)(wrapper)
+    return decorator
+
+##########################################################################################
+# classes
+
+class MessageEmitter(QtCore.QObject):
+    """
+    Emits incoming socket.io messages as Qt signals.
+    """
+    logging_received = QtCore.Signal(str, str)
+    command_received = QtCore.Signal(int)
 
 
 class AdobeBridge(Communicator):
@@ -33,71 +74,77 @@ class AdobeBridge(Communicator):
     This is where we put logic that allows the two ends to communicate.
     """
 
-    def __init__(self, engine, *args, **kwargs):
-
+    def __init__(self, *args, **kwargs):
         super(AdobeBridge, self).__init__(*args, **kwargs)
 
-        self._commands_by_id = {}
-        self._engine = engine
+        self._emitter = MessageEmitter()
         self._io.on("logging", self._forward_logging)
+        self._io.on("command", self._forward_command)
 
-    def _forward_logging(self, response):
-        command_map = dict(
-            debug=self._engine.log_debug,
-            error=self._engine.log_error,
-            info=self._engine.log_info,
-            warn=self._engine.log_warning,
-        )
+    ##########################################################################################
+    # properties
 
-        response = json.loads(response)
+    @property
+    def logging_received(self):
+        """
+        The QSignal that is emitted when a logging message has arrived
+        via RPC.
+        """
+        return self._emitter.logging_received
 
-        if response.get("level") in command_map:
-            command_map[response["level"]](
-                "[ADOBE] %s" % response.get("message")
-            )
+    @property
+    def command_received(self):
+        """
+        The QSignal that is emitted when a command message has arrived
+        via RPC.
+        """
+        return self._emitter.command_received
 
-    def send_state(self):
+    ##########################################################################################
+    # public methods
+
+    def send_state(self, state):
         """
         Responsible for forwarding the current SG state to javascript.
 
         This method knows about the structure of the json that the js side
         expects. We provide display info and we also
         """
-
-        # get the current engine
-        engine = sgtk.platform.current_engine()
-
-        # TODO: thumbnail path for current context? query & update if unavailable
-
-        state = {
-            "context": {
-                "display": str(engine.context),
-            },
-            "commands": []
-        }
-
-        for (command_name, command_info) in engine.commands.iteritems():
-
-            command_id = "command_%s" % (command_name,)
-
-            properties = command_info.get("properties", {})
-
-            command = {
-                "id": command_id,
-                "display_name": command_name,
-                "icon_path": properties.get("icon"),
-                "description": properties.get("description")
-            }
-
-            state["commands"].append(command)
-
-            self._commands_by_id[command_id] = command_info
-
-        engine.log_debug("Sending state: " + str(state))
-
         # encode the python dict as json
         json_state = json.dumps(state)
-
-        # send to javascript
         self._io.emit("set_state", json_state)
+
+    @timeout()
+    def wait(self, timeout=0.1):
+        """
+        Triggers a wait call in the underlying socket.io server. This wait
+        can get hung up if the server is killed, so this methods breaks at
+        5 seconds of duration and raises RPCTimeoutError if it does.
+
+        :param float timeout: The wait duration, in seconds.
+        """
+        super(AdobeBridge, self).wait(timeout)
+
+    ##########################################################################################
+    # internal methods
+
+    def _forward_command(self, response):
+        self.command_received.emit(int(json.loads(response)))
+
+    def _forward_logging(self, response):
+        response = json.loads(response)
+        self.logging_received.emit(
+            response.get("level"),
+            response.get("message"),
+        )
+
+##########################################################################################
+# exceptions
+
+class RPCTimeoutError(Exception):
+    """
+    Raised when an RPC event times out.
+    """
+    pass
+
 

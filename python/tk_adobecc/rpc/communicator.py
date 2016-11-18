@@ -42,6 +42,9 @@ class Communicator(object):
 
         self._get_global_scope()
 
+    ##########################################################################################
+    # constructor
+
     @classmethod
     def get_or_create(cls, identifier, *args, **kwargs):
         if identifier in cls.__REGISTRY:
@@ -51,6 +54,9 @@ class Communicator(object):
             cls.__REGISTRY[identifier] = instance
         return instance
 
+    ##########################################################################################
+    # properties
+
     @property
     def host(self):
         return self._host
@@ -58,6 +64,12 @@ class Communicator(object):
     @property
     def port(self):
         return self._port
+
+    ##########################################################################################
+    # RPC
+
+    def ping(self):
+        self._io._ping()
 
     def rpc_call(self, proxy_object, params=[], parent=None):
         if parent:
@@ -124,6 +136,12 @@ class Communicator(object):
 
         return ProxyWrapper(results, self)
 
+    def wait(self, timeout=0.1):
+        self._io.wait(float(timeout))
+
+    ##########################################################################################
+    # internal methods
+
     def _get_global_scope(self):
         payload = self._get_payload("get_global_scope")
 
@@ -161,6 +179,9 @@ class Communicator(object):
             except ValueError:
                 self._RESULTS[uid] = result.get("result")
 
+    ##########################################################################################
+    # private methods
+
     def __get_uid(self):
         with self._LOCK:
             self._UID += 1
@@ -187,6 +208,9 @@ class Communicator(object):
         results = self._RESULTS[uid]
         del self._RESULTS[uid]
         return results
+
+    ##########################################################################################
+    # magic methods
 
     def __getattr__(self, name):
         try:
