@@ -1,4 +1,4 @@
-# Copyright (c) 2013 Shotgun Software Inc.
+# Copyright (c) 2016 Shotgun Software Inc.
 # 
 # CONFIDENTIAL AND PROPRIETARY
 # 
@@ -8,19 +8,17 @@
 # agreement to the Shotgun Pipeline Toolkit Source Code License. All rights 
 # not expressly granted therein are reserved by Shotgun Software Inc.
 
-"""
-A Adobe engine for Toolkit.
-"""
-
 import os
 import threading
 
 import sgtk
 
 
-###############################################################################################
-# The Toolkit Adobe engine
 class AdobeEngine(sgtk.platform.Engine):
+    """
+    An Adobe CC engine for Shotgun Toolkit.
+    """
+
     ENV_COMMUNICATION_PORT_NAME = "SHOTGUN_ADOBE_PORT"
     CHECK_CONNECTION_TIMEOUT = 1000
     _COMMAND_UID_COUNTER = 0
@@ -37,8 +35,8 @@ class AdobeEngine(sgtk.platform.Engine):
             port=os.environ.get(self.ENV_COMMUNICATION_PORT_NAME),
         )
 
-        self.adobe.emitter.logging_received.connect(self._handle_logging)
-        self.adobe.emitter.command_received.connect(self._handle_command)
+        self.adobe.logging_received.connect(self._handle_logging)
+        self.adobe.command_received.connect(self._handle_command)
 
     def post_app_init(self):
 
@@ -66,7 +64,7 @@ class AdobeEngine(sgtk.platform.Engine):
 
         # since this is running in our own Qt event loop, we'll use the bundled
         # dark look and feel. breaking encapsulation to do so.
-        self.log_debug("Initializing dark look and feel...")
+        self.log_debug("Initializing default styling...")
         self._initialize_dark_look_and_feel()
 
         # setup the check connection timer.
@@ -108,16 +106,18 @@ class AdobeEngine(sgtk.platform.Engine):
         app.quit()
 
     def _check_connection(self):
-
-        # TODO: refactor this into appropriate calls
         try:
-            self.adobe._io._ping()
-        except:
+            self.adobe.ping()
+        except Exception:
             self.disconnected()
         else:
+            tk_adobecc = self.import_module("tk_adobecc")
             # Will allow queued up messages (like logging calls)
             # to be handled on the Python end.
-            self.adobe._io.wait(0.01)
+            try:
+                self.adobe.wait(0.01)
+            except tk_adobecc.RPCTimeoutError:
+                self.disconnected()
 
     def _handle_command(self, uid):
         for command in self.commands.values():

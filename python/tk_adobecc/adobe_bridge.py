@@ -16,15 +16,48 @@
     # TODO: get remote objects/classes
     # TODO: wrap save as
 
-import sgtk
+import os
+import functools
+import threading
 
-from sgtk.platform.qt import QtCore, QtGui
+import sgtk
+from sgtk.platform.qt import QtCore
 
 # use api json to cover py 2.5
 from tank_vendor import shotgun_api3
 json = shotgun_api3.shotgun.json
 
 from .rpc import Communicator
+
+##########################################################################################
+# functions
+
+def timeout(seconds=5.0, error_message="Timed out."):
+    """
+    A timeout decorator. When the given amount of time has passed
+    after the decorated callable is called, if it has not completed
+    an RPCTimeoutError is raised.
+
+    :param float seconds: The timeout duration, in seconds.
+    :param str error_message: The error message to raise once timed out.
+    """
+    def decorator(func):
+        def _handle_timeout():
+            raise RPCTimeoutError(error_message)
+
+        def wrapper(*args, **kwargs):
+            timer = threading.Timer(float(seconds), _handle_timeout)
+            try:
+                result = func(*args, **kwargs)
+            finally:
+                timer.cancel()
+            return result
+
+        return functools.wraps(func)(wrapper)
+    return decorator
+
+##########################################################################################
+# classes
 
 class MessageEmitter(QtCore.QObject):
     """
@@ -52,8 +85,20 @@ class AdobeBridge(Communicator):
     # properties
 
     @property
-    def emitter(self):
-        return self._emitter
+    def logging_received(self):
+        """
+        The QSignal that is emitted when a logging message has arrived
+        via RPC.
+        """
+        return self._emitter.logging_received
+
+    @property
+    def command_received(self):
+        """
+        The QSignal that is emitted when a command message has arrived
+        via RPC.
+        """
+        return self._emitter.command_received
 
     ##########################################################################################
     # public methods
@@ -69,16 +114,36 @@ class AdobeBridge(Communicator):
         json_state = json.dumps(state)
         self._io.emit("set_state", json_state)
 
+    @timeout()
+    def wait(self, timeout=0.1):
+        """
+        Triggers a wait call in the underlying socket.io server. This wait
+        can get hung up if the server is killed, so this methods breaks at
+        5 seconds of duration and raises RPCTimeoutError if it does.
+
+        :param float timeout: The wait duration, in seconds.
+        """
+        super(AdobeBridge, self).wait(timeout)
+
     ##########################################################################################
     # internal methods
 
     def _forward_command(self, response):
-        self.emitter.command_received.emit(int(json.loads(response)))
+        self.command_received.emit(int(json.loads(response)))
 
     def _forward_logging(self, response):
         response = json.loads(response)
-        self.emitter.logging_received.emit(
+        self.logging_received.emit(
             response.get("level"),
             response.get("message"),
         )
+
+##########################################################################################
+# exceptions
+
+class RPCTimeoutError(Exception):
+    """
+    Raised when an RPC event times out.
+    """
+    pass
 

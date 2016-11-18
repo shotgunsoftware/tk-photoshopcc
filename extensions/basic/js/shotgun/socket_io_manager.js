@@ -114,7 +114,7 @@ sg_socket_io.SocketManager = new function() {
                 // Args: [class_name]
                 var class_name = JSON.stringify(params.shift());
                 var cmd = "rpc_new(" + class_name + ")";
-                sg_logging.info(cmd);
+                sg_logging.debug(cmd);
 
                 csLib.evalScript(
                     cmd,
@@ -131,7 +131,7 @@ sg_socket_io.SocketManager = new function() {
                 var args = [base.__uniqueid, JSON.stringify(property)].join();
 
                 var cmd = "rpc_get(" + args + ")";
-                sg_logging.info(cmd);
+                sg_logging.debug(cmd);
 
                 csLib.evalScript(
                     cmd,
@@ -149,7 +149,7 @@ sg_socket_io.SocketManager = new function() {
                 var args = [base.__uniqueid, index].join();
 
                 var cmd = "rpc_get_index(" + args + ")";
-                sg_logging.info(cmd);
+                sg_logging.debug(cmd);
 
                 csLib.evalScript(
                     cmd,
@@ -171,7 +171,7 @@ sg_socket_io.SocketManager = new function() {
                 ].join();
 
                 var cmd = "rpc_set(" + args + ")";
-                sg_logging.info(cmd);
+                sg_logging.debug(cmd);
 
                 csLib.evalScript(
                     cmd,
@@ -202,7 +202,7 @@ sg_socket_io.SocketManager = new function() {
                 }
 
                 var cmd = "rpc_call(" + args + ")";
-                sg_logging.info(cmd);
+                sg_logging.debug(cmd);
 
                 csLib.evalScript(
                     cmd,
@@ -229,7 +229,7 @@ sg_socket_io.SocketManager = new function() {
             remote.expose(new RPCInterface());
 
             socket.on("execute_command", function(message) {
-                sg_logging.info(JSON.stringify(message));
+                sg_logging.debug(JSON.stringify(message));
                 remote.receive(message);
             });
 
