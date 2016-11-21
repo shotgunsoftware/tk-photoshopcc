@@ -183,7 +183,22 @@ class AdobeEngine(sgtk.platform.Engine):
         :returns: the created widget_class instance
         """
         # TODO: ensure dialog is shown above CC
-        super(AdobeEngine, self).show_dialog(title, bundle, widget_class, *args, **kwargs)
+        if not self.has_ui:
+            self.log_error("Sorry, this environment does not support UI display! Cannot show "
+                           "the requested window '%s'." % title)
+            return None
+
+        # create the dialog:
+        dialog, widget = self._create_dialog_with_widget(title, bundle, widget_class, *args, **kwargs)
+
+        # show the dialog
+        dialog.show()
+
+        # raise the dialog to make sure it shows above CC product
+        dialog.raise_()
+
+        # lastly, return the instantiated widget
+        return widget
 
     def show_modal(self, title, bundle, widget_class, *args, **kwargs):
         """

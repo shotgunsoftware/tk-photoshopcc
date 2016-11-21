@@ -45,3 +45,13 @@ sg_constants.product_info = {
 
 };
 
+// This is simply a lookup of panel div ids. The keys of this should never
+// change.
+sg_constants.panel_div_ids = {
+    contents: "sg_panel_contents",
+    footer: "sg_panel_footer",
+    header: "sg_panel_header",
+    progress: "sg_progress",
+    progress_bar: "sg_progress_bar",
+    progress_label: "sg_progress_label"
+};
