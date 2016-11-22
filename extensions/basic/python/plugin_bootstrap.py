@@ -22,9 +22,7 @@ class _PyToJsLogHandler(logging.StreamHandler):
     Manually flushes emitted records for js to pickup.
     """
 
-    # TODO: this needs to be replaced with direct communication with the socket io server.
-    #       an instance of the engine name can be supplied and each emit() call can
-    #       get the communicator singleton instance in order to forward to js.
+    # TODO: only log according to current log level in engine settings
 
     def __init__(self, engine_name):
         """
@@ -46,6 +44,22 @@ class _PyToJsLogHandler(logging.StreamHandler):
         #       singleton instance and make a call to its logging method
         super(_PyToJsLogHandler, self).emit(record)
         self.flush()
+
+def progress_handler(value, message):
+    """
+    Writes the progress values in a special format that can be intercepted by
+    the panel during load.
+
+    :param value: A float (0-1) value representing startup progress percentage.
+    :param message: A message that indicates what is happening during startup.
+    """
+
+    # A three part message separated by "|" to help indicate boundaries. The
+    # panel will intercept logged strings of this format and translate them
+    # to the display.
+    sys.stdout.write("|PLUGIN_BOOTSTRAP_PROGRESS,%s,%s|" % (value, message))
+    sys.stdout.flush()
+
 
 def plugin_bootstrap(root_path, port, engine_name):
 
@@ -121,13 +135,13 @@ def toolkit_bootstrap(root_path, engine_name):
     # now get a logger use during bootstrap
     sgtk_logger = sgtk.LogManager.get_logger("extension_bootstrap")
     sgtk_logger.debug("Toolkit core path: %s" % (tk_core_path,))
-    sgtk_logger.debug("Booting up plugin with manifest %s" % manifest.BUILD_INFO)
 
     # set up the toolkit boostrap manager
     toolkit_mgr = sgtk.bootstrap.ToolkitManager()
     toolkit_mgr.plugin_id = manifest.plugin_id
     toolkit_mgr.base_configuration = manifest.base_configuration
     toolkit_mgr.bundle_cache_fallback_paths = [os.path.join(root_path, "bundle_cache")]
+    toolkit_mgr.progress_callback = progress_handler
     sgtk_logger.debug("Toolkit Manager: " + str(toolkit_mgr))
 
     # the engine name comes from the adobe side. it will be tk-<name> where

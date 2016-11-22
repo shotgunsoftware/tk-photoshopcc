@@ -191,14 +191,21 @@ sg_manager.Manager = new function() {
         // launch a separate process to bootstrap python with toolkit running...
         // > cd $ext_dir
         // > python /path/to/ext/bootstrap.py
-        var python_exe_path = "/Applications/Shotgun.app/Contents/Resources/Python/bin/python";
+
+        // use the system installed python
+        var python_exe_path = "python";
 
         if (process.env["SHOTGUN_ADOBECC_PYTHON"]) {
+            // use the python specified in the environment if it exists
             python_exe_path = process.env.SHOTGUN_ADOBECC_PYTHON;
         }
 
         sg_logging.debug("Spawning child process... ");
-        sg_logging.debug("Using Python: " + python_exe_path);
+        sg_logging.debug("Current working directory: " + plugin_python_path);
+        sg_logging.debug("Executing command: ");
+        sg_logging.debug("  " +
+            [python_exe_path, plugin_bootstrap_py, port, engine_name].join(" ")
+        );
 
         try {
             self.python_process = child_process.spawn(
@@ -214,7 +221,7 @@ sg_manager.Manager = new function() {
                     // start the process from this dir
                     cwd: plugin_python_path,
                     // the environment to use for bootstrapping
-                    env: process.env,
+                    env: process.env
                 }
             );
         }
