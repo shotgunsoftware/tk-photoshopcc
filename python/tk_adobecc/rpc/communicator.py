@@ -25,7 +25,7 @@ class Communicator(object):
     _LOCK = threading.Lock()
     _WAIT_INTERVAL = 0.01
     _RPC_EXECUTE_COMMAND = "execute_command"
-    __REGISTRY = dict()
+    _REGISTRY = dict()
 
     def __init__(self, port=8090, host="localhost", disconnect_callback=None):
         self._port = port
@@ -47,11 +47,11 @@ class Communicator(object):
 
     @classmethod
     def get_or_create(cls, identifier, *args, **kwargs):
-        if identifier in cls.__REGISTRY:
-            instance = cls.__REGISTRY[identifier]
+        if identifier in cls._REGISTRY:
+            instance = cls._REGISTRY[identifier]
         else:
             instance = cls(*args, **kwargs)
-            cls.__REGISTRY[identifier] = instance
+            cls._REGISTRY[identifier] = instance
         return instance
 
     ##########################################################################################
@@ -77,64 +77,52 @@ class Communicator(object):
         else:
             params.insert(0, None)
 
-        payload = self._get_payload(
-            "call",
-            proxy_object,
-            params,
+        return self.__run_rpc_command(
+            method="call",
+            proxy_object=proxy_object,
+            params=params,
+            wrapper_class=ProxyWrapper,
         )
 
-        self._io.emit(self._RPC_EXECUTE_COMMAND, payload)
-        results = self.__wait(payload["id"])
-
-        return ProxyWrapper(results, self)
+    def rpc_eval(self, command):
+        return self.__run_rpc_command(
+            method="eval",
+            proxy_object=None,
+            params=[command],
+            wrapper_class=ProxyWrapper,
+        )
 
     def rpc_get(self, proxy_object, property_name):
-        payload = self._get_payload(
-            "get",
-            proxy_object,
-            [property_name],
+        return self.__run_rpc_command(
+            method="get",
+            proxy_object=proxy_object,
+            params=[property_name],
+            wrapper_class=ProxyWrapper,
         )
-
-        self._io.emit(self._RPC_EXECUTE_COMMAND, payload)
-        results = self.__wait(payload["id"])
-
-        return ProxyWrapper(results, self, parent=proxy_object)
 
     def rpc_get_index(self, proxy_object, index):
-        payload = self._get_payload(
-            "get_index",
-            proxy_object,
-            [index],
+        return self.__run_rpc_command(
+            method="get_index",
+            proxy_object=proxy_object,
+            params=[index],
+            wrapper_class=ProxyWrapper,
         )
 
-        self._io.emit(self._RPC_EXECUTE_COMMAND, payload)
-        results = self.__wait(payload["id"])
-
-        return ProxyWrapper(results, self)
-
     def rpc_new(self, class_name):
-        payload = self._get_payload(
+        return self.__run_rpc_command(
             method="new",
             proxy_object=None,
             params=[class_name],
+            wrapper_class=ClassInstanceProxyWrapper,
         )
-
-        self._io.emit(self._RPC_EXECUTE_COMMAND, payload)
-        results = self.__wait(payload["id"])
-
-        return ClassInstanceProxyWrapper(results, self)
 
     def rpc_set(self, proxy_object, property_name, value):
-        payload = self._get_payload(
-            "set",
-            proxy_object,
-            [property_name, value],
+        return self.__run_rpc_command(
+            method="set",
+            proxy_object=proxy_object,
+            params=[property_name, value],
+            wrapper_class=ProxyWrapper,
         )
-
-        self._io.emit(self._RPC_EXECUTE_COMMAND, payload)
-        results = self.__wait(payload["id"])
-
-        return ProxyWrapper(results, self)
 
     def wait(self, timeout=0.1):
         self._io.wait(float(timeout))
@@ -200,6 +188,18 @@ class Communicator(object):
                 processed.append(param)
 
         return processed
+
+    def __run_rpc_command(self, method, proxy_object, params, wrapper_class):
+        payload = self._get_payload(
+            method=method,
+            proxy_object=proxy_object,
+            params=params,
+        )
+
+        self._io.emit(self._RPC_EXECUTE_COMMAND, payload)
+        results = self.__wait(payload["id"])
+
+        return wrapper_class(results, self)
 
     def __wait(self, uid):
         while uid not in self._RESULTS:

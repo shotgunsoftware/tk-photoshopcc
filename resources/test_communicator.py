@@ -4,16 +4,17 @@ import sys
 
 sys.path.append("/Users/jeff/Documents/repositories/tk-framework-adobe/extensions/http_server/python")
 sys.path.append("d:/repositories/tk-adobecc/python")
+sys.path.append("d:/repositories/tk-core/python")
 
-from adobecc import Communicator
+from tk_adobecc import AdobeBridge
 
-adobe = Communicator()
+adobe = AdobeBridge(port=55605)
 
 # Get the active document.
 # ad = adobe.app.activeDocument
 
 # Show the File->Open dialog.
-# adobe.app.openDialog()
+adobe.app.openDialog()
 
 # Pop up a message/alert dialog.
 # adobe.alert("WOOT")
@@ -35,27 +36,27 @@ adobe = Communicator()
 
 
 # Export a file for the web for each layer of the active document.
-doc = adobe.app.activeDocument
-layers = doc.artLayers
-layers = [layers[i] for i in xrange(layers.length)]
-original_visibility = [layer.visible for layer in layers]
+# doc = adobe.app.activeDocument
+# layers = doc.artLayers
+# layers = [layers[i] for i in xrange(layers.length)]
+# original_visibility = [layer.visible for layer in layers]
 
-save_for_web = adobe.ExportType.SAVEFORWEB
-export_options = adobe.ExportOptionsSaveForWeb()
+# save_for_web = adobe.ExportType.SAVEFORWEB
+# export_options = adobe.ExportOptionsSaveForWeb()
 
-for layer in layers:
-    layer.visible = False
+# for layer in layers:
+#     layer.visible = False
 
-for layer in layers:
-    layer.visible = True
-    out_file = adobe.File("c:/YES.%s.jpg" % str(layer.name))
-    doc.exportDocument(
-        out_file,
-        save_for_web,
-        export_options,
-    )
-    layer.visible = False
+# for layer in layers:
+#     layer.visible = True
+#     out_file = adobe.File("c:/YES.%s.jpg" % str(layer.name))
+#     doc.exportDocument(
+#         out_file,
+#         save_for_web,
+#         export_options,
+#     )
+#     layer.visible = False
 
-for (i, layer) in enumerate(layers):
-    layer.visible = original_visibility[i]
+# for (i, layer) in enumerate(layers):
+#     layer.visible = original_visibility[i]
 
