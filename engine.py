@@ -23,6 +23,7 @@ class AdobeEngine(sgtk.platform.Engine):
     ENV_COMMUNICATION_PORT_NAME = "SHOTGUN_ADOBE_PORT"
     ENV_APPID_NAME = "SHOTGUN_ADOBE_APPID"
     CHECK_CONNECTION_TIMEOUT = 1000
+    TEST_SCRIPT_BASENAME = "run_tests.py"
 
     _COMMAND_UID_COUNTER = 0
     _LOCK = threading.Lock()
@@ -168,7 +169,7 @@ class AdobeEngine(sgtk.platform.Engine):
             # Make sure we can find the run_tests.py file within the root
             # that was specified in the environment.
             self.log_debug("Test root path found. Looking for run_tests.py.")
-            test_module = os.path.join(tests_root, "run_tests.py")
+            test_module = os.path.join(tests_root, self.TEST_SCRIPT_BASENAME)
 
             if not os.path.exists(test_module):
                 self.log_error(
