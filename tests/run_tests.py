@@ -1,16 +1,14 @@
 
-import os.path
 import sys
+import unittest
+import rpc_tests
 
-python_path = os.path.abspath(
-    os.path.join(
-        os.path.dirname(__file__),
-        "..",
-        "python",
-    ),
-)
+def run_tests(engine):
 
-print ""
-print "Prepending to sys.path: %s" % python_path
-sys.path = [python_path] + sys.path
+    engine.log_debug("Getting test suite...")
+    suite = rpc_tests.get_tests_by_app_id(engine.app_id, engine.adobe)
 
+    engine.log_debug("Running test suite...")
+    unittest.TextTestRunner().run(suite)
+
+    engine.log_debug("Testing finished.")

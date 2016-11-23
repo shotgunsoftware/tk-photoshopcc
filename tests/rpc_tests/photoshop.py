@@ -10,22 +10,39 @@
 
 import os
 
-from .. import TestAdobeRPC
+from . import TestAdobeRPC
 
 class TestPhotoshopRPC(TestAdobeRPC):
+    document = None
 
-    def setUp(self):
-        super(TestPhotoshopRPC, self).setUp()
-        self.document = self.adobe.app.open(
-            self.adobe.File(os.path.join(self.resources,"empty.psd")),
+    @classmethod
+    def setUpClass(cls):
+        TestAdobeRPC.setUpClass()
+        cls.document = cls.adobe.app.open(
+            cls.adobe.File(os.path.join(cls.resources,"empty.psd")),
         )
-        self.assertEqual(self.document, self.adobe.activeDocument)
+
+    @classmethod
+    def tearDownClass(cls):
+        TestAdobeRPC.tearDownClass()
+        cls.document.close(
+            cls.adobe.SaveOptions.DONOTSAVECHANGES,
+        )
+
+    def test_active_document(self):
+        self.assertEqual(
+            self.document.fullName.path,
+            self.adobe.app.activeDocument.fullName.path,
+        )
 
     def test_layer_create_and_delete(self):
-        art_layers = self.adobe.activeDocument.artLayers
+        art_layers = self.document.artLayers
         current_layers = art_layers.length
+
         self.assertTrue(isinstance(current_layers, int))
-        artLayers.add()
-        self.assertTrue(artLayers.length > current_layers)
-        artLayers[0].remove()
-        self.assertEqual(artLayers.length, current_layers)
+
+        art_layers.add()
+        self.assertTrue(art_layers.length > current_layers)
+
+        art_layers[0].remove()
+        self.assertEqual(art_layers.length, current_layers)

@@ -11,34 +11,19 @@
 import unittest
 import os
 
-from tk_adobecc import AdobeBridge
-from tk_adobecc.rpc import Communicator
-
 class TestAdobeRPC(unittest.TestCase):
+    adobe = None
+    resources = None
 
-    def setUp(self):
-        self.resources = os.path.abspath(
+    @classmethod
+    def setUpClass(cls):
+        cls.resources = os.path.abspath(
             os.path.join(
                 os.path.dirname(__file__),
                 "..",
                 "resources",
             ),
         )
-
-        # Since we're requiring that these tests be run from
-        # within an Adobe product with Shotgun integration active,
-        # we can assume that a bridge communicator is already available
-        # and use that.
-        if not AdobeBrige._REGISTRY:
-            raise RuntimeError(
-                "These tests must be run from within an Adobe product "
-                "with Shotgun integration active."
-            )
-
-        identifier = AdobeBridge._REGISTRY.keys()[:1]
-        self.adobe = AdobeBridge.get_or_create(identifier)
-        self.assertTrue(isinstance(self.adobe, AdobeBridge))
-        self.assertTrue(isinstance(self.adobe, Communicator))
 
     def test_simple_eval(self):
         result = self.adobe.rpc_eval("1 + 1")

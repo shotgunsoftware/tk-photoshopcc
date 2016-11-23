@@ -65,6 +65,7 @@ class MessageEmitter(QtCore.QObject):
     """
     logging_received = QtCore.Signal(str, str)
     command_received = QtCore.Signal(int)
+    run_tests_request_received = QtCore.Signal()
 
 
 class AdobeBridge(Communicator):
@@ -80,6 +81,7 @@ class AdobeBridge(Communicator):
         self._emitter = MessageEmitter()
         self._io.on("logging", self._forward_logging)
         self._io.on("command", self._forward_command)
+        self._io.on("run_tests", self._forward_run_tests)
 
     ##########################################################################################
     # properties
@@ -87,7 +89,7 @@ class AdobeBridge(Communicator):
     @property
     def logging_received(self):
         """
-        The QSignal that is emitted when a logging message has arrived
+        The signal that is emitted when a logging message has arrived
         via RPC.
         """
         return self._emitter.logging_received
@@ -95,10 +97,18 @@ class AdobeBridge(Communicator):
     @property
     def command_received(self):
         """
-        The QSignal that is emitted when a command message has arrived
+        The signal that is emitted when a command message has arrived
         via RPC.
         """
         return self._emitter.command_received
+
+    @property
+    def run_tests_request_received(self):
+        """
+        The signal that is emitted when a run_tests message has arrived
+        via RPC.
+        """
+        return self._emitter.run_tests_request_received
 
     ##########################################################################################
     # public methods
@@ -137,6 +147,9 @@ class AdobeBridge(Communicator):
             response.get("level"),
             response.get("message"),
         )
+
+    def _forward_run_tests(self, response):
+        self.run_tests_request_received.emit()
 
 ##########################################################################################
 # exceptions

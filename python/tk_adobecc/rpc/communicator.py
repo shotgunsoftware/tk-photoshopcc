@@ -98,6 +98,7 @@ class Communicator(object):
             proxy_object=proxy_object,
             params=[property_name],
             wrapper_class=ProxyWrapper,
+            attach_parent=proxy_object,
         )
 
     def rpc_get_index(self, proxy_object, index):
@@ -189,7 +190,7 @@ class Communicator(object):
 
         return processed
 
-    def __run_rpc_command(self, method, proxy_object, params, wrapper_class):
+    def __run_rpc_command(self, method, proxy_object, params, wrapper_class, attach_parent=None):
         payload = self._get_payload(
             method=method,
             proxy_object=proxy_object,
@@ -199,7 +200,7 @@ class Communicator(object):
         self._io.emit(self._RPC_EXECUTE_COMMAND, payload)
         results = self.__wait(payload["id"])
 
-        return wrapper_class(results, self)
+        return wrapper_class(results, self, parent=attach_parent)
 
     def __wait(self, uid):
         while uid not in self._RESULTS:

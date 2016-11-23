@@ -208,7 +208,8 @@ sg_manager.Manager = new function() {
                     // path to the python bootstrap script
                     plugin_bootstrap_py,
                     port,
-                    engine_name
+                    engine_name,
+                    app_id
                 ],
                 {
                     // start the process from this dir
@@ -416,8 +417,16 @@ sg_manager.Manager = new function() {
             // TODO: do the proper thing here...
             // TODO: post an event for the client to handle
             function(event) {
-                sg_logging.debug("Registered Command Triggered: " + event.data)
-                sg_socket_io.rpc_command(event.data)
+                sg_logging.debug("Registered Command Triggered: " + event.data);
+                sg_socket_io.rpc_command(event.data);
+            }
+        );
+
+        // Handle requests for test running.
+        sg_panel.RUN_TESTS.connect(
+            function(event) {
+                sg_logging.debug("Requesting that tk_adobecc run tests...");
+                sg_socket_io.rpc_run_tests();
             }
         );
 
