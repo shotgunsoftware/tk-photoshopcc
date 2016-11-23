@@ -8,6 +8,7 @@
 # agreement to the Shotgun Pipeline Toolkit Source Code License. All rights 
 # not expressly granted therein are reserved by Shotgun Software Inc.
 
+import sys
 import os
 import threading
 
@@ -20,11 +21,16 @@ class AdobeEngine(sgtk.platform.Engine):
     """
 
     ENV_COMMUNICATION_PORT_NAME = "SHOTGUN_ADOBE_PORT"
+    ENV_APPID_NAME = "SHOTGUN_ADOBE_APPID"
     CHECK_CONNECTION_TIMEOUT = 1000
+
     _COMMAND_UID_COUNTER = 0
     _LOCK = threading.Lock()
 
     def pre_app_init(self):
+        # TODO: We need to pass across id,name,displayname and have a
+        # property for each. Like this: AEFT,aftereffects,After Effects
+        self._app_id = os.environ.get(self.ENV_APPID_NAME)
 
         tk_adobecc = self.import_module("tk_adobecc")
 
@@ -37,6 +43,7 @@ class AdobeEngine(sgtk.platform.Engine):
 
         self.adobe.logging_received.connect(self._handle_logging)
         self.adobe.command_received.connect(self._handle_command)
+        self.adobe.run_tests_request_received.connect(self._run_tests)
 
     def post_app_init(self):
 
@@ -114,11 +121,22 @@ class AdobeEngine(sgtk.platform.Engine):
                 self.disconnected()
 
     def _handle_command(self, uid):
+        """
+        Handles an RPC engine command execution request.
+
+        :param int uid: The unique id of the engine command to run.
+        """
         for command in self.commands.values():
             if command.get("properties", dict()).get("uid") == uid:
                 command["callback"]()
 
     def _handle_logging(self, level, message):
+        """
+        Handles an RPC logging request.
+
+        :param str level: One of "debug", "info", "warning", or "error".
+        :param str message: The log message.
+        """
         command_map = dict(
             debug=self.log_debug,
             error=self.log_error,
@@ -131,12 +149,81 @@ class AdobeEngine(sgtk.platform.Engine):
             # native logging from Python.
             command_map[level]("[ADOBE] %s" % message)
 
+    def _run_tests(self):
+        """
+        Runs the test suite for the tk-adobecc bundle.
+        """
+        # If we don't know what the tests root directory path is
+        # via the environment, then we shouldn't be here.
+        try:
+            tests_root = os.environ["SHOTGUN_ADOBECC_TESTS_ROOT"]
+        except KeyError:
+            self.log_error(
+                "The SHOTGUN_ADOBECC_TESTS_ROOT environment variable "
+                "must be set to the root directory of the tests to be "
+                "run. Not running tests!"
+            )
+            return
+        else:
+            # Make sure we can find the run_tests.py file within the root
+            # that was specified in the environment.
+            self.log_debug("Test root path found. Looking for run_tests.py.")
+            test_module = os.path.join(tests_root, "run_tests.py")
+
+            if not os.path.exists(test_module):
+                self.log_error(
+                    "Unable to find run_tests.py in the directory "
+                    "specified by the SHOTGUN_ADOBECC_TESTS_ROOT "
+                    "environment variable. Not running tests!"
+                )
+                return
+
+        self.log_debug("Found run_tests.py. Importing to run tests.")
+
+        try:
+            # We need to prepend to sys.path. We'll set it back to
+            # what it was before once we're done running the tests.
+            original_sys_path = sys.path
+            python_root = os.path.abspath(
+                os.path.join(os.path.dirname(__file__), "python")
+            )
+
+            sys.path = [tests_root, python_root] + sys.path
+            import run_tests
+
+            # The run_tests.py module should make available a run_tests
+            # function. We need to run that, giving it the engine pointer
+            # so that it can use that for logging purposes.
+            run_tests.run_tests(self)
+        except Exception as exc:
+            # If we got an unhandled exception, then something went very
+            # wrong in the test suite. We'll just trap that and print it
+            # as an error without letting it bubble up any farther.
+            import traceback
+            self.log_error(
+                "Tests raised the following:\n%s" % traceback.format_exc(exc)
+            )
+        finally:
+            # Reset sys.path back to what it was before we started.
+            sys.path = original_sys_path
+
     ##########################################################################################
     # properties
 
     @property
     def adobe(self):
+        """
+        The handle to the Adobe RPC API.
+        """
         return self._adobe
+
+    @property
+    def app_id(self):
+        """
+        The runtime app id. This will be a string -- something like
+        PHSP for Photoshop, or AEFT for After Effect.
+        """
+        return self._app_id
 
     ##########################################################################################
     # UI

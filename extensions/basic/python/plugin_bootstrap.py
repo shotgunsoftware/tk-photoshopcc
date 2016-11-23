@@ -45,6 +45,7 @@ class _PyToJsLogHandler(logging.StreamHandler):
         super(_PyToJsLogHandler, self).emit(record)
         self.flush()
 
+
 def progress_handler(value, message):
     """
     Writes the progress values in a special format that can be intercepted by
@@ -61,11 +62,15 @@ def progress_handler(value, message):
     sys.stdout.flush()
 
 
-def plugin_bootstrap(root_path, port, engine_name):
+def plugin_bootstrap(root_path, port, engine_name, app_id):
 
     # set the port in the env so that the engine can pick it up. this also
     # allows engine restarts to find the proper port.
     os.environ["SHOTGUN_ADOBE_PORT"] = port
+
+    # set the application id in the environment. This will allow the engine
+    # to know what host runtime it's in -- Photoshop, AE, etc.
+    os.environ["SHOTGUN_ADOBE_APPID"] = app_id
 
     # do the toolkit bootstrapping. this will replace the core imported via the
     # sys path with the one specified via the resolved config. it will startup
@@ -164,12 +169,11 @@ if __name__ == "__main__":
 
         # the communication port is supplied by javascript. the toolkit engine
         # env to bootstrap into is also supplied by javascript
-        port = sys.argv[1]
-        engine_name = sys.argv[2]
+        (port, engine_name, app_id) = sys.argv[1:4]
 
         # startup the plugin which includes setting up the socket io client,
         # bootstrapping the engine, and starting the Qt event loop
-        plugin_bootstrap(root_path, port, engine_name)
+        plugin_bootstrap(root_path, port, engine_name, app_id)
     except Exception, e:
         print "Shotgun Toolkit failed to bootstrap."
 
