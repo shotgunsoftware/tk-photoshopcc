@@ -129,7 +129,7 @@ sg_panel.Panel = new function() {
         // Builds the flyout menu with the debug/reload options.
 
         // the xml that defines the flyout menu
-        const flyout_xml =
+        var flyout_xml =
             '<Menu> \
                 <MenuItem Id="sg_about" \
                           Label="About..." \
@@ -143,8 +143,15 @@ sg_panel.Panel = new function() {
                 <MenuItem Id="sg_dev_reload" \
                           Label="Reload" \
                           Enabled="true" \
-                          Checked="false"/> \
-            </Menu>';
+                          Checked="false"/>'
+
+        if (process.env["SHOTGUN_ADOBECC_TESTS_ROOT"]) {
+            flyout_xml += '   <MenuItem Id="sg_dev_tests" \
+                                        Label="Run Tests" \
+                                        Enabled="true" \
+                                        Checked="false"/>'
+        }
+        flyout_xml += '</Menu>';
 
         // build the menu
         _cs_interface.setPanelFlyoutMenu(flyout_xml);
@@ -189,6 +196,12 @@ sg_panel.Panel = new function() {
                 // having to navigate away from the current panel and its contents.
                 // Alternatively, display an overlay in the panel.
                 alert("ABOUT dialog goes here.");
+                break;
+
+            // run test suite
+            case "sg_dev_tests":
+                sg_logging.debug("Emitting RUN_TESTS panel event.");
+                sg_panel.RUN_TESTS.emit();
                 break;
 
             default:

@@ -42,6 +42,13 @@ sg_socket_io.rpc_command = function(uid) {
     sg_socket_io.emit("command", uid);
 };
 
+sg_socket_io.rpc_run_tests = function() {
+    // Emits a "run_tests" message from the currently open socket.io
+    // server.
+    sg_logging.debug("Emitting 'run_tests' message via socket.io.");
+    sg_socket_io.emit("run_tests", {});
+};
+
 sg_socket_io.SocketManager = new function() {
     var self = this;
     var io = undefined;
@@ -129,9 +136,7 @@ sg_socket_io.SocketManager = new function() {
                 var base = JSON.parse(params.shift());
                 var property = params.shift();
                 var args = [base.__uniqueid, JSON.stringify(property)].join();
-
                 var cmd = "rpc_get(" + args + ")";
-                sg_logging.debug(cmd);
 
                 csLib.evalScript(
                     cmd,
@@ -147,9 +152,7 @@ sg_socket_io.SocketManager = new function() {
                 var base = JSON.parse(params.shift());
                 var index = JSON.stringify(params.shift());
                 var args = [base.__uniqueid, index].join();
-
                 var cmd = "rpc_get_index(" + args + ")";
-                sg_logging.debug(cmd);
 
                 csLib.evalScript(
                     cmd,
@@ -171,7 +174,6 @@ sg_socket_io.SocketManager = new function() {
                 ].join();
 
                 var cmd = "rpc_set(" + args + ")";
-                sg_logging.debug(cmd);
 
                 csLib.evalScript(
                     cmd,
@@ -202,7 +204,6 @@ sg_socket_io.SocketManager = new function() {
                 }
 
                 var cmd = "rpc_call(" + args + ")";
-                sg_logging.debug(cmd);
 
                 csLib.evalScript(
                     cmd,
@@ -229,7 +230,6 @@ sg_socket_io.SocketManager = new function() {
             remote.expose(new RPCInterface());
 
             socket.on("execute_command", function(message) {
-                sg_logging.debug(JSON.stringify(message));
                 remote.receive(message);
             });
 
