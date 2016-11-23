@@ -27,13 +27,6 @@ sg_panel.Panel = new function() {
     // adobe interface
     const _cs_interface = new CSInterface();
 
-    // panel contents divs
-    const _panel_div_ids = {
-        contents: "sg_panel_contents",
-        footer: "sg_panel_footer",
-        header: "sg_panel_header"
-    };
-
     // ---- public methods
 
     this.clear = function() {
@@ -110,17 +103,36 @@ sg_panel.Panel = new function() {
             if (command.hasOwnProperty("uid") &&
                 command.hasOwnProperty("display_name") &&
                 command.hasOwnProperty("icon_path")) {
-                    const command_id = command["uid"];
-                    const display_name = command["display_name"];
-                    const icon_path = command["icon_path"];
-                    commands_html +=
-                        "<a href='#' onClick='sg_panel.REGISTERED_COMMAND_TRIGGERED.emit(\"" + command_id + "\")'>" +
-                        "<img align='middle' src='" + icon_path + "' width='24'> " + display_name +
-                        "</a><br><br>";
+
+                const command_id = command["uid"];
+                const display_name = command["display_name"];
+                const icon_path = command["icon_path"];
+
+                commands_html +=
+                    "<a href='#' onClick='sg_panel.REGISTERED_COMMAND_TRIGGERED.emit(\"" + command_id + "\")'>" +
+                        "<div id='sg_command_button'>" +
+                            "<table>" +
+                                "<tr>" +
+                                    // icon
+                                    "<td id='sg_command_button_icon'>" +
+                                       "<img align='middle' src='" + icon_path + "' width='48'> " +
+                                    "</td>" +
+                                    // text
+                                    "<td id='sg_command_button_text'>" +
+                                       display_name +
+                                    "</td>" +
+                                "</tr>" +
+                          "</table>" +
+                        "</div>" +
+                    "</a>";
             }
+            // TODO: if command is missing something, log it.
         });
 
         _set_contents(commands_html);
+
+        // make sure the progress bar is hidden
+        _show_progress(false);
     };
 
     // ---- private methods
@@ -225,6 +237,40 @@ sg_panel.Panel = new function() {
         );
     };
 
+    const _on_logged_message = function(event) {
+        // Handles incoming log messages
+        const level = event.data.level;
+        const msg = event.data.message;
+
+        // Some things are sent via log signal because there's no other
+        // way to get access to them. For example, during toolkit
+        // bootstrap, we can only gain access to progress via stdio pipe
+        // maintained between js process and the spawned python process.
+        // So we intercept messages formatted to relay progress.
+        if (msg.includes("PLUGIN_BOOTSTRAP_PROGRESS")) {
+            // It is possible that the message contains multiple
+            // progress messages packaged together. Identify all of them
+            // and update the progress bar.
+            var regex_str = "\\|PLUGIN_BOOTSTRAP_PROGRESS,(\\d+(\\.\\d+)?),([^|]+)\\|";
+            const multi_regex = new RegExp(regex_str, "gm");
+            var matches = msg.match(multi_regex);
+            if (!matches) {
+                return;
+            }
+            matches.forEach(function(match) {
+                const single_regex = new RegExp(regex_str, "m");
+                const msg_parts = match.match(single_regex);
+                // the regex returns the progress value as a float at
+                // position 1 of the match. position 3 is the message
+                _set_progress(msg_parts[1] * 100, msg_parts[3]);
+            });
+
+        } else {
+            // typical log message. forward to the console
+            console[level](msg);
+        }
+    };
+
     const _setup_event_listeners = function() {
         // Sets up all the event handling callbacks.
 
@@ -246,13 +292,7 @@ sg_panel.Panel = new function() {
         );
 
         // Handle log messages from python process
-        sg_logging.LOG_MESSAGE.connect(
-            function(event) {
-                const level = event.data.level;
-                const msg = event.data.message;
-                console[level](msg);
-            }
-        );
+        sg_logging.LOG_MESSAGE.connect(_on_logged_message);
 
     };
 
@@ -266,13 +306,35 @@ sg_panel.Panel = new function() {
     const _set_div_html_by_id = function(div_id) {
         return function(html) {
             // Convenience method for updating panel contents with supplied html
-            _set_div_html(_panel_div_ids[div_id], html);
+            _set_div_html(sg_constants.panel_div_ids[div_id], html);
         };
     };
 
+    // convenience methods for updating the various panel components
     const _set_contents = _set_div_html_by_id("contents");
     const _set_header = _set_div_html_by_id("header");
     const _set_footer = _set_div_html_by_id("footer");
+    const _set_progress_message = _set_div_html_by_id("progress_label");
 
+    const _set_progress = function(progress, message) {
+        // Update the progress section with a % and a message.
+        _show_progress(true);
+        var elem = document.getElementById(
+            sg_constants.panel_div_ids["progress_bar"]);
+        elem.style.width = progress + '%';
+        _set_progress_message(message);
+    };
+
+    const _show_progress = function(show_or_hide) {
+        // Show or hide the progress bar.
+        var display = "none";  // hide
+        if (show_or_hide) {
+            display = "block"; // show
+        }
+        var elem = document.getElementById(
+            sg_constants.panel_div_ids["progress"]);
+        elem.style.display = display;
+    };
 };
+
 

@@ -27,3 +27,46 @@ body {
     text-decoration: none;
     display: inline-block;
 }
+
+
+#sg_progress {
+    position: relative;
+    width: 100%;
+    height: 40px;
+}
+
+#sg_progress_label {
+    text-align: left;
+    line-height: 30px;
+    color: white;
+}
+
+#sg_progress_bar {
+    position: absolute;
+    width: 0%;
+    height: 10px;
+    background-color: dodgerblue;
+}
+
+#sg_command_button {
+    display: block;
+}
+
+#sg_command_button:hover {
+    background-color: #3B3B3B;
+    border: 1px solid #787878;
+    box-shadow: 4px 4px 4px rgba(0, 0, 0, 0.5);
+}
+
+#sg_command_button_icon {
+    padding: 5px;
+    text-align: center;
+}
+
+#sg_command_button_text {
+    padding: 5px;
+    text-align: left;
+    font-family: Verdana;
+	font-size: 14px;
+	color: #C6C6C6;
+}
