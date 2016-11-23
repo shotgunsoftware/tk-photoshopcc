@@ -414,8 +414,6 @@ sg_manager.Manager = new function() {
 
         // Handle python process disconnected
         sg_panel.REGISTERED_COMMAND_TRIGGERED.connect(
-            // TODO: do the proper thing here...
-            // TODO: post an event for the client to handle
             function(event) {
                 sg_logging.debug("Registered Command Triggered: " + event.data);
                 sg_socket_io.rpc_command(event.data);

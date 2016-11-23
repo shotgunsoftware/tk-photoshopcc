@@ -125,7 +125,6 @@ def toolkit_bootstrap(root_path, engine_name):
     # now get a logger use during bootstrap
     sgtk_logger = sgtk.LogManager.get_logger("extension_bootstrap")
     sgtk_logger.debug("Toolkit core path: %s" % (tk_core_path,))
-    sgtk_logger.debug("Booting up plugin with manifest %s" % manifest.BUILD_DATE)
 
     # set up the toolkit boostrap manager
     toolkit_mgr = sgtk.bootstrap.ToolkitManager()
@@ -154,9 +153,7 @@ if __name__ == "__main__":
 
         # the communication port is supplied by javascript. the toolkit engine
         # env to bootstrap into is also supplied by javascript
-        port = sys.argv[1]
-        engine_name = sys.argv[2]
-        app_id = sys.argv[3]
+        (port, engine_name, app_id) = sys.argv[1:4]
 
         # startup the plugin which includes setting up the socket io client,
         # bootstrapping the engine, and starting the Qt event loop

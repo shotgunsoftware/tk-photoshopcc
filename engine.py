@@ -28,6 +28,8 @@ class AdobeEngine(sgtk.platform.Engine):
     _LOCK = threading.Lock()
 
     def pre_app_init(self):
+        # TODO: We need to pass across id,name,displayname and have a
+        # property for each. Like this: AEFT,aftereffects,After Effects
         self._app_id = os.environ.get(self.ENV_APPID_NAME)
 
         tk_adobecc = self.import_module("tk_adobecc")
@@ -181,7 +183,7 @@ class AdobeEngine(sgtk.platform.Engine):
         try:
             # We need to prepend to sys.path. We'll set it back to
             # what it was before once we're done running the tests.
-            hero_sys_path = sys.path
+            original_sys_path = sys.path
             python_root = os.path.abspath(
                 os.path.join(os.path.dirname(__file__), "python")
             )
@@ -203,7 +205,7 @@ class AdobeEngine(sgtk.platform.Engine):
             )
         finally:
             # Reset sys.path back to what it was before we started.
-            sys.path = hero_sys_path
+            sys.path = original_sys_path
 
     ##########################################################################################
     # properties
