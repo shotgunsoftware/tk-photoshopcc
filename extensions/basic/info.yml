@@ -38,12 +38,13 @@ base_configuration:
 
   # RELEASE : uncomment these. comment out the dev descriptor args below
   #type: app_store
-  #name: tk-config-pluginbasic
+  #name: tk-config-basic
 
   # DEV: uncomment these. comment out the app store descriptor args above
-  type: dev
-  # path: /Users/josh/dev/sg/38480_adobe_engine/tk-config-pluginbasic
-  path: d:\repositories\tk-config-pluginbasic
+  type: git_branch
+  branch: 39540_adobecc
+  path: https://github.com/shotgunsoftware/tk-config-basic.git
+  version: bbc7489
 
 # The Plugin Id helps uniquely identify this plugin and can be used to override
 # and customize it. For more information, see:
