@@ -62,6 +62,15 @@ def timeout(seconds=5.0, error_message="Timed out."):
 class MessageEmitter(QtCore.QObject):
     """
     Emits incoming socket.io messages as Qt signals.
+
+    :signal logging_received(str, str): Fires when a logging call has been
+        received. The first string is the logging level (debug, info, warning,
+        or error) and the second string is the message.
+    :signal command_received(int): Fires when an engine command has been
+        received. The integer value is the unique id of the engine command
+        that was requested to be executed.
+    :signal run_tests_request_received: Fires when a request for unit tests to
+        be run has been received.
     """
     logging_received = QtCore.Signal(str, str)
     command_received = QtCore.Signal(int)
@@ -70,11 +79,8 @@ class MessageEmitter(QtCore.QObject):
 
 class AdobeBridge(Communicator):
     """
-    Bridge layer between the adobe product and toolkit.
-
-    This is where we put logic that allows the two ends to communicate.
+    Bridge layer between the Adobe product and Shotgun Toolkit.
     """
-
     def __init__(self, *args, **kwargs):
         super(AdobeBridge, self).__init__(*args, **kwargs)
 
@@ -139,9 +145,25 @@ class AdobeBridge(Communicator):
     # internal methods
 
     def _forward_command(self, response):
+        """
+        Forwards the received command on as a Qt Signal.
+
+        :param response: The data received with the message. This
+                         will take the form of a JSON encoded integeter
+                         that is the unique id of the command to be called.
+        """
         self.command_received.emit(int(json.loads(response)))
 
     def _forward_logging(self, response):
+        """
+        Forwards the logging request received as a Qt Signal.
+
+        :param response: The data received with the message. This will
+                         take the form of a JSON encoded dictionary with
+                         "level" and "message" keys containing the severity
+                         level of the logging message, and the message itself,
+                         respectively.
+        """
         response = json.loads(response)
         self.logging_received.emit(
             response.get("level"),
@@ -149,6 +171,12 @@ class AdobeBridge(Communicator):
         )
 
     def _forward_run_tests(self, response):
+        """
+        Forwards the request for tests to be run as a Qt Signal.
+
+        :param response: The data received with the message. This
+                         is disregarded.
+        """
         self.run_tests_request_received.emit()
 
 ##########################################################################################
