@@ -33,29 +33,33 @@ are reserved by Shotgun Software Inc.
 
   <body>
 
-    <!-- header -->
-    <div id="sg_panel_header">
-    </div>
+    <!-- error -->
+    <div id="sg_status_error" style="display:none;"></div>
 
-    <!-- TODO: style so that the header is sticky at the top? -->
-    <br><br>
+    <!-- warning -->
+    <div id="sg_status_warning" style="display:none;"></div>
+
+    <!-- header -->
+    <div id="sg_panel_header"></div>
 
     <!-- main contents -->
-    <div id="sg_panel_contents">
-    </div>
-
-    <!-- TODO: style so that the footer is always at the bottom -->
-    <br><br>
-
-    <!-- progress bar for startup -->
-    <div id="sg_progress" style="display:none;">
-      <div id="sg_progress_label"></div>
-      <div id="sg_progress_bar">
-      </div>
-    </div>
+    <div id="sg_panel_contents"></div>
 
     <!-- footer -->
     <div id="sg_panel_footer">
+
+      <!-- progress bar -->
+      <div id="sg_console_link" style="display:block;">
+        <a href='#' onclick="alert('console here');">- show console -</a>
+      </div>
+
+      <!-- progress bar -->
+      <div id="sg_progress" style="display:none;">
+        <div id="sg_progress_bar">
+        </div>
+      </div>
+      <!-- info -->
+      <div id="sg_status_info" style="display:none;"></div>
     </div>
 
     <script>

@@ -10,6 +10,7 @@
 
 import sys
 import os
+import sys
 import threading
 
 import sgtk
@@ -28,6 +29,12 @@ class AdobeEngine(sgtk.platform.Engine):
     _COMMAND_UID_COUNTER = 0
     _LOCK = threading.Lock()
 
+    ##########################################################################################
+    # init and destroy
+    def init_engine(self):
+        self.log_debug("%s: Initializing..." % (self,))
+        self.__qt_dialogs = []
+
     def pre_app_init(self):
         # TODO: We need to pass across id,name,displayname and have a
         # property for each. Like this: AEFT,aftereffects,After Effects
@@ -45,6 +52,9 @@ class AdobeEngine(sgtk.platform.Engine):
         self.adobe.logging_received.connect(self._handle_logging)
         self.adobe.command_received.connect(self._handle_command)
         self.adobe.run_tests_request_received.connect(self._run_tests)
+        self.adobe.state_requested.connect(self.__send_state)
+
+        self.__qt_dialogs = []
 
     def post_app_init(self):
 
@@ -127,9 +137,14 @@ class AdobeEngine(sgtk.platform.Engine):
 
         :param int uid: The unique id of the engine command to run.
         """
+
+        from sgtk.platform.qt import QtGui
+
         for command in self.commands.values():
             if command.get("properties", dict()).get("uid") == uid:
-                command["callback"]()
+                result = command["callback"]()
+                if isinstance(result, QtGui.QWidget):
+                    self.__qt_dialogs.append(result)
 
     def _handle_logging(self, level, message):
         """
@@ -255,6 +270,25 @@ class AdobeEngine(sgtk.platform.Engine):
         # TODO: ensure message boxes show up in front of CC
         return base
 
+    def _get_dialog_parent(self):
+        """
+        Get the QWidget parent for all dialogs created through
+        show_dialog & show_modal.
+        """
+        # determine the parent widget to use:
+        parent_widget = None
+        if sys.platform == "win32":
+            # for windows, we create a proxy window parented to the
+            # main application window that we can then set as the owner
+            # for all Toolkit dialogs
+            parent_widget = self._win32_get_proxy_window()
+        else:
+            from sgtk.platform.qt import QtGui
+            parent_widget = QtGui.QApplication.activeWindow()
+
+        return parent_widget
+
+
     # TODO: see tk-photoshop for handling windows-specific window parenting/display
 
     def show_dialog(self, title, bundle, widget_class, *args, **kwargs):
@@ -279,13 +313,23 @@ class AdobeEngine(sgtk.platform.Engine):
         # create the dialog:
         dialog, widget = self._create_dialog_with_widget(title, bundle, widget_class, *args, **kwargs)
 
-        # show the dialog
+        # Note - the base engine implementation will try to clean up
+        # dialogs and widgets after they've been closed.  However this
+        # can cause a crash in Photoshop as the system may try to send
+        # an event after the dialog has been deleted.
+        # Keeping track of all dialogs will ensure this doesn't happen
+        self.__qt_dialogs.append(dialog)
+
+        # TODO: bring python to the front
+
+        # show the dialog:
         dialog.show()
 
-        # raise the dialog to make sure it shows above CC product
+        # make sure the window raised so it doesn't
+        # appear behind the main Photoshop window
         dialog.raise_()
+        dialog.activateWindow()
 
-        # lastly, return the instantiated widget
         return widget
 
     def show_modal(self, title, bundle, widget_class, *args, **kwargs):
@@ -293,17 +337,67 @@ class AdobeEngine(sgtk.platform.Engine):
         Shows a modal dialog window in a way suitable for this engine. The engine will attempt to
         integrate it as seamlessly as possible into the host application. This call is blocking
         until the user closes the dialog.
-
         :param title: The title of the window
         :param bundle: The app, engine or framework object that is associated with this window
         :param widget_class: The class of the UI to be constructed. This must derive from QWidget.
-
         Additional parameters specified will be passed through to the widget_class constructor.
-
         :returns: (a standard QT dialog status return code, the created widget_class instance)
         """
-        # TODO: ensure the dialog is shown above CC
-        super(AdobeEngine, self).show_modal(title, bundle, widget_class, *args, **kwargs)
+        if not self.has_ui:
+            self.log_error("Sorry, this environment does not support UI display! Cannot show "
+                           "the requested window '%s'." % title)
+            return
+
+        from tank.platform.qt import QtGui
+
+        # create the dialog:
+        dialog, widget = self._create_dialog_with_widget(title, bundle, widget_class, *args, **kwargs)
+
+        # Note - the base engine implementation will try to clean up
+        # dialogs and widgets after they've been closed.  However this
+        # can cause a crash in Photoshop as the system may try to send
+        # an event after the dialog has been deleted.
+        # Keeping track of all dialogs will ensure this doesn't happen
+        self.__qt_dialogs.append(dialog)
+
+        # TODO: bring python to the front
+
+        # make sure the window raised so it doesn't
+        # appear behind the main Photoshop window
+        dialog.raise_()
+        dialog.activateWindow()
+
+        status = QtGui.QDialog.Rejected
+        if sys.platform == "win32":
+            tk_adobecc = self.import_module("tk_adobecc")
+            win_32_api = tk_adobecc.win_32_api
+
+            saved_state = []
+            try:
+                # find all photoshop windows and save enabled state:
+                ps_process_id = self._win32_get_photoshop_process_id()
+                if ps_process_id != None:
+                    found_hwnds = win_32_api.find_windows(process_id=ps_process_id, stop_if_found=False)
+                    for hwnd in found_hwnds:
+                        enabled = win_32_api.IsWindowEnabled(hwnd)
+                        saved_state.append((hwnd, enabled))
+                        if enabled:
+                            win_32_api.EnableWindow(hwnd, False)
+
+                # show dialog:
+                status = dialog.exec_()
+            except Exception, e:
+                self.log_error("Error showing modal dialog: %s" % e)
+            finally:
+                # kinda important to ensure we restore other window state:
+                for hwnd, state in saved_state:
+                    if win_32_api.IsWindowEnabled(hwnd) != state:
+                        win_32_api.EnableWindow(hwnd, state)
+        else:
+            # show dialog:
+            status = dialog.exec_()
+
+        return status, widget
 
     ##########################################################################################
     # logging
@@ -318,14 +412,43 @@ class AdobeEngine(sgtk.platform.Engine):
             self._COMMAND_UID_COUNTER += 1
             return self._COMMAND_UID_COUNTER
 
+    def __get_sg_url(self, entity):
+
+        return "%s/detail/%s/%d" % (
+            self.sgtk.shotgun_url, entity["type"], entity["id"])
+
     def __send_state(self):
-        # TODO: thumbnail path for current context? query & update if unavailable
-        state = dict(
-            context=dict(
-                display=str(self.context)
-            ),
-            commands=[],
-        )
+
+        # TODO: thumbnail path for current context
+
+        context = self.context
+        context_fields = [
+            {
+                "type": "Site",
+                "display": str(context),
+                "url": self.sgtk.shotgun_url,
+            }
+        ]
+        thumbnail_entity = None
+
+        for entity in [context.project, context.entity, context.step, context.task]:
+
+            if not entity:
+                continue
+
+            entity_type = entity["type"]
+            entity_name = entity["name"]
+            context_fields.append({
+                "type": entity_type,
+                "display": entity_name,
+                "url": self.__get_sg_url(entity),
+            })
+            thumbnail_entity = entity
+
+        state = {
+            "context_fields": context_fields,
+            "commands": [],
+        }
 
         for (command_name, command_info) in self.commands.iteritems():
             properties = command_info.get("properties", {})
@@ -342,5 +465,78 @@ class AdobeEngine(sgtk.platform.Engine):
         # TODO: send to javascript
         self.log_debug("Sending state: %s" % str(state))
         self.adobe.send_state(state)
-        
+
+    def _win32_get_photoshop_process_id(self):
+        """
+        Windows specific method to find the process id of Photoshop.  This
+        assumes that it is the parent process of this python process
+        """
+        if hasattr(self, "_win32_photoshop_process_id"):
+            return self._win32_photoshop_process_id
+        self._win32_photoshop_process_id = None
+
+        this_pid = os.getpid()
+
+        tk_adobecc = self.import_module("tk_adobecc")
+        win_32_api = tk_adobecc.win_32_api
+        self._win32_photoshop_process_id = win_32_api.find_parent_process_id(this_pid)
+
+        return self._win32_photoshop_process_id
+
+    def _win32_get_photoshop_main_hwnd(self):
+        """
+        Windows specific method to find the main Photoshop window
+        handle (HWND)
+        """
+        if hasattr(self, "_win32_photoshop_main_hwnd"):
+            return self._win32_photoshop_main_hwnd
+        self._win32_photoshop_main_hwnd = None
+
+        # find photoshop process id:
+        ps_process_id = self._win32_get_photoshop_process_id()
+
+        if ps_process_id != None:
+            # get main application window for photoshop process:
+            tk_adobecc = self.import_module("tk_adobecc")
+            win_32_api = tk_adobecc.win_32_api
+            found_hwnds = win_32_api.find_windows(process_id=ps_process_id, class_name="Photoshop", stop_if_found=False)
+            if len(found_hwnds) == 1:
+                self._win32_photoshop_main_hwnd = found_hwnds[0]
+
+        return self._win32_photoshop_main_hwnd
+
+    def _win32_get_proxy_window(self):
+        """
+        Windows specific method to get the proxy window that will 'own' all Toolkit dialogs.  This
+        will be parented to the main photoshop application.  Creates the proxy window
+        if it doesn't already exist.
+        """
+        if hasattr(self, "_win32_proxy_win"):
+            return self._win32_proxy_win
+        self._win32_proxy_win = None
+
+        # get the main Photoshop window:
+        ps_hwnd = self._win32_get_photoshop_main_hwnd()
+        if ps_hwnd != None:
+
+            from sgtk.platform.qt import QtGui
+            tk_adobecc = self.import_module("tk_adobecc")
+            win_32_api = tk_adobecc.win_32_api
+
+            # create the proxy QWidget:
+            self._win32_proxy_win = QtGui.QWidget()
+            self._win32_proxy_win.setWindowTitle('sgtk dialog owner proxy')
+
+            proxy_win_hwnd = win_32_api.qwidget_winid_to_hwnd(self._win32_proxy_win.winId())
+
+            # set no parent notify:
+            win_ex_style = win_32_api.GetWindowLong(proxy_win_hwnd, win_32_api.GWL_EXSTYLE)
+            win_32_api.SetWindowLong(proxy_win_hwnd, win_32_api.GWL_EXSTYLE,
+                                     win_ex_style
+                                     | win_32_api.WS_EX_NOPARENTNOTIFY)
+
+            # parent to photoshop application window:
+            win_32_api.SetParent(proxy_win_hwnd, ps_hwnd)
+
+        return self._win32_proxy_win
 

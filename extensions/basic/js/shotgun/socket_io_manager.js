@@ -44,6 +44,12 @@ sg_socket_io.rpc_log = function(level, message) {
     sg_socket_io.emit("logging", msg);
 };
 
+sg_socket_io.rpc_state_requested = function() {
+    // Emits a "state_requested" message from the currently open socket.io
+    // server.
+    sg_socket_io.emit("state_requested");
+};
+
 sg_socket_io.rpc_command = function(uid) {
     /*
     Emits a "command" message from the currently open socket.io
@@ -319,8 +325,7 @@ sg_socket_io.SocketManager = new function() {
             socket.on("set_state", function(json_state) {
                 // The client is setting the state.
                 var state = JSON.parse(json_state);
-                sg_logging.debug("Setting state from client: " +
-                    state["context"]["display"]);
+                sg_logging.debug("Setting state from client: " + json_state);
 
                 // TODO: we're emitting a manager event. perhaps we should
                 // have a set of events that come from socket.io? or perhaps

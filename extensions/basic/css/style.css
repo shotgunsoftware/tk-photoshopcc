@@ -13,60 +13,186 @@ are reserved by Shotgun Software Inc.
 /* XXX some quick, temporary styling during dev XXX */
 
 body {
-    background-color: #535353;
-    color: #F1F1F1;
-    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+    color: #C6C6C6;
+    font-family: Verdana,sans-serif;
+    font-size: 12px;
+    margin: 0;
+    padding: 0;
+    background-image: linear-gradient(to right, #212121, #1B1B1B) ;
 }
 
-.sg_button {
-    background-color: #18A7E3;
-    border: none;
-    color: #E1E1E1;
-    padding: 4px 4px;
-    text-align: center;
+a {
     text-decoration: none;
-    display: inline-block;
 }
 
+a:link {
+    color: #18A7E3;
+}
+
+a:link.sg_field_value_link {
+    color: #C6C6C6;
+}
+
+a:hover {
+    color: #FFFFFF;
+}
+
+a:active {
+    position: relative;
+    top: 1px;
+    left: 1px
+}
+
+hr.sg_hr {
+    border: 0;
+    height: 1px;
+    background-image: linear-gradient(to right, #212121, #2A2A2A);
+}
+
+div.sg_error {
+    width: 90%;
+    height: 100px;
+    resize: vertical;
+    overflow-x: scroll;
+    overflow-y: auto;
+    font-size: 10px;
+    background-color: #2C2C2C;
+    padding: 8px;
+    display: inline-block;
+    text-align: left;
+}
+
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background-color: #3C3C3C;
+    border-radius: 0px;
+}
+
+::-webkit-scrollbar-thumb {
+    background-color: #5C5C5C;
+    border-radius: 16px;
+}
+
+#sg_panel_contents {
+}
+
+#sg_command_button {
+    display: block;
+    padding-left: 12px;
+}
+
+#sg_command_button_icon {
+    padding: 2px;
+    vertical-align: middle;
+}
+
+#sg_command_button_text {
+    padding: 2px;
+    vertical-align: middle;
+}
+
+.sg_command_description {
+    color: #767676;
+    font-family: Verdana;
+    font-size: 10px;
+    padding: 4px;
+}
+
+#sg_panel_footer {
+   position:fixed;
+   left:0px;
+   bottom:0px;
+   width:100%;
+}
+
+#sg_status_info {
+    text-align: center;
+    height: 22px;
+    line-height: 22px;
+    color: #C6C6C6;
+    font-size: 12px;
+    background-color: rgba(24, 167, 227, .75);
+}
+
+#sg_console_link {
+    text-align: center;
+    vertical-align: middle;
+    height: 10px;
+    line-height: 10px;
+    font-size: 10px;
+    background-image: linear-gradient(to bottom, rgba(0, 0, 0, 0), #1B1B1B, #1B1B1B) ;
+    padding-bottom: 4px;
+}
+
+#sg_console_link a:link {
+    color: #5C5C5C;
+    text-shadow: 1px 1px 0px #000000;
+}
+
+.sg_context_header {
+    width: 100%;
+    background-color: #101010;
+    padding: 8px;
+    border-bottom: 1px solid #2A2A2A;
+    background-image: linear-gradient(to right, #101010, #1B1B1B) ;
+}
+
+.sg_field_name {
+    text-align: right;
+    color: #5C5C5C;
+}
+
+.sg_field_value {
+    text-align: left;
+    color: #C6C6C6;
+}
+
+.sg_container {
+    padding: 12px;
+}
+
+.sg_error_message {
+    font-size: 12px;
+    padding: 8px;
+    color: rgba(226, 74, 74, .75);
+    border-left: 1px solid rgba(226, 74, 74, .75);
+}
+
+#sg_status_error {
+    width: 100%;
+    text-align: center;
+    height: 22px;
+    line-height: 22px;
+    color: #C6C6C6;
+    font-size: 12px;
+    background-color: rgba(226, 74, 74, .75);
+}
+
+#sg_status_warning {
+    width: 100%;
+    text-align: center;
+    height: 22px;
+    line-height: 22px;
+    color: #C6C6C6;
+    font-size: 12px;
+    background-color: rgba(226, 159, 74, .75);
+}
 
 #sg_progress {
     position: relative;
     width: 100%;
-    height: 40px;
-}
-
-#sg_progress_label {
-    text-align: left;
-    line-height: 30px;
-    color: white;
+    height: 8px;
+    background-color: #1B1B1B;
+    border-bottom: 1px solid #1B1B1B;
 }
 
 #sg_progress_bar {
     position: absolute;
     width: 0%;
-    height: 10px;
-    background-color: dodgerblue;
-}
-
-#sg_command_button {
-    display: block;
-}
-
-#sg_command_button:hover {
-    background-color: #3B3B3B;
-    border: 1px solid #787878;
-    box-shadow: 4px 4px 4px rgba(0, 0, 0, 0.5);
-}
-
-#sg_command_button_icon {
-    padding: 5px;
-    text-align: center;
-}
-
-#sg_command_button_text {
-    padding: 5px;
-    text-align: left;
-    font-family: Verdana;
-	font-size: 14px;
-	color: #C6C6C6;
+    height: 8px;
+    background-color: rgba(24, 167, 227, .75);
 }

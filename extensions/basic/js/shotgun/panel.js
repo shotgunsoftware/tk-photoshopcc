@@ -35,8 +35,31 @@ sg_panel.Panel = new function() {
         // Since we don't really want to stay in this state, the panel shows
         // a message to the user saying that the panel is loading.
 
-        _set_header("Shotgun integration is loading...");
-        _set_contents("<img src='../images/sg_logo.png'>");
+        _show_header(false);
+        _set_contents(
+            "<br><br>" +
+            "<center><img src='../images/sg_logo_loading.png'></center>"
+        );
+
+        _show_info(true);
+        _set_info(
+            "Loading Shotgun Integration..."
+        );
+    };
+
+    this.email_support = function(subject, body) {
+
+        const mailto_url = "mailto:support@shotgunsoftware.com?" +
+                           "subject=" + subject +
+                           "&body=" + body;
+
+        sg_logging.debug("Emailing support: " + mailto_url);
+
+        _clear_messages();
+        _set_progress_info(100, "Composing SG support email...");
+        setTimeout(_clear_messages, 2000);
+
+        self.open_external_url(mailto_url);
     };
 
     this.on_load = function() {
@@ -77,6 +100,11 @@ sg_panel.Panel = new function() {
         // TODO: do we need to remove event listeners? do they persist?
     };
 
+    this.open_external_url = function(url) {
+        sg_logging.debug("Opening external url: " + url);
+        _cs_interface.openURLInDefaultBrowser(url);
+    };
+
     this.reload = function() {
         // Request reload of the manager.
         //
@@ -89,13 +117,48 @@ sg_panel.Panel = new function() {
 
     this.set_state = function(state) {
 
-        // TODO: display the description as a tooltip or expandable content?
+        // TODO: show actual header info
         // TODO: handle case where no icon is provided
+        // TODO: document state object. make an object out of it?
 
-        // TODO: document required command object contents once settled.
-        _set_header(state["context"]["display"]);
+        var fields_table = "<table width='100%'>";
 
-        // XXX Temp implementation for testing.
+        state["context_fields"].forEach(function(field_info) {
+
+            const field = field_info["type"];
+            const value = field_info["display"];
+            const url = field_info["url"];
+
+            fields_table +=
+                "<tr>" +
+                    "<td class='sg_field_name'>" +
+                        field + ":&nbsp;" +
+                    "</td>" +
+                    "<td class='sg_field_value'>" +
+                        "<a href='#' class='sg_field_value_link' " +
+                            "onclick='sg_panel.Panel.open_external_url(\"" + url + "\")'>" +
+                            value +
+                        "</a>" +
+                    "</td>" +
+                "</tr>";
+        });
+
+        fields_table += "</table>";
+
+        var header_html = "<table class='sg_context_header'>" +
+                "<tr>" +
+                    "<td align='right'>" +
+                        "<img src='../images/sg_logo.png' height='64'>" +
+                    "</td>" +
+                    "<td>" +
+                        fields_table +
+                    "</td>" +
+                "</tr>" +
+            "</table>";
+
+        _set_header(header_html);
+        _show_header(true);
+
         var commands_html = "";
         const commands = state["commands"];
 
@@ -107,32 +170,53 @@ sg_panel.Panel = new function() {
                 const command_id = command["uid"];
                 const display_name = command["display_name"];
                 const icon_path = command["icon_path"];
+                const description = command["description"];
+
+                var description_html = "";
+                if (description) {
+                    description_html = "<br><div class=sg_command_description>" + description + "</div>";
+                }
 
                 commands_html +=
-                    "<a href='#' onClick='sg_panel.REGISTERED_COMMAND_TRIGGERED.emit(\"" + command_id + "\")'>" +
+                    "<a href='#' class='sg_command_link' onClick='sg_panel.Panel.trigger_command(\"" + command_id + "\", \"" + display_name + "\")'>" +
                         "<div id='sg_command_button'>" +
                             "<table>" +
                                 "<tr>" +
                                     // icon
                                     "<td id='sg_command_button_icon'>" +
-                                       "<img align='middle' src='" + icon_path + "' width='48'> " +
+                                       "<img src='" + icon_path + "' width='48'> " +
                                     "</td>" +
                                     // text
                                     "<td id='sg_command_button_text'>" +
                                        display_name +
+                                       description_html +
                                     "</td>" +
                                 "</tr>" +
                           "</table>" +
                         "</div>" +
-                    "</a>";
+                    "</a>" +
+                    "<hr class='sg_hr'>";
             }
             // TODO: if command is missing something, log it.
         });
 
         _set_contents(commands_html);
+        _show_contents(true);
 
-        // make sure the progress bar is hidden
-        _show_progress(false);
+        // make sure the progress bar and info is hidden
+        _clear_messages();
+    };
+
+    this.trigger_command = function(command_id, command_display) {
+        // Emits the signal to launch the supplied command id.
+        // Also shows a tmp message in the footer to confirm user click
+
+        // show the progress message temporarily
+        _set_info("Launching command: " + command_display);
+        setTimeout(_clear_messages, 3000);
+
+        // trigger the command
+        sg_panel.REGISTERED_COMMAND_TRIGGERED.emit(command_id);
     };
 
     // ---- private methods
@@ -190,7 +274,7 @@ sg_panel.Panel = new function() {
                 sg_logging.debug("Opening debugger in default browser.");
                 var app_name = _cs_interface.getHostEnvironment().appName;
                 var debug_url = sg_constants.product_info[app_name].debug_url;
-                _cs_interface.openURLInDefaultBrowser(debug_url);
+                self.open_external_url(debug_url);
                 break;
 
             // reload extension
@@ -223,6 +307,8 @@ sg_panel.Panel = new function() {
 
     const _on_critical_error = function(event) {
 
+        _clear_messages();
+
         const message = event.data.message;
 
         // TODO: show the stack trace somewhere!
@@ -230,23 +316,54 @@ sg_panel.Panel = new function() {
 
         sg_logging.error("Critical: " + message);
 
-        _set_header(
-            "<img src='../images/error.png' align='bottom' width='24'>" +
-            "&nbsp;&nbsp;Uh oh! Something went wrong..."
-        );
+        _show_header(false);
 
-        _set_contents(
+        var contents_html = "<div class='sg_error_message'>" +
             message +
-            "<br>" +
-            "If you encounter this problem consistently or have any other " +
-            "problems, please contact: " +
-            "<a href='mailto:support@shotgunsoftware.com'>Shotgun Support</a>" +
-            "<br>" +
-            "Click the button below to attempt to restart the integration." +
-            "<br>" +
-            "<button class='sg_button' onclick='sg_panel.Panel.reload()'>" +
+            "</div>";
+
+        contents_html +=
+            "<br>You can try link below to attempt a full restart " +
+            " of the Adobe integration.<br><br>" +
+            "<center>" +
+            "<a href='#' onclick='sg_panel.Panel.reload()'>" +
             "Restart Shotgun Integration" +
-            "</button>"
+            "</a>" +
+            "</center><br>";
+
+        const subject = encodeURIComponent("Adobe Integration Error");
+        const body = _format_email_error_message(event.data);
+
+        if (typeof stack !== "undefined") {
+            contents_html +=
+                "<br>If you encounter this problem consistently or have any " +
+                "other questions, please send the following error and a " +
+                "description of the steps to reproduce the problem to: " +
+                "<a href='#' onClick='sg_panel.Panel.email_support(\"" +
+                    subject + "\", \"" + body + "\")'>" +
+                    "Shotgun Support" +
+                "</a>." +
+                "<br><br>" +
+                "<center>" +
+                    "<div class='sg_error'>" +
+                        "<pre>" + stack + "</pre>" +
+                    "</div>" +
+                "</center>";
+        } else {
+            contents_html +=
+                "<br>If you encounter this problem consistently or have any " +
+                "other questions, please send the steps to reproduce to: " +
+                "<a href='#' onClick='sg_panel.Panel.email_support(\"" +
+                    subject + "\", \"" + body + "\")'>" +
+                    "Shotgun Support" +
+                "</a>.";
+        }
+
+        contents_html = "<div class='sg_container'>" + contents_html + "</div>";
+
+        _set_contents(contents_html);
+        _set_error(
+            "Uh oh! Something went wrong."
         );
     };
 
@@ -275,7 +392,7 @@ sg_panel.Panel = new function() {
                 const msg_parts = match.match(single_regex);
                 // the regex returns the progress value as a float at
                 // position 1 of the match. position 3 is the message
-                _set_progress(msg_parts[1] * 100, msg_parts[3]);
+                _set_progress_info(msg_parts[1] * 100, msg_parts[3]);
             });
 
         } else {
@@ -309,10 +426,11 @@ sg_panel.Panel = new function() {
 
     };
 
-    // ---- html update methods
+    // set html for div
 
     const _set_div_html = function(div_id, html) {
         // Updates the inner HTML of the supplied div with the supplied HTML
+        _show_div(div_id, true);
         document.getElementById(div_id).innerHTML = html;
     };
 
@@ -326,28 +444,79 @@ sg_panel.Panel = new function() {
     // convenience methods for updating the various panel components
     const _set_contents = _set_div_html_by_id("contents");
     const _set_header = _set_div_html_by_id("header");
-    const _set_footer = _set_div_html_by_id("footer");
-    const _set_progress_message = _set_div_html_by_id("progress_label");
+    const _set_info = _set_div_html_by_id("info");
+    const _set_error = _set_div_html_by_id("error");
+    const _set_warning = _set_div_html_by_id("warning");
 
-    const _set_progress = function(progress, message) {
+    // ---- progress bar methods
+
+    const _set_progress_info = function(progress, message) {
         // Update the progress section with a % and a message.
         _show_progress(true);
+        _show_info(true);
         var elem = document.getElementById(
             sg_constants.panel_div_ids["progress_bar"]);
         elem.style.width = progress + '%';
-        _set_progress_message(message);
+        _set_info(message);
     };
 
-    const _show_progress = function(show_or_hide) {
-        // Show or hide the progress bar.
+    // show/hide divs
+
+    const _show_div = function(div_id, show_or_hide) {
+        // Show or hide a div
         var display = "none";  // hide
         if (show_or_hide) {
             display = "block"; // show
         }
-        var elem = document.getElementById(
-            sg_constants.panel_div_ids["progress"]);
+        var elem = document.getElementById(div_id);
         elem.style.display = display;
+    };
+
+    const _show_div_by_id = function(div_id) {
+        return function(show_or_hide) {
+            // Convenience method for showing/hiding divs
+            _show_div(sg_constants.panel_div_ids[div_id], show_or_hide);
+        }
+    };
+
+    // convenience methods for showing/hiding status divs
+    const _show_header = _show_div_by_id("header");
+    const _show_contents = _show_div_by_id("contents");
+    const _show_info = _show_div_by_id("info");
+    const _show_error = _show_div_by_id("error");
+    const _show_warning = _show_div_by_id("warning");
+    const _show_progress = _show_div_by_id("progress");
+
+    const _clear_messages = function() {
+        _show_info(false);
+        _show_error(false);
+        _show_warning(false);
+        _show_progress(false);
+    };
+
+    const _format_email_error_message = function(error) {
+
+        const message = error.message;
+        const stack = error.stack;
+
+        return encodeURIComponent(
+            "Greetings Shotgun Support Team!\n\n" +
+            "We are experiencing some difficulties with the Adobe CC Integration. " +
+            "The details are included below.\n\n" +
+            "Summary of the issue:\n\n" +
+            "*** Please enter a summary of the issue here... ***\n\n" +
+            "Steps to reproduce:\n\n" +
+            "*** Please enter the steps you took to reach this error here. ***\n\n" +
+            "Error displayed to the user:\n\n" +
+            message + "\n\n" +
+            "Stack trace:\n\n" +
+            stack + "\n\n"
+        );
+
+        // TODO: include current version info of core, app, CC, etc.
     };
 };
 
-
+// TODO: add show console link in footer
+// TODO: state should provide header info
+// TODO: mouse over icon should highlight text

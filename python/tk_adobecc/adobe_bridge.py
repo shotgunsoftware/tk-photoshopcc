@@ -75,6 +75,7 @@ class MessageEmitter(QtCore.QObject):
     logging_received = QtCore.Signal(str, str)
     command_received = QtCore.Signal(int)
     run_tests_request_received = QtCore.Signal()
+    state_requested = QtCore.Signal()
 
 
 class AdobeBridge(Communicator):
@@ -88,6 +89,7 @@ class AdobeBridge(Communicator):
         self._io.on("logging", self._forward_logging)
         self._io.on("command", self._forward_command)
         self._io.on("run_tests", self._forward_run_tests)
+        self._io.on("state_requested", self._forward_state_request)
 
     ##########################################################################################
     # properties
@@ -115,6 +117,13 @@ class AdobeBridge(Communicator):
         via RPC.
         """
         return self._emitter.run_tests_request_received
+
+    @property
+    def state_requested(self):
+        """
+        The QSignal that is emitted when the state is requested via RPC.
+        """
+        return self._emitter.state_requested
 
     ##########################################################################################
     # public methods
@@ -178,6 +187,9 @@ class AdobeBridge(Communicator):
                          is disregarded.
         """
         self.run_tests_request_received.emit()
+
+    def _forward_state_request(self, response):
+        self.state_requested.emit()
 
 ##########################################################################################
 # exceptions

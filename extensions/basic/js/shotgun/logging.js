@@ -47,12 +47,10 @@ sg_logging._log = function(level, message, send_to_rpc) {
         // send a log message. this should be received and processed by the
         // panel extension. that's where the user will have access to the
         // flyout menu where they can click and go to the console.
-        sg_logging.LOG_MESSAGE.emit(
-            {
-                level: level,
-                message: message
-            }
-        );
+        sg_logging.LOG_MESSAGE.emit({
+            level: level,
+            message: message
+        });
     }
 };
 

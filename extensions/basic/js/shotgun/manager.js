@@ -36,6 +36,10 @@ sg_manager.Manager = new function() {
     // the name of the python process extension
     const _panel_extension_name = "com.shotgunsoftware.basic.adobecc.panel";
 
+    // remember if/why python was disconnected
+    var __python_disconnected = false;
+    var __python_disconnected_error = undefined;
+
     // ---- public methods
 
     this.on_load = function() {
@@ -71,10 +75,11 @@ sg_manager.Manager = new function() {
             // method to start up the server and then bootstrap python.
             _get_open_port(_on_server_port_found);
 
+            // TODO: setup promise here for found port?
+
         } catch (error) {
-            const message = "There was an unexpected error startup of the " +
-                "startup of the Shotgun integration. Please see the " +
-                "attached stack trace.";
+            const message = "There was an unexpected error during startup of " +
+                "the Adobe Shotgun integration.";
 
             // log the error in the event that the panel has started and the
             // user can click the console
@@ -82,7 +87,7 @@ sg_manager.Manager = new function() {
             sg_logging.error(error.stack);
 
             // emit the critical error for any listeners to display
-            sg_manager.CRITICAL_ERROR.emit({
+            _emit_python_critical_error({
                 message: message,
                 stack: error.stack
             });
@@ -233,8 +238,6 @@ sg_manager.Manager = new function() {
 
         sg_logging.debug("Child process spawned! PID: " + self.python_process.pid)
 
-        // XXX begin temporary process communication
-
         // log stdout from python process
         self.python_process.stdout.on("data", function (data) {
             sg_logging.log(data.toString());
@@ -245,21 +248,20 @@ sg_manager.Manager = new function() {
             sg_logging.log(data.toString());
         });
 
-        // XXX end temporary process communication
-
         // handle python process disconnection
         self.python_process.on(
             "close",
             function() {
-                sg_manager.CRITICAL_ERROR.emit({
+                _emit_python_critical_error({
                     message: "The Shotgun integration has unexpectedly shut " +
                              "down. Specifically, the python process that " +
                              "handles the communication with Shotgun has " +
                              "been terminated.",
                     stack: undefined
                 });
+
             }
-        );
+        )
     };
 
     const _get_open_port = function(port_found_callback) {
@@ -294,7 +296,7 @@ sg_manager.Manager = new function() {
             // check the current number of tries. if too many, emit a signal
             // indicating that a port could not be found
             if (num_tries > max_tries) {
-                sg_manager.CRITICAL_ERROR.emit({
+                _emit_python_critical_error({
                     message: "Unable to set up the communication server that " +
                              "allows the shotgun integration to work. " +
                              "Specifically, there was a problem identifying " +
@@ -352,7 +354,7 @@ sg_manager.Manager = new function() {
                         try {
                             port_found_callback(port);
                         } catch(error) {
-                            sg_manager.CRITICAL_ERROR.emit({
+                            _emit_python_critical_error({
                                 message: "Unable to set up the communication " +
                                          "server that allows the shotgun " +
                                          "integration to work.",
@@ -370,6 +372,12 @@ sg_manager.Manager = new function() {
             // listen to a port assigned by the OS.
             server.listen(0);
         };
+
+        // fake error message to test startup fail. good for debugging.
+        //var error = new Error();
+        //error.message = "This is a fake fail!!! Thrown manually to force an error!";
+        //Error.captureStackTrace(error);
+        //throw error;
 
         // initiate the port finding
         _try_port();
@@ -435,6 +443,24 @@ sg_manager.Manager = new function() {
             }
         );
 
+        sg_panel.REQUEST_STATE.connect(
+            function() {
+                sg_logging.debug("State requested.");
+                if (__python_disconnected) {
+                    _emit_python_critical_error(__python_disconnected_error);
+                } else {
+                    sg_socket_io.rpc_state_requested();
+                }
+            }
+        );
+
     };
+
+    const _emit_python_critical_error = function(error) {
+        __python_disconnected = true;
+        __python_disconnected_error = error;
+        sg_manager.CRITICAL_ERROR.emit(error);
+    };
+
 };
 
