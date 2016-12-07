@@ -48,6 +48,7 @@ def timeout(seconds=5.0, error_message="Timed out."):
         def wrapper(*args, **kwargs):
             timer = threading.Timer(float(seconds), _handle_timeout)
             try:
+                timer.start()
                 result = func(*args, **kwargs)
             finally:
                 timer.cancel()

@@ -17,7 +17,11 @@ from ctypes import wintypes
 
 # user32.dll
 EnumWindows = ctypes.windll.user32.EnumWindows
-EnumWindowsProc = ctypes.WINFUNCTYPE(ctypes.c_bool, ctypes.POINTER(ctypes.c_int), ctypes.POINTER(ctypes.c_int))
+EnumWindowsProc = ctypes.WINFUNCTYPE(
+    ctypes.c_bool,
+    ctypes.POINTER(ctypes.c_int),
+    ctypes.POINTER(ctypes.c_int),
+)
 GetWindowText = ctypes.windll.user32.GetWindowTextW
 GetWindowTextLength = ctypes.windll.user32.GetWindowTextLengthW
 SendMessage = ctypes.windll.user32.SendMessageW
@@ -158,9 +162,9 @@ def find_windows(process_id = None, class_name = None, window_text = None, stop_
 
     return found_hwnds
 
-def qwidget_winid_to_hwnd(id):
+def qwidget_winid_to_hwnd(window_id):
     """
-    Convert the winid for a qtwidget to a HWND
+    Convert the window id for a qtwidget to a HWND
 
     :param id: qtwidget winid to convert
 
@@ -168,9 +172,9 @@ def qwidget_winid_to_hwnd(id):
     """
     # Setup arguments and return types
     ctypes.pythonapi.PyCObject_AsVoidPtr.restype = ctypes.c_void_p
-    ctypes.pythonapi.PyCObject_AsVoidPtr.argtypes = [ ctypes.py_object ]
+    ctypes.pythonapi.PyCObject_AsVoidPtr.argtypes = [ctypes.py_object]
 
     # Convert PyCObject to a void pointer
-    hwnd = ctypes.pythonapi.PyCObject_AsVoidPtr(id)
+    hwnd = ctypes.pythonapi.PyCObject_AsVoidPtr(window_id)
 
     return hwnd
