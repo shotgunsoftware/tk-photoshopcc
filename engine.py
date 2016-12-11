@@ -10,7 +10,6 @@
 
 import sys
 import os
-import sys
 import threading
 
 import sgtk
@@ -52,9 +51,10 @@ class AdobeEngine(sgtk.platform.Engine):
     def init_engine(self):
         self.log_debug("%s: Initializing..." % (self,))
         self.__qt_dialogs = []
-        self.__tk_adobecc = self.import_module("tk_adobecc")
 
     def pre_app_init(self):
+        self.__tk_adobecc = self.import_module("tk_adobecc")
+
         # TODO: We need to pass across id,name,displayname and have a
         # property for each. Like this: AEFT,aftereffects,After Effects
         self._app_id = self.SHOTGUN_ADOBE_APPID
@@ -88,7 +88,6 @@ class AdobeEngine(sgtk.platform.Engine):
         # TODO: log user attribute metric
 
     def post_qt_init(self):
-
         from sgtk.platform.qt import QtCore
 
         # since this is running in our own Qt event loop, we'll use the bundled
@@ -137,8 +136,7 @@ class AdobeEngine(sgtk.platform.Engine):
         # TODO: Implement real disconnection behavior. This may or may not
         # make sense to do here. This is just a tribute.
         from sgtk.platform.qt import QtCore
-        app = QtCore.QCoreApplication.instance()
-        app.quit()
+        QtCore.QCoreApplication.instance().quit()
 
     def _check_connection(self):
         try:
@@ -148,12 +146,6 @@ class AdobeEngine(sgtk.platform.Engine):
                 self.disconnected()
             else:
                 self._FAILED_PINGS += 1
-
-            # Regardless of whether we're beyond our tolerance, we don't
-            # want to continue on with the wait call below, because it's
-            # very likely to timeout. Best to let the heartbeat process
-            # work its course and get another shot after the next interval.
-            return
         else:
             self._FAILED_PINGS = 0
 
@@ -170,7 +162,6 @@ class AdobeEngine(sgtk.platform.Engine):
 
         :param int uid: The unique id of the engine command to run.
         """
-
         from sgtk.platform.qt import QtGui
 
         for command in self.commands.values():

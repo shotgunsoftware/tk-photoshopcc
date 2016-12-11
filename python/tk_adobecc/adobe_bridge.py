@@ -146,7 +146,7 @@ class AdobeBridge(Communicator):
     ##########################################################################################
     # public methods
 
-    @timeout(seconds=AdobeBridge.SHOTGUN_ADOBE_HEARTBEAT_TIMEOUT)
+    @timeout(seconds=SHOTGUN_ADOBE_HEARTBEAT_TIMEOUT)
     def ping(self):
         """
 
@@ -222,7 +222,7 @@ class AdobeBridge(Communicator):
         """
         self.state_requested.emit()
 
-    @timeout(seconds=AdobeBridge.SHOTGUN_ADOBE_RESPONSE_TIMEOUT)
+    @timeout(seconds=SHOTGUN_ADOBE_RESPONSE_TIMEOUT)
     def _wait_for_response(self, uid):
         """
         Waits for the results of an RPC call. A timeout is attached to this
