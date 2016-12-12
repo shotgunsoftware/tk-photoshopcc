@@ -6,13 +6,18 @@
     </ExtensionList>
     <ExecutionEnvironment>
         <HostList>
-            <!-- TODO: update with all products we want to provide access to. -->
-            <!-- TODO: make sure the minimum version is specified properly. -->
-            <!-- Photoshop -->
-            <Host Name="PHSP" Version="14.0"/>
-            <Host Name="PHXS" Version="14.0"/>
+            <!-- Photoshop - CC 2014+ -->
+            <Host Name="PHSP" Version="15.0"/>
+            <Host Name="PHXS" Version="15.0"/>
+
+            <!-- TODO: comment these out before release! -->
+            <!-- TODO: Manager does not sart properly for AE or PPro -->
+
             <!-- After Effects -->
-            <Host Name="AEFT" Version="13.0"/>
+            <Host Name="AEFT" Version="13.0" />
+
+            <!-- Premiere Pro -->
+            <Host Name="PPRO" Version="10.0" />
         </HostList>
         <LocaleList>
             <Locale Code="All"/>
@@ -34,7 +39,11 @@
                     <!-- don't show. keep it secret. keep it safe. -->
                     <AutoVisible>false</AutoVisible>
                     <StartOn>
+                        <!-- Photoshop startup event -->
                         <Event>applicationActivate</Event>
+                        <!-- Premiere startup event -->
+                        <Event>com.adobe.csxs.events.ApplicationActivate</Event>
+                        <!-- TODO: may need the panel to trigger manager startup in other products!-->
                     </StartOn>
                 </Lifecycle>
                 <UI>

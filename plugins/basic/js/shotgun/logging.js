@@ -10,6 +10,13 @@
 
 "use strict";
 
+// Each of the extensions (panel & manager) will use this interface, and each
+// will emit log messages. The panel will be connected to these log messages and
+// react to both sources. This allows all logging from python (via the manager)
+// and the panel to end up in one destination. In addition, logging messages
+// that don't originate from python will be forwarded back to the python
+// process.
+
 // namespace
 var sg_logging = sg_logging || {};
 
@@ -43,19 +50,20 @@ sg_logging._log = function(level, message, send_to_rpc) {
     if ( send_to_rpc && sg_logging.rpc != undefined ) {
         sg_logging._log_rpc(level, message);
     }
-    else {
-        // send a log message. this should be received and processed by the
-        // panel extension. that's where the user will have access to the
-        // flyout menu where they can click and go to the console.
-        sg_logging.LOG_MESSAGE.emit({
-            level: level,
-            message: message
-        });
-    }
+
+    // send a log message. this should be received and processed by the
+    // panel extension. that's where the user will have access to the
+    // flyout menu where they can click and go to the console.
+    sg_logging.LOG_MESSAGE.emit({
+        level: level,
+        message: message
+    });
 };
 
 sg_logging.debug = sg_logging._get_logger_by_level("debug", true);
-sg_logging.error = sg_logging._get_logger_by_level("error", true);
 sg_logging.info = sg_logging._get_logger_by_level("info", true);
+// TODO: wonder if we should add 'log_python' or 'python' to be explicit?
+//       maybe better than overtaking the standard 'log' level to mean 'from python'?
 sg_logging.log = sg_logging._get_logger_by_level("log", false);
 sg_logging.warn = sg_logging._get_logger_by_level("warn", true);
+sg_logging.error = sg_logging._get_logger_by_level("error", true);

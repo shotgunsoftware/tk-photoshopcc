@@ -29,6 +29,11 @@ a:link {
     color: #18A7E3;
 }
 
+a:link.sg_small_link {
+    color: #18A7E3;
+    font-size: 10px;
+}
+
 a:link.sg_field_value_link {
     color: #C6C6C6;
 }
@@ -77,6 +82,10 @@ div.sg_error {
     border-radius: 16px;
 }
 
+::-webkit-scrollbar-corner {
+    background-color: #3C3C3C;
+}
+
 #sg_panel_contents {
 }
 
@@ -116,21 +125,6 @@ div.sg_error {
     color: #C6C6C6;
     font-size: 12px;
     background-color: rgba(24, 167, 227, .75);
-}
-
-#sg_console_link {
-    text-align: center;
-    vertical-align: middle;
-    height: 10px;
-    line-height: 10px;
-    font-size: 10px;
-    background-image: linear-gradient(to bottom, rgba(0, 0, 0, 0), #1B1B1B, #1B1B1B) ;
-    padding-bottom: 4px;
-}
-
-#sg_console_link a:link {
-    color: #5C5C5C;
-    text-shadow: 1px 1px 0px #000000;
 }
 
 .sg_context_header {
@@ -196,3 +190,57 @@ div.sg_error {
     height: 8px;
     background-color: rgba(24, 167, 227, .75);
 }
+
+#sg_panel_console {
+    position: fixed;
+    bottom: 0px;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(24, 24, 24, .85);
+    display: none;
+}
+
+#sg_panel_console_header {
+    position: fixed;
+    top: 0px;
+    left: 0px;
+    width: 100%;
+    height: 22px;
+    color: #C6C6C6;
+    background-image: linear-gradient(to bottom, #1B1B1B, rgba(24, 24, 24, .85));
+    border-bottom: 1px solid #2A2A2A;
+    padding: 2px;
+}
+
+#sg_panel_console_log {
+    position: fixed;
+    bottom: 0px;
+    height: calc(100% - 31px);
+    width: calc(100% - 8px);
+    padding: 4px;
+    font-size: 10px;
+    text-align: left;
+    overflow-x: scroll;
+    overflow-y: scroll;
+}
+
+#sg_log_message {
+    color: #C6C6C6;
+    display: inline;
+}
+
+#sg_log_message_debug {
+    color: #18A7E3;
+    display: inline;
+}
+
+#sg_log_message_warn {
+    color: rgb(226, 159, 74);
+    display: inline;
+}
+
+#sg_log_message_error {
+    color: rgb(226, 74, 74);
+    display: inline;
+}
+

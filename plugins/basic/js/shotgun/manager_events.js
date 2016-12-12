@@ -28,5 +28,9 @@ sg_event.create_event(sg_manager, "UPDATE_STATE");
 // from continuing to function properly.
 sg_event.create_event(sg_manager, "CRITICAL_ERROR");
 
+// this event emitted when the python process cannot bootstrap due to pyside
+// not being installed
+sg_event.create_event(sg_manager, "PYSIDE_NOT_AVAILABLE");
+
 // emitted when the manager is shutting down. allows listeners to act accordingly
 sg_event.create_event(sg_manager, "SHUTTING_DOWN");

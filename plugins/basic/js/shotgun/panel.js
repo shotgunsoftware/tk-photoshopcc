@@ -55,9 +55,9 @@ sg_panel.Panel = new function() {
 
         sg_logging.debug("Emailing support: " + mailto_url);
 
-        _clear_messages();
+        _clear_info();
         _set_progress_info(100, "Composing SG support email...");
-        setTimeout(_clear_messages, 2000);
+        setTimeout(_clear_info, 2000);
 
         self.open_external_url(mailto_url);
     };
@@ -70,12 +70,28 @@ sg_panel.Panel = new function() {
             // ensure the panel is in its default state.
             self.clear();
 
+            _override_console_logging();
+
             // build the flyout menu. always do this first so we can have access
             // to the debug console no matter what happens during bootstrap.
             _build_flyout_menu();
 
             // setup event listeners first so we can react to various events
             _setup_event_listeners();
+
+            sg_logging.error("PANEL: test error");
+            sg_logging.warn("PANEL: test warning");
+            sg_logging.info("PANEL: test info");
+            sg_logging.debug("PANEL: test debug");
+
+            // If the current Adobe application is photoshop, turn on persistence.
+            // This isn't required, but provides a better user experience by not
+            // trying to reload the panel whenever it regains focus.
+            const photoshop_ids = ["PHSP", "PHXS"];
+            if (photoshop_ids.indexOf(_cs_interface.getApplicationID()) > -1) {
+                sg_logging.debug("Making panel persistent.");
+                _make_persistent(true);
+            }
 
             // request new state from the manager. if the python process hasn't
             // started up yet, this may not result in a response. however, the
@@ -111,8 +127,17 @@ sg_panel.Panel = new function() {
         // After requesting manager reload, simply shuts down this extension
         // since the manager will restart it.
 
-        // request manager reload
+        sg_logging.debug("Closing the panel.");
+
+        // turn off persistence so we can close the panel
+        _make_persistent(false);
+
+        // close the panel
+        self.on_unload();
+
+        // request manager reload and close the panel
         sg_panel.REQUEST_MANAGER_RELOAD.emit();
+        _cs_interface.closeExtension();
     };
 
     this.set_state = function(state) {
@@ -204,7 +229,24 @@ sg_panel.Panel = new function() {
         _show_contents(true);
 
         // make sure the progress bar and info is hidden
-        _clear_messages();
+        _show_progress(false);
+        _show_info(false);
+    };
+
+    this.show_console = function(show) {
+        // Show or hide the console.
+
+        const console_div_id = sg_constants.panel_div_ids["console"];
+        const console_log_div_id = sg_constants.panel_div_ids["console_log"];
+
+        _show_div(console_div_id, show);
+
+        if (show) {
+            _scroll_to_log_bottom();
+            document.body.style.overflow = 'hidden';
+        } else {
+            document.body.style.overflow = 'visible';
+        }
     };
 
     this.trigger_command = function(command_id, command_display) {
@@ -212,8 +254,8 @@ sg_panel.Panel = new function() {
         // Also shows a tmp message in the footer to confirm user click
 
         // show the progress message temporarily
-        _set_info("Launching command: " + command_display);
-        setTimeout(_clear_messages, 3000);
+        _set_info("Launching: " + command_display);
+        setTimeout(_clear_info, 3000);
 
         // trigger the command
         sg_panel.REGISTERED_COMMAND_TRIGGERED.emit(command_id);
@@ -231,9 +273,13 @@ sg_panel.Panel = new function() {
                           Label="About..." \
                           Enabled="true" \
                           Checked="false"/> \
+                <MenuItem Id="sg_console" \
+                          Label="Console" \
+                          Enabled="true" \
+                          Checked="false"/> \
                 <MenuItem Label="---" /> \
                 <MenuItem Id="sg_dev_debug" \
-                          Label="Debug Console (Requires Chrome)..." \
+                          Label="Chrome Console..." \
                           Enabled="true" \
                           Checked="false"/> \
                 <MenuItem Id="sg_dev_reload" \
@@ -259,6 +305,21 @@ sg_panel.Panel = new function() {
         );
     };
 
+    const _make_persistent = function(persistent) {
+        // Provides a way to make the panel persistent.
+        //
+        // Only valid for Photoshop.
+
+        var event_type = "com.adobe.PhotoshopUnPersistent";
+        if (persistent) {
+            event_type = "com.adobe.PhotoshopPersistent";
+        }
+
+        var event = new CSEvent(event_type, "APPLICATION");
+         event.extensionId = _cs_interface.getExtensionID();
+         _cs_interface.dispatchEvent(event);
+    };
+
     const _on_flyout_menu_clicked = function(event) {
         // Handles flyout menu clicks
 
@@ -279,8 +340,6 @@ sg_panel.Panel = new function() {
 
             // reload extension
             case "sg_dev_reload":
-                // turn off persistence so we can reload, then turn it back
-                // on after the reload
                 self.reload();
                 break;
 
@@ -292,6 +351,11 @@ sg_panel.Panel = new function() {
                 // having to navigate away from the current panel and its contents.
                 // Alternatively, display an overlay in the panel.
                 alert("ABOUT dialog goes here.");
+                break;
+
+            // about the extension
+            case "sg_console":
+                self.show_console(true);
                 break;
 
             // run test suite
@@ -311,7 +375,6 @@ sg_panel.Panel = new function() {
 
         const message = event.data.message;
 
-        // TODO: show the stack trace somewhere!
         const stack = event.data.stack;
 
         sg_logging.error("Critical: " + message);
@@ -367,10 +430,59 @@ sg_panel.Panel = new function() {
         );
     };
 
+    const _on_pyside_unavailable = function(event) {
+
+        _clear_messages();
+
+        sg_logging.error("Critical: PySide is unavailable");
+
+        _show_header(false);
+
+        var contents_html = "<div class='sg_error_message'>" +
+            "The Shotgun integration failed to load because <samp>PySide" +
+            "</samp> is not installed." +
+            "</div>";
+
+        contents_html +=
+            "<br>In order for the Shotgun integration to work properly,  " +
+            "<samp>PySide</samp> must be installed on your system.<br><br>" +
+            "For information about <samp>PySide</samp> and how to install " +
+            "it, please click the image below:<br><br><br>" +
+            "<center>" +
+            "<a href='#' onclick='sg_panel.Panel.open_external_url(\"" + sg_constants.pyside_url + "\")'>" +
+                "<img src='../images/PySideLogo1.png' width='150px'>" +
+            "</a>" +
+            "</center><br>";
+
+        const subject = encodeURIComponent("Adobe Integration Error");
+        const body = encodeURIComponent(
+            "Greetings Shotgun Support Team!\n\n" +
+            "We have some questions about the Adobe CC Integration.\n\n" +
+            "*** Please enter your questions here... ***\n\n"
+        );
+
+        contents_html +=
+            "<br>Once you have <samp>PySide</samp> installed, restart this " +
+            "application to load the Shotgun integration.<br><br> " +
+            "If you believe the error is incorrect or you have any further " +
+            "questions, please contact: " +
+            "<a href='#' onClick='sg_panel.Panel.email_support(\"" +
+            subject + "\", \"" + body + "\")'>" +
+            "Shotgun Support" +
+            "</a>.";
+
+        contents_html = "<div class='sg_container'>" + contents_html + "</div>";
+
+        _set_contents(contents_html);
+        _set_error(
+            "Uh Oh! Could not find <samp>PySide</samp>."
+        );
+    };
+
     const _on_logged_message = function(event) {
         // Handles incoming log messages
-        const level = event.data.level;
-        const msg = event.data.message;
+        var level = event.data.level;
+        var msg = event.data.message;
 
         // Some things are sent via log signal because there's no other
         // way to get access to them. For example, during toolkit
@@ -387,7 +499,7 @@ sg_panel.Panel = new function() {
             if (!matches) {
                 return;
             }
-            matches.forEach(function(match) {
+            matches.forEach(function (match) {
                 const single_regex = new RegExp(regex_str, "m");
                 const msg_parts = match.match(single_regex);
                 // the regex returns the progress value as a float at
@@ -395,9 +507,127 @@ sg_panel.Panel = new function() {
                 _set_progress_info(msg_parts[1] * 100, msg_parts[3]);
             });
 
-        } else {
-            // typical log message. forward to the console
-            console[level](msg);
+            return;
+        }
+
+        // forward to the js console
+        console[level](msg);
+    };
+
+    const _override_console_logging = function (){
+
+        var console = window.console;
+        if (!console) return;
+
+        const intercept = function(method) {
+
+            var original = console[method];
+            console[method] = function(){
+                var message = Array.prototype.slice.apply(arguments).join(" ");
+                _forward_to_panel_console(method, message);
+                original.apply(console, arguments);
+            }
+        };
+
+        var methods = ["log", "warn", "error", "debug", "info"];
+        for (var i = 0; i < methods.length; i++) {
+            intercept(methods[i])
+        }
+    };
+
+    const _forward_to_panel_console = function(level, msg) {
+
+        var log_source = "js";
+
+        if (level === "log") {
+            // This log message came from python. See if we can determine
+            // the real log level from the beginning of the message. This allows
+            // the messages to display properly in both the chrome debug console
+            // and our own console in the panel. NOTE: if the formatting of the
+            // python logs changes, this may not work.
+            level = _get_python_log_level(msg, "log");
+            log_source = "py";
+        }
+
+        // remove trailing newline
+        msg = msg.replace(/\n$/, "");
+
+        const lines = msg.split("\n");
+        lines.forEach(function(line) {
+
+            var line_level = _get_python_log_level(line, level);
+
+            var div_id = "sg_log_message";
+            if (line_level == "debug") {
+                line = line.replace("DEBUG:", "");
+                div_id = "sg_log_message_debug"
+            } else if (line_level == "warn") {
+                line = line.replace("WARNING:", "");
+                div_id = "sg_log_message_warn"
+            } else if (line_level == "error") {
+                line = line.replace("ERROR:", "");
+                div_id = "sg_log_message_error"
+            } else {
+                line = line.replace("INFO:", "");
+            }
+
+            if (log_source == "js") {
+                line = " > " + line;
+            } else {
+                line = ">>" + line;
+            }
+
+            // create a <pre> element and insert the line text
+            const node = document.createElement("pre");
+            node.setAttribute("id", div_id);
+            node.appendChild(document.createTextNode(line));
+
+            // append the <pre> element to the log div
+            const log = document.getElementById("sg_panel_console_log");
+            log.appendChild(node);
+            log.appendChild(document.createElement("br"));
+        });
+
+        if (["error", "critical"].indexOf(level) >= 0) {
+            // scroll to the bottom if an error occurs
+            _scroll_to_log_bottom();
+        }
+    };
+
+    const _get_python_log_level = function(msg, default_level) {
+        var level = default_level;
+
+        if (msg.startsWith("DEBUG:")) {
+            level = "debug";
+        } else if (msg.startsWith("INFO:")) {
+            level = "info";
+        } else if (msg.startsWith("WARNING:")) {
+            level = "warn";
+        } else if (msg.startsWith("ERROR:")) {
+            level = "error";
+        } else if (msg.startsWith("CRITICAL:")) {
+            level = "error";
+        }
+        return level
+    };
+
+    // scroll to the bottom of the div
+    const _scroll_to_log_bottom = function() {
+        const console_log_div_id = sg_constants.panel_div_ids["console_log"];
+        const log = document.getElementById(console_log_div_id);
+        log.scrollTop = log.scrollHeight;
+    };
+
+    const _select_text = function(div_id) {
+        // Select all the text within the provided div
+        if (document.selection) {
+            const range = document.body.createTextRange();
+            range.moveToElementText(document.getElementById(div_id));
+            range.select();
+        } else if (window.getSelection) {
+            const range = document.createRange();
+            range.selectNode(document.getElementById(div_id));
+            window.getSelection().addRange(range);
         }
     };
 
@@ -406,6 +636,9 @@ sg_panel.Panel = new function() {
 
         // Handle python process disconnected
         sg_manager.CRITICAL_ERROR.connect(_on_critical_error);
+
+        // Handle pyside not being installed
+        sg_manager.PYSIDE_NOT_AVAILABLE.connect(_on_pyside_unavailable);
 
         // Updates the panel with the current state from python
         sg_manager.UPDATE_STATE.connect(
@@ -494,6 +727,11 @@ sg_panel.Panel = new function() {
         _show_progress(false);
     };
 
+    const _clear_info = function() {
+        _show_info(false);
+        _show_progress(false);
+    };
+
     const _format_email_error_message = function(error) {
 
         const message = error.message;
@@ -517,6 +755,5 @@ sg_panel.Panel = new function() {
     };
 };
 
-// TODO: add show console link in footer
 // TODO: state should provide header info
 // TODO: mouse over icon should highlight text
