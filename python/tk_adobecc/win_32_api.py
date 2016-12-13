@@ -1,4 +1,4 @@
-# Copyright (c) 2013 Shotgun Software Inc.
+# Copyright (c) 2016 Shotgun Software Inc.
 #
 # CONFIDENTIAL AND PROPRIETARY
 #
@@ -9,14 +9,19 @@
 # not expressly granted therein are reserved by Shotgun Software Inc.
 
 """
-minimal set of win32 functions used by photoshop engine to manage toolkit UI under windows
+A minimal set of win32 functions used by the adobecc engine to manage SGTK
+GUI components within a Windows environment.
 """
 import ctypes
 from ctypes import wintypes
 
 # user32.dll
 EnumWindows = ctypes.windll.user32.EnumWindows
-EnumWindowsProc = ctypes.WINFUNCTYPE(ctypes.c_bool, ctypes.POINTER(ctypes.c_int), ctypes.POINTER(ctypes.c_int))
+EnumWindowsProc = ctypes.WINFUNCTYPE(
+    ctypes.c_bool,
+    ctypes.POINTER(ctypes.c_int),
+    ctypes.POINTER(ctypes.c_int),
+)
 GetWindowText = ctypes.windll.user32.GetWindowTextW
 GetWindowTextLength = ctypes.windll.user32.GetWindowTextLengthW
 SendMessage = ctypes.windll.user32.SendMessageW
@@ -60,7 +65,9 @@ class PROCESSENTRY32(ctypes.Structure):
 def find_parent_process_id(process_id):
     """
     Find the parent process id for a given process
+
     :param process_id: id of process to find parent of
+
     :returns: parent process id or None if parent not found
     """
     parent_process_id = None
@@ -86,7 +93,9 @@ def find_parent_process_id(process_id):
 def safe_get_window_text(hwnd):
     """
     Safely get the window text (title) of a specified window
+
     :param hwnd: window handle to get the text of
+
     :returns: window title if found
     """
     title = ""
@@ -104,10 +113,12 @@ def safe_get_window_text(hwnd):
 def find_windows(process_id = None, class_name = None, window_text = None, stop_if_found = True):
     """
     Find top level windows matching certain criteria
+
     :param process_id: only match windows that belong to this process id if specified
     :param class_name: only match windows that match this class name if specified
     :param window_text: only match windows that match this window text if specified
     :param stop_if_found: stop when find a match
+
     :returns: list of window handles found by search
     """
     found_hwnds = []
@@ -151,17 +162,19 @@ def find_windows(process_id = None, class_name = None, window_text = None, stop_
 
     return found_hwnds
 
-def qwidget_winid_to_hwnd(id):
+def qwidget_winid_to_hwnd(window_id):
     """
-    Convert the winid for a qtwidget to a HWND
+    Convert the window id for a qtwidget to a HWND
+
     :param id: qtwidget winid to convert
+
     :returns: window handle
     """
     # Setup arguments and return types
     ctypes.pythonapi.PyCObject_AsVoidPtr.restype = ctypes.c_void_p
-    ctypes.pythonapi.PyCObject_AsVoidPtr.argtypes = [ ctypes.py_object ]
+    ctypes.pythonapi.PyCObject_AsVoidPtr.argtypes = [ctypes.py_object]
 
     # Convert PyCObject to a void pointer
-    hwnd = ctypes.pythonapi.PyCObject_AsVoidPtr(id)
+    hwnd = ctypes.pythonapi.PyCObject_AsVoidPtr(window_id)
 
     return hwnd

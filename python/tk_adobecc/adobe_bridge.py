@@ -62,7 +62,8 @@ def timeout(seconds=5.0, error_message="Timed out."):
 
 class MessageEmitter(QtCore.QObject):
     """
-    Emits incoming socket.io messages as Qt signals.
+    Container QObject for Qt signals fired when messages requesting certain
+    actions take place in Python arrive from the remote process.
 
     :signal logging_received(str, str): Fires when a logging call has been
         received. The first string is the logging level (debug, info, warning,
@@ -72,6 +73,8 @@ class MessageEmitter(QtCore.QObject):
         that was requested to be executed.
     :signal run_tests_request_received: Fires when a request for unit tests to
         be run has been received.
+    :signal state_requested: Fires when the remote process requests the current
+        state.
     """
     logging_received = QtCore.Signal(str, str)
     command_received = QtCore.Signal(int)
