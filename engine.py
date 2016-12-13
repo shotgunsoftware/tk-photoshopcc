@@ -10,7 +10,6 @@
 
 import sys
 import os
-import sys
 import threading
 
 import sgtk
@@ -21,27 +20,45 @@ class AdobeEngine(sgtk.platform.Engine):
     An Adobe CC engine for Shotgun Toolkit.
     """
 
-    ENV_COMMUNICATION_PORT_NAME = "SHOTGUN_ADOBE_PORT"
-    ENV_APPID_NAME = "SHOTGUN_ADOBE_APPID"
-    CHECK_CONNECTION_TIMEOUT = 1000
+    SHOTGUN_ADOBE_PORT = os.environ.get("SHOTGUN_ADOBE_PORT")
+    SHOTGUN_ADOBE_APPID = os.environ.get("SHOTGUN_ADOBE_APPID")
+
+    # Backwards compatibility added to support tk-photoshop environment vars.
+    # https://support.shotgunsoftware.com/hc/en-us/articles/219039748-Photoshop#If%20the%20engine%20does%20not%20start
+    SHOTGUN_ADOBE_HEARTBEAT_INTERVAL = os.environ.get(
+        "SHOTGUN_ADOBE_HEARTBEAT_INTERVAL",
+        os.environ.get(
+            "SGTK_PHOTOSHOP_HEARTBEAT_INTERVAL",
+            0.2,
+        )
+    )
+    SHOTGUN_ADOBE_HEARTBEAT_TOLERANCE = os.environ.get(
+        "SHOTGUN_ADOBE_HEARTBEAT_TOLERANCE",
+        os.environ.get(
+            "SGTK_PHOTOSHOP_HEARTBEAT_TOLERANCE",
+            2,
+        ),
+    )
+
     TEST_SCRIPT_BASENAME = "run_tests.py"
 
     _COMMAND_UID_COUNTER = 0
     _LOCK = threading.Lock()
+    _FAILED_PINGS = 0
 
     ##########################################################################################
     def pre_app_init(self):
+        self.__tk_adobecc = self.import_module("tk_adobecc")
+
         # TODO: We need to pass across id,name,displayname and have a
         # property for each. Like this: AEFT,aftereffects,After Effects
-        self._app_id = os.environ.get(self.ENV_APPID_NAME)
-
-        tk_adobecc = self.import_module("tk_adobecc")
+        self._app_id = self.SHOTGUN_ADOBE_APPID
 
         # get the adobe instance. it may have been initialized already by a
         # previous instance of the engine. if not, initialize a new one.
-        self._adobe = tk_adobecc.AdobeBridge.get_or_create(
+        self._adobe = self.__tk_adobecc.AdobeBridge.get_or_create(
             identifier=self.instance_name,
-            port=os.environ.get(self.ENV_COMMUNICATION_PORT_NAME),
+            port=self.SHOTGUN_ADOBE_PORT,
         )
 
         self.logger.debug("%s: Initializing..." % (self,))
@@ -74,7 +91,6 @@ class AdobeEngine(sgtk.platform.Engine):
         # TODO: log user attribute metric
 
     def post_qt_init(self):
-
         from sgtk.platform.qt import QtCore
 
         # since this is running in our own Qt event loop, we'll use the bundled
@@ -84,9 +100,15 @@ class AdobeEngine(sgtk.platform.Engine):
 
         # setup the check connection timer.
         self._check_connection_timer = QtCore.QTimer(
-            parent=QtCore.QCoreApplication.instance())
+            parent=QtCore.QCoreApplication.instance(),
+        )
+
         self._check_connection_timer.timeout.connect(self._check_connection)
-        self._check_connection_timer.start(self.CHECK_CONNECTION_TIMEOUT)
+
+        # The class variable is in seconds, so multiply to get milliseconds.
+        self._check_connection_timer.start(
+            self.SHOTGUN_ADOBE_HEARTBEAT_INTERVAL * 1000.0,
+        )
 
         # now that qt is setup and the engine is ready to go, forward the
         # current state back to the adobe side.
@@ -117,21 +139,24 @@ class AdobeEngine(sgtk.platform.Engine):
         # TODO: Implement real disconnection behavior. This may or may not
         # make sense to do here. This is just a tribute.
         from sgtk.platform.qt import QtCore
-        app = QtCore.QCoreApplication.instance()
-        app.quit()
+        QtCore.QCoreApplication.instance().quit()
 
     def _check_connection(self):
         try:
             self.adobe.ping()
         except Exception:
-            self.disconnected()
+            if self._FAILED_PINGS >= self.SHOTGUN_ADOBE_HEARTBEAT_TOLERANCE:
+                self.disconnected()
+            else:
+                self._FAILED_PINGS += 1
         else:
-            tk_adobecc = self.import_module("tk_adobecc")
+            self._FAILED_PINGS = 0
+
             # Will allow queued up messages (like logging calls)
             # to be handled on the Python end.
             try:
                 self.adobe.wait(0.01)
-            except tk_adobecc.RPCTimeoutError:
+            except self.__tk_adobecc.RPCTimeoutError:
                 self.disconnected()
 
     def _emit_log_message(self, handler, record):
@@ -160,7 +185,6 @@ class AdobeEngine(sgtk.platform.Engine):
 
         :param int uid: The unique id of the engine command to run.
         """
-
         from sgtk.platform.qt import QtGui
 
         for command in self.commands.values():
@@ -415,8 +439,7 @@ class AdobeEngine(sgtk.platform.Engine):
 
         status = QtGui.QDialog.Rejected
         if sys.platform == "win32":
-            tk_adobecc = self.import_module("tk_adobecc")
-            win_32_api = tk_adobecc.win_32_api
+            win_32_api = self.__tk_adobecc.win_32_api
 
             saved_state = []
             try:
@@ -519,12 +542,12 @@ class AdobeEngine(sgtk.platform.Engine):
         """
         if hasattr(self, "_win32_photoshop_process_id"):
             return self._win32_photoshop_process_id
+
         self._win32_photoshop_process_id = None
 
         this_pid = os.getpid()
 
-        tk_adobecc = self.import_module("tk_adobecc")
-        win_32_api = tk_adobecc.win_32_api
+        win_32_api = self.__tk_adobecc.win_32_api
         self._win32_photoshop_process_id = win_32_api.find_parent_process_id(this_pid)
 
         return self._win32_photoshop_process_id
@@ -536,6 +559,7 @@ class AdobeEngine(sgtk.platform.Engine):
         """
         if hasattr(self, "_win32_photoshop_main_hwnd"):
             return self._win32_photoshop_main_hwnd
+
         self._win32_photoshop_main_hwnd = None
 
         # find photoshop process id:
@@ -543,9 +567,13 @@ class AdobeEngine(sgtk.platform.Engine):
 
         if ps_process_id != None:
             # get main application window for photoshop process:
-            tk_adobecc = self.import_module("tk_adobecc")
-            win_32_api = tk_adobecc.win_32_api
-            found_hwnds = win_32_api.find_windows(process_id=ps_process_id, class_name="Photoshop", stop_if_found=False)
+            win_32_api = self.__tk_adobecc.win_32_api
+            found_hwnds = win_32_api.find_windows(
+                process_id=ps_process_id,
+                class_name="Photoshop",
+                stop_if_found=False,
+            )
+
             if len(found_hwnds) == 1:
                 self._win32_photoshop_main_hwnd = found_hwnds[0]
 
@@ -559,27 +587,34 @@ class AdobeEngine(sgtk.platform.Engine):
         """
         if hasattr(self, "_win32_proxy_win"):
             return self._win32_proxy_win
+
         self._win32_proxy_win = None
 
         # get the main Photoshop window:
         ps_hwnd = self._win32_get_photoshop_main_hwnd()
-        if ps_hwnd != None:
 
+        if ps_hwnd != None:
             from sgtk.platform.qt import QtGui
-            tk_adobecc = self.import_module("tk_adobecc")
-            win_32_api = tk_adobecc.win_32_api
+            win_32_api = self.__tk_adobecc.win_32_api
 
             # create the proxy QWidget:
             self._win32_proxy_win = QtGui.QWidget()
             self._win32_proxy_win.setWindowTitle('sgtk dialog owner proxy')
 
-            proxy_win_hwnd = win_32_api.qwidget_winid_to_hwnd(self._win32_proxy_win.winId())
+            proxy_win_hwnd = win_32_api.qwidget_winid_to_hwnd(
+                self._win32_proxy_win.winId(),
+            )
 
             # set no parent notify:
-            win_ex_style = win_32_api.GetWindowLong(proxy_win_hwnd, win_32_api.GWL_EXSTYLE)
-            win_32_api.SetWindowLong(proxy_win_hwnd, win_32_api.GWL_EXSTYLE,
-                                     win_ex_style
-                                     | win_32_api.WS_EX_NOPARENTNOTIFY)
+            win_ex_style = win_32_api.GetWindowLong(
+                proxy_win_hwnd,
+                win_32_api.GWL_EXSTYLE,
+            )
+            win_32_api.SetWindowLong(
+                proxy_win_hwnd,
+                win_32_api.GWL_EXSTYLE,
+                win_ex_style | win_32_api.WS_EX_NOPARENTNOTIFY,
+            )
 
             # parent to photoshop application window:
             win_32_api.SetParent(proxy_win_hwnd, ps_hwnd)
