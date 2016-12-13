@@ -40,6 +40,9 @@ sg_manager.Manager = new function() {
     var __python_disconnected = false;
     var __python_disconnected_error = undefined;
 
+    // remember if pyside was unavailable
+    var __pyside_unavailable = false;
+
     // ---- public methods
 
     this.on_load = function() {
@@ -51,18 +54,24 @@ sg_manager.Manager = new function() {
 
             // ensure this app is supported by our extension
             if (!_app_is_supported()) {
-                sg_logging.warning(
-                    "This CC product does not meet the minimum requirements " +
-                    "to run the Shotgun integration. The Shotgun integration " +
-                    "requires support for HTML panels and the extended panel " +
-                    "menu."
-                );
+                _emit_python_critical_error({
+                    message: "This CC product does not meet the minimum " +
+                        "requirements to run the Shotgun integration. The " +
+                        "Shotgun integration requires support for HTML " +
+                        "panels and the extended panel menu.",
+                    stack: undefined
+                });
                 return;
             }
 
             // setup event listeners so that we can react to messages as they
             // come in.
             _setup_event_listeners();
+
+            sg_logging.error("MANAGER: test error");
+            sg_logging.warn("MANAGER: test warning");
+            sg_logging.info("MANAGER: test info");
+            sg_logging.debug("MANAGER: test debug");
 
             // start up the panel in the adobe product first. we can display
             // messages and information to the user while functions below are
@@ -249,19 +258,33 @@ sg_manager.Manager = new function() {
         });
 
         // handle python process disconnection
-        self.python_process.on(
-            "close",
-            function() {
-                _emit_python_critical_error({
-                    message: "The Shotgun integration has unexpectedly shut " +
-                             "down. Specifically, the python process that " +
-                             "handles the communication with Shotgun has " +
-                             "been terminated.",
-                    stack: undefined
-                });
+        self.python_process.on("close", _handle_python_close);
+    };
 
-            }
-        )
+    const _handle_python_close = function(code, signal) {
+        // Python should never be shut down by anything other than the manager.
+        // So if we're here, something caused it to exit early. Handle any known
+        // status codes accordingly.
+
+        const error_codes = sg_constants.python_error_codes;
+
+        if (code == error_codes.EXIT_STATUS_NO_PYSIDE) {
+            // Special case, PySide does not appear to be installed.
+            __pyside_unavailable = true;
+            __python_disconnected = true;
+            sg_logging.error("Python exited because PySide is unavailable.");
+            sg_manager.PYSIDE_NOT_AVAILABLE.emit();
+        } else {
+            // Fallback case where we don't know why it shut down.
+            sg_logging.error("Python exited unexpectedly.");
+            _emit_python_critical_error({
+                message: "The Shotgun integration has unexpectedly shut " +
+                "down. Specifically, the python process that " +
+                "handles the communication with Shotgun has " +
+                "been terminated.",
+                stack: undefined
+            });
+        }
     };
 
     const _get_open_port = function(port_found_callback) {
@@ -410,7 +433,6 @@ sg_manager.Manager = new function() {
         const extension_id = _cs_interface.getExtensionID();
 
         // close the extension
-        self.on_unload();
         sg_logging.debug(" Closing the python extension.");
         _cs_interface.closeExtension();
 
@@ -447,7 +469,11 @@ sg_manager.Manager = new function() {
             function() {
                 sg_logging.debug("State requested.");
                 if (__python_disconnected) {
-                    _emit_python_critical_error(__python_disconnected_error);
+                    if (__pyside_unavailable) {
+                        sg_manager.PYSIDE_NOT_AVAILABLE.emit();
+                    } else {
+                        _emit_python_critical_error(__python_disconnected_error);
+                    }
                 } else {
                     sg_socket_io.rpc_state_requested();
                 }

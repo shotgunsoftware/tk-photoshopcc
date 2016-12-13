@@ -4,14 +4,9 @@
         <HostList>
            <Host Name="PHSP" Port="45216"/>
            <Host Name="PHXS" Port="45217"/>
+           <!-- TODO: comment these out before release -->
            <Host Name="AEFT" Port="45218"/>
-        </HostList>
-    </Extension>
-    <Extension Id="com.shotgunsoftware.basic.adobecc.manager">
-        <HostList>
-           <Host Name="PHSP" Port="45219"/>
-           <Host Name="PHXS" Port="45220"/>
-           <Host Name="AEFT" Port="45221"/>
+           <Host Name="PPRO" Port="45219"/>
         </HostList>
     </Extension>
 </ExtensionList>

@@ -47,11 +47,6 @@ class AdobeEngine(sgtk.platform.Engine):
     _FAILED_PINGS = 0
 
     ##########################################################################################
-    # init and destroy
-    def init_engine(self):
-        self.log_debug("%s: Initializing..." % (self,))
-        self.__qt_dialogs = []
-
     def pre_app_init(self):
         self.__tk_adobecc = self.import_module("tk_adobecc")
 
@@ -66,6 +61,14 @@ class AdobeEngine(sgtk.platform.Engine):
             port=self.SHOTGUN_ADOBE_PORT,
         )
 
+        self.logger.debug("%s: Initializing..." % (self,))
+        self.__qt_dialogs = []
+
+        self.logger.error("PYTHON: test error")
+        self.logger.warning("PYTHON: test warning")
+        self.logger.info("PYTHON: test info")
+        self.logger.debug("PYTHON: test debug")
+
         self.adobe.logging_received.connect(self._handle_logging)
         self.adobe.command_received.connect(self._handle_command)
         self.adobe.run_tests_request_received.connect(self._run_tests)
@@ -76,14 +79,14 @@ class AdobeEngine(sgtk.platform.Engine):
     def post_app_init(self):
 
         # list the registered commands for debugging purposes
-        self.log_debug("Registered Commands:")
+        self.logger.debug("Registered Commands:")
         for (command_name, value) in self.commands.iteritems():
-            self.log_debug(" %s: %s" % (command_name, value))
+            self.logger.debug(" %s: %s" % (command_name, value))
 
         # list the registered panels for debugging purposes
-        self.log_debug("Registered Panels:")
+        self.logger.debug("Registered Panels:")
         for (panel_name, value) in self.panels.iteritems():
-            self.log_debug(" %s: %s" % (panel_name, value))
+            self.logger.debug(" %s: %s" % (panel_name, value))
 
         # TODO: log user attribute metric
 
@@ -92,7 +95,7 @@ class AdobeEngine(sgtk.platform.Engine):
 
         # since this is running in our own Qt event loop, we'll use the bundled
         # dark look and feel. breaking encapsulation to do so.
-        self.log_debug("Initializing default styling...")
+        self.logger.debug("Initializing default styling...")
         self._initialize_dark_look_and_feel()
 
         # setup the check connection timer.
@@ -156,6 +159,26 @@ class AdobeEngine(sgtk.platform.Engine):
             except self.__tk_adobecc.RPCTimeoutError:
                 self.disconnected()
 
+    def _emit_log_message(self, handler, record):
+        """
+        Called by the engine whenever a new log message is available.
+
+        All log messages from the toolkit logging namespace will be passed to
+        this method.
+
+        :param handler: Log handler that this message was dispatched from
+        :type handler: :class:`~python.logging.LogHandler`
+        :param record: Std python logging record
+        :type record: :class:`~python.logging.LogRecord`
+        """
+
+        # we don't use the handler's format method here because the adobe side
+        # expects a certain format.
+        msg_str = "%s: [%s] %s" % (record.levelname, record.name, record.message)
+
+        sys.stdout.write(msg_str)
+        sys.stdout.flush()
+
     def _handle_command(self, uid):
         """
         Handles an RPC engine command execution request.
@@ -178,16 +201,17 @@ class AdobeEngine(sgtk.platform.Engine):
         :param str message: The log message.
         """
         command_map = dict(
-            debug=self.log_debug,
-            error=self.log_error,
-            info=self.log_info,
-            warn=self.log_warning,
+            debug=self.logger.debug,
+            error=self.logger.error,
+            info=self.logger.info,
+            warn=self.logger.warning,
         )
 
-        if level in command_map:
-            # TODO: Figure out how to better identify RPC logging vs.
-            # native logging from Python.
-            command_map[level]("[ADOBE] %s" % message)
+        # TODO: figure out how to add this back in. this will end up back in
+        #       _emit_log_message which will send back to js.
+        #if level in command_map:
+        #    # native logging from Python.
+        #    command_map[level]("[ADOBE] %s" % message)
 
     def _run_tests(self):
         """
@@ -198,7 +222,7 @@ class AdobeEngine(sgtk.platform.Engine):
         try:
             tests_root = os.environ["SHOTGUN_ADOBECC_TESTS_ROOT"]
         except KeyError:
-            self.log_error(
+            self.logger.error(
                 "The SHOTGUN_ADOBECC_TESTS_ROOT environment variable "
                 "must be set to the root directory of the tests to be "
                 "run. Not running tests!"
@@ -207,18 +231,18 @@ class AdobeEngine(sgtk.platform.Engine):
         else:
             # Make sure we can find the run_tests.py file within the root
             # that was specified in the environment.
-            self.log_debug("Test root path found. Looking for run_tests.py.")
+            self.logger.debug("Test root path found. Looking for run_tests.py.")
             test_module = os.path.join(tests_root, self.TEST_SCRIPT_BASENAME)
 
             if not os.path.exists(test_module):
-                self.log_error(
+                self.logger.error(
                     "Unable to find run_tests.py in the directory "
                     "specified by the SHOTGUN_ADOBECC_TESTS_ROOT "
                     "environment variable. Not running tests!"
                 )
                 return
 
-        self.log_debug("Found run_tests.py. Importing to run tests.")
+        self.logger.debug("Found run_tests.py. Importing to run tests.")
 
         try:
             # We need to prepend to sys.path. We'll set it back to
@@ -240,7 +264,7 @@ class AdobeEngine(sgtk.platform.Engine):
             # wrong in the test suite. We'll just trap that and print it
             # as an error without letting it bubble up any farther.
             import traceback
-            self.log_error(
+            self.logger.error(
                 "Tests raised the following:\n%s" % traceback.format_exc(exc)
             )
         finally:
@@ -330,7 +354,7 @@ class AdobeEngine(sgtk.platform.Engine):
         """
         # TODO: ensure dialog is shown above CC
         if not self.has_ui:
-            self.log_error("Sorry, this environment does not support UI display! Cannot show "
+            self.logger.error("Sorry, this environment does not support UI display! Cannot show "
                            "the requested window '%s'." % title)
             return None
 
@@ -344,7 +368,15 @@ class AdobeEngine(sgtk.platform.Engine):
         # Keeping track of all dialogs will ensure this doesn't happen
         self.__qt_dialogs.append(dialog)
 
-        # TODO: bring python to the front
+        # if the dialogs are configured to always be on top, set the proper
+        # hint on the dialog.
+        if self.get_setting("dialogs_always_on_top", True):
+            from sgtk.platform.qt import QtCore
+            dialog.setWindowFlags(
+                dialog.windowFlags() |
+                QtCore.Qt.CustomizeWindowHint |
+                QtCore.Qt.WindowStaysOnTopHint
+            )
 
         # show the dialog:
         dialog.show()
@@ -368,7 +400,7 @@ class AdobeEngine(sgtk.platform.Engine):
         :returns: (a standard QT dialog status return code, the created widget_class instance)
         """
         if not self.has_ui:
-            self.log_error("Sorry, this environment does not support UI display! Cannot show "
+            self.logger.error("Sorry, this environment does not support UI display! Cannot show "
                            "the requested window '%s'." % title)
             return
 
@@ -384,12 +416,26 @@ class AdobeEngine(sgtk.platform.Engine):
         # Keeping track of all dialogs will ensure this doesn't happen
         self.__qt_dialogs.append(dialog)
 
-        # TODO: bring python to the front
+        # if the dialogs are configured to always be on top, set the proper
+        # hint on the dialog.
+        if self.get_setting("dialogs_always_on_top", True):
+            from sgtk.platform.qt import QtCore
+            dialog.setWindowFlags(
+                dialog.windowFlags() |
+                QtCore.Qt.CustomizeWindowHint |
+                QtCore.Qt.WindowStaysOnTopHint
+            )
 
         # make sure the window raised so it doesn't
         # appear behind the main Photoshop window
         dialog.raise_()
         dialog.activateWindow()
+
+        # TODO: we need to test modal app dialogs!
+        # TODO: wf2 file open for example
+        # TODO: make sure it shows up on top!
+        # TODO: if current code doesn't work, try single shot timer to raise after exec_()
+        #       confirmed. single shot timer will fire while dialog is shown.
 
         status = QtGui.QDialog.Rejected
         if sys.platform == "win32":
@@ -410,7 +456,7 @@ class AdobeEngine(sgtk.platform.Engine):
                 # show dialog:
                 status = dialog.exec_()
             except Exception, e:
-                self.log_error("Error showing modal dialog: %s" % e)
+                self.logger.error("Error showing modal dialog: %s" % e)
             finally:
                 # kinda important to ensure we restore other window state:
                 for hwnd, state in saved_state:
@@ -486,7 +532,7 @@ class AdobeEngine(sgtk.platform.Engine):
             state["commands"].append(command)
 
         # TODO: send to javascript
-        self.log_debug("Sending state: %s" % str(state))
+        self.logger.debug("Sending state: %s" % str(state))
         self.adobe.send_state(state)
 
     def _win32_get_photoshop_process_id(self):

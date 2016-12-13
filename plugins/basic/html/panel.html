@@ -49,17 +49,35 @@ are reserved by Shotgun Software Inc.
     <div id="sg_panel_footer">
 
       <!-- progress bar -->
-      <div id="sg_console_link" style="display:block;">
-        <a href='#' onclick="alert('console here');">- show console -</a>
-      </div>
-
-      <!-- progress bar -->
       <div id="sg_progress" style="display:none;">
         <div id="sg_progress_bar">
         </div>
       </div>
       <!-- info -->
       <div id="sg_status_info" style="display:none;"></div>
+    </div>
+
+    <!-- console -->
+    <div id="sg_panel_console">
+
+      <!-- console header -->
+      <div id="sg_panel_console_header">
+        <table width="100%">
+          <tr>
+            <td>
+              Console:
+            </td>
+            <td align="right">
+              <a class="sg_small_link" href="#" onclick="sg_panel.Panel.show_console(false)">[close]</a>
+            </td>
+          </tr>
+        </table>
+      </div>
+      <!-- console logs -->
+      <div id="sg_panel_console_log">
+
+      </div>
+
     </div>
 
     <script>
