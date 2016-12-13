@@ -102,6 +102,7 @@ class AdobeBridge(Communicator):
             0.5,
         ),
     )
+    WAIT_TIMEOUT = 5.0
 
     def __init__(self, *args, **kwargs):
         super(AdobeBridge, self).__init__(*args, **kwargs)
@@ -149,7 +150,7 @@ class AdobeBridge(Communicator):
     ##########################################################################################
     # public methods
 
-    @timeout(seconds=SHOTGUN_ADOBE_HEARTBEAT_TIMEOUT)
+    @timeout(SHOTGUN_ADOBE_HEARTBEAT_TIMEOUT, "Ping timed out.")
     def ping(self):
         """
 
@@ -167,7 +168,7 @@ class AdobeBridge(Communicator):
         json_state = json.dumps(state)
         self._io.emit("set_state", json_state)
 
-    @timeout(seconds=5.0)
+    @timeout(WAIT_TIMEOUT, "SocketIO wait timed out.")
     def wait(self, timeout=0.1):
         """
         Triggers a wait call in the underlying socket.io server. This wait
@@ -225,7 +226,7 @@ class AdobeBridge(Communicator):
         """
         self.state_requested.emit()
 
-    @timeout(seconds=SHOTGUN_ADOBE_RESPONSE_TIMEOUT)
+    @timeout(SHOTGUN_ADOBE_RESPONSE_TIMEOUT, "Timed out waiting for response.")
     def _wait_for_response(self, uid):
         """
         Waits for the results of an RPC call. A timeout is attached to this
