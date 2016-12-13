@@ -250,10 +250,12 @@ class EngineIO(LoggingMixin):
             # not.
             pass
 
-        tt = threading.Timer(seconds, _handle_timeout)
-        tt.start()
+        # Using an async timer to handle stopping the wait loop
+        # once the wait period is over.
+        wait_timer = threading.Timer(seconds, _handle_timeout)
+        wait_timer.start()
 
-        while tt.is_alive():
+        while wait_timer.is_alive():
             if self._should_stop_waiting(**kw):
                 break
             try:
@@ -273,7 +275,7 @@ class EngineIO(LoggingMixin):
                     self._warn(warning)
                 try:
                     namespace = self.get_namespace()
-                    namespace.on_disconnect()
+                    namespace._find_packet_callback('disconnect')()
                 except PacketError:
                     pass
 

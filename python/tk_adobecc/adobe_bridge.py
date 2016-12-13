@@ -229,7 +229,9 @@ class AdobeBridge(Communicator):
     def _wait_for_response(self, uid):
         """
         Waits for the results of an RPC call. A timeout is attached to this
-        operation equal to
+        operation equal to the number of seconds defined in the
+        SHOTGUN_ADOBE_RESPONSE_TIMEOUT environment variable, or 300 seconds
+        if that is not defined.
 
         :param int uid: The unique id of the RPC call to wait for.
 
