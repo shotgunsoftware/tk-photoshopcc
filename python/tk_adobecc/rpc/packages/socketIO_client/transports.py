@@ -3,11 +3,13 @@ import six
 import ssl
 import threading
 import time
+from six.moves.urllib.parse import urlencode as format_query
+from six.moves.urllib.parse import urlparse as parse_url
 from socket import error as SocketError
 try:
     from websocket import (
-        SSLError, WebSocketConnectionClosedException,
-        WebSocketTimeoutException, create_connection)
+        WebSocketConnectionClosedException, WebSocketTimeoutException,
+        create_connection)
 except ImportError:
     exit("""\
 An incompatible websocket library is conflicting with the one we need.
@@ -21,7 +23,7 @@ from .exceptions import ConnectionError, TimeoutError
 from .parsers import (
     encode_engineIO_content, decode_engineIO_content,
     format_packet_text, parse_packet_text)
-from .symmetries import format_query, memoryview, parse_url
+from .symmetries import SSLError, memoryview
 
 
 ENGINEIO_PROTOCOL = 3
@@ -151,7 +153,7 @@ class WebsocketTransport(AbstractTransport):
         except SocketError as e:
             raise ConnectionError('recv disconnected (%s)' % e)
         if not isinstance(packet_text, six.binary_type):
-            packet_text = six.b(packet_text)
+            packet_text = packet_text.encode('utf-8')
         engineIO_packet_type, engineIO_packet_data = parse_packet_text(
             packet_text)
         yield engineIO_packet_type, engineIO_packet_data
