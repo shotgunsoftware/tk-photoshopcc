@@ -1,4 +1,6 @@
 import atexit
+import threading
+import time
 
 from .exceptions import ConnectionError, TimeoutError, PacketError
 from .heartbeats import HeartbeatThread
@@ -16,7 +18,7 @@ from .transports import (
 
 
 __all__ = 'SocketIO', 'SocketIONamespace'
-__version__ = '0.7.0'
+__version__ = '0.7.2'
 BaseNamespace = SocketIONamespace
 LoggingNamespace = LoggingSocketIONamespace
 
@@ -241,9 +243,19 @@ class EngineIO(LoggingMixin):
         self._heartbeat_thread.hurry()
         # Use timeout to unblock recv for websocket transport
         self._transport.set_timeout(seconds=1)
-        # Listen
-        warning_screen = self._yield_warning_screen(seconds)
-        for elapsed_time in warning_screen:
+
+        def _handle_timeout():
+            # No behavior here. We're just testing whether the timer is
+            # actually running to determine whether to stop waiting or
+            # not.
+            pass
+
+        # Using an async timer to handle stopping the wait loop
+        # once the wait period is over.
+        wait_timer = threading.Timer(seconds, _handle_timeout)
+        wait_timer.start()
+
+        while wait_timer.is_alive():
             if self._should_stop_waiting(**kw):
                 break
             try:
@@ -263,9 +275,14 @@ class EngineIO(LoggingMixin):
                     self._warn(warning)
                 try:
                     namespace = self.get_namespace()
-                    namespace.on_disconnect()
+                    namespace._find_packet_callback('disconnect')()
                 except PacketError:
                     pass
+
+            # Slow the loop down a bit so that it doesn't
+            # eat up a ton of CPU.
+            time.sleep(0.01)
+
         self._heartbeat_thread.relax()
         self._transport.set_timeout()
 
@@ -342,7 +359,7 @@ class SocketIO(EngineIO):
     """
 
     def __init__(
-            self, host, port=None, Namespace=SocketIONamespace,
+            self, host='localhost', port=None, Namespace=SocketIONamespace,
             wait_for_connection=True, transports=TRANSPORTS,
             resource='socket.io', hurry_interval_in_seconds=1, **kw):
         self._namespace_by_path = {}
@@ -396,26 +413,30 @@ class SocketIO(EngineIO):
 
     # Act
 
-    def connect(self, path, with_transport_instance=False):
-        socketIO_packet_type = 0
-        socketIO_packet_data = format_socketIO_packet_data(path)
-        self._message(
-            str(socketIO_packet_type) + socketIO_packet_data,
-            with_transport_instance)
+    def connect(self, path='', with_transport_instance=False):
+        if path or not self.connected:
+            socketIO_packet_type = 0
+            socketIO_packet_data = format_socketIO_packet_data(path)
+            self._message(
+                str(socketIO_packet_type) + socketIO_packet_data,
+                with_transport_instance)
+        self._wants_to_close = False
 
     def disconnect(self, path=''):
-        if not path or not self._opened:
-            self._close()
-        elif path:
+        if path and self._opened:
             socketIO_packet_type = 1
             socketIO_packet_data = format_socketIO_packet_data(path)
             try:
                 self._message(str(socketIO_packet_type) + socketIO_packet_data)
             except (TimeoutError, ConnectionError):
                 pass
+        elif not path:
+            self._close()
         try:
-            namespace = self._namespace_by_path.pop(path)
-            namespace.on_disconnect()
+            namespace = self._namespace_by_path[path]
+            namespace._find_packet_callback('disconnect')()
+            if path:
+                del self._namespace_by_path[path]
         except KeyError:
             pass
 

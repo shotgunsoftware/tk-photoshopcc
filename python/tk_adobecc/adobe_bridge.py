@@ -86,6 +86,24 @@ class AdobeBridge(Communicator):
     """
     Bridge layer between the Adobe product and Shotgun Toolkit.
     """
+    # Backwards compatibility added to support tk-photoshop environment vars.
+    # https://support.shotgunsoftware.com/hc/en-us/articles/219039748-Photoshop#If%20the%20engine%20does%20not%20start
+    SHOTGUN_ADOBE_RESPONSE_TIMEOUT = os.environ.get(
+        "SHOTGUN_ADOBE_RESPONSE_TIMEOUT",
+        os.environ.get(
+            "SGTK_PHOTOSHOP_TIMEOUT",
+            300.0,
+        ),
+    )
+    SHOTGUN_ADOBE_HEARTBEAT_TIMEOUT = os.environ.get(
+        "SHOTGUN_ADOBE_HEARTBEAT_TIMEOUT",
+        os.environ.get(
+            "SGTK_PHOTOSHOP_HEARTBEAT_TIMEOUT",
+            0.5,
+        ),
+    )
+    WAIT_TIMEOUT = 5.0
+
     def __init__(self, *args, **kwargs):
         super(AdobeBridge, self).__init__(*args, **kwargs)
 
@@ -132,6 +150,13 @@ class AdobeBridge(Communicator):
     ##########################################################################################
     # public methods
 
+    @timeout(SHOTGUN_ADOBE_HEARTBEAT_TIMEOUT, "Ping timed out.")
+    def ping(self):
+        """
+
+        """
+        super(AdobeBridge, self).ping()
+
     def send_state(self, state):
         """
         Responsible for forwarding the current SG state to javascript.
@@ -143,7 +168,7 @@ class AdobeBridge(Communicator):
         json_state = json.dumps(state)
         self._io.emit("set_state", json_state)
 
-    @timeout()
+    @timeout(WAIT_TIMEOUT, "SocketIO wait timed out.")
     def wait(self, timeout=0.1):
         """
         Triggers a wait call in the underlying socket.io server. This wait
@@ -193,7 +218,27 @@ class AdobeBridge(Communicator):
         self.run_tests_request_received.emit()
 
     def _forward_state_request(self, response):
+        """
+        Forwards the request for state as a QtSignal.
+
+        :param response: The data received with the message. This
+                         is disregarded.
+        """
         self.state_requested.emit()
+
+    @timeout(SHOTGUN_ADOBE_RESPONSE_TIMEOUT, "Timed out waiting for response.")
+    def _wait_for_response(self, uid):
+        """
+        Waits for the results of an RPC call. A timeout is attached to this
+        operation equal to the number of seconds defined in the
+        SHOTGUN_ADOBE_RESPONSE_TIMEOUT environment variable, or 300 seconds
+        if that is not defined.
+
+        :param int uid: The unique id of the RPC call to wait for.
+
+        :returns: The raw returned results data.
+        """
+        return super(AdobeBridge, self)._wait_for_response(uid)
 
 ##########################################################################################
 # exceptions

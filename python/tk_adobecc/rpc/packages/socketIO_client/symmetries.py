@@ -1,4 +1,3 @@
-import six
 try:
     from logging import NullHandler
 except ImportError:  # Python 2.6
@@ -8,26 +7,30 @@ except ImportError:  # Python 2.6
 
         def emit(self, record):
             pass
+
+
+from six import indexbytes
+
+
 try:
-    from urllib import urlencode as format_query
+    from ssl import SSLError
 except ImportError:
-    from urllib.parse import urlencode as format_query  # noqa
-try:
-    from urlparse import urlparse as parse_url
-except ImportError:
-    from urllib.parse import urlparse as parse_url  # noqa
+    class SSLError(Exception):
+        pass
+
+
 try:
     memoryview = memoryview
 except NameError:
     memoryview = buffer
 
 
+def get_byte(x, index):
+    return indexbytes(x, index)
+
+
 def get_character(x, index):
     return chr(get_byte(x, index))
-
-
-def get_byte(x, index):
-    return six.indexbytes(x, index)
 
 
 def decode_string(x):

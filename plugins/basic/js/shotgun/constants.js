@@ -25,35 +25,54 @@ sg_constants.product_info = {
     // Photoshop
     PHSP: {
         tk_engine_name: "tk-photoshop",
-        debug_url: "http://localhost:45216",
+        debug_url: "http://localhost:45216"
     },
 
     // Photoshop alt
     PHXS: {
         tk_engine_name: "tk-photoshop",
-        debug_url: "http://localhost:45217",
+        debug_url: "http://localhost:45217"
     },
 
     // After Effects
 
     AEFT: {
-        tk_engine_name: "tk-aftereffects",
-        debug_url: "http://localhost:45218",
+        tk_engine_name: "tk-photoshop",
+        debug_url: "http://localhost:45218"
     },
 
-    // NOTE: the debug ports are defined in .debug manifest
+    // Premiere Pro
 
+    PPRO: {
+        tk_engine_name: "tk-photoshop",
+        debug_url: "http://localhost:45219"
+    }
+
+    // NOTE: the debug ports are defined in .debug file at the top level of the
+    // plugin.
 };
 
 // This is simply a lookup of panel div ids. The keys of this should never
-// change.
+// change. The values should always match the div ids in panel.html.
 sg_constants.panel_div_ids = {
+    error: "sg_status_error",
+    warning: "sg_status_warning",
+    header: "sg_panel_header",
     contents: "sg_panel_contents",
     footer: "sg_panel_footer",
-    header: "sg_panel_header",
     progress: "sg_progress",
     progress_bar: "sg_progress_bar",
     info: "sg_status_info",
-    error: "sg_status_error",
-    warning: "sg_status_warning"
+    console: "sg_panel_console",
+    console_log: "sg_panel_console_log"
 };
+
+// Error codes to identify why the python process was shut down
+sg_constants.python_error_codes = {
+    EXIT_STATUS_CLEAN: 0,
+    EXIT_STATUS_ERROR: 100,
+    EXIT_STATUS_NO_PYSIDE: 101
+};
+
+// External link to pyside docs
+sg_constants.pyside_url = "https://wiki.qt.io/PySide";

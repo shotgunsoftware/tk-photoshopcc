@@ -16,33 +16,28 @@ import traceback
 # NOTE: this module becomes available once the plugin is built
 from sgtk_plugin_basic_adobecc import manifest
 
+# exit status codes used when the python process dies. these are known by the
+# js process that spawned python so they can be used as a primitive form of
+# communication.
+EXIT_STATUS_CLEAN = 0
+EXIT_STATUS_ERROR = 100
+EXIT_STATUS_NO_PYSIDE = 101
+
 # TODO: move this into the engine?
-class _PyToJsLogHandler(logging.StreamHandler):
+class _BootstrapLogHandler(logging.StreamHandler):
     """
     Manually flushes emitted records for js to pickup.
     """
 
-    # TODO: only log according to current log level in engine settings
-
-    def __init__(self, engine_name):
-        """
-        Initializes the log handler.
-
-        :param engine_name: The name of the engine being wrapped.
-        """
-        super(_PyToJsLogHandler, self).__init__()
-        self._engine_name = engine_name
-
-    # always flush to ensure its seen by the js process
     def emit(self, record):
         """
         Forwards the record back to to js via the engine communicator.
 
         :param record: The record to log.
         """
-        # TODO: replace these two lines with a call go get the communictor
-        #       singleton instance and make a call to its logging method
-        super(_PyToJsLogHandler, self).emit(record)
+        super(_BootstrapLogHandler, self).emit(record)
+
+        # always flush to ensure its seen by the js process
         self.flush()
 
 
@@ -125,21 +120,28 @@ def toolkit_bootstrap(root_path, engine_name):
     # ---- setup logging
 
     # initializes the file where logging output will go
-    sgtk.LogManager().initialize_base_file_handler("tk-adobecc")
+    sgtk.LogManager().initialize_base_file_handler(engine_name)
 
     # allows for debugging to be turned on by the plugin build process
     sgtk.LogManager().global_debug = manifest.debug_logging
 
     # add a custom handler to the root logger so that all toolkit log messages
     # are forwarded back to python via the communicator
-    py_to_js_formatter = logging.Formatter("%(levelname)s: %(message)s")
-    py_to_js_handler = _PyToJsLogHandler(engine_name)
-    py_to_js_handler.setFormatter(py_to_js_formatter)
-    sgtk.LogManager().initialize_custom_handler(py_to_js_handler)
+    bootstrap_log_formatter = logging.Formatter("%(levelname)s: %(message)s")
+    bootstrap_log_handler = _BootstrapLogHandler()
+    bootstrap_log_handler.setFormatter(bootstrap_log_formatter)
+
+    if manifest.debug_logging:
+        bootstrap_log_handler.setLevel(logging.DEBUG)
+    else:
+        bootstrap_log_handler.setLevel(logging.INFO)
 
     # now get a logger use during bootstrap
     sgtk_logger = sgtk.LogManager.get_logger("extension_bootstrap")
+    sgtk.LogManager().initialize_custom_handler(bootstrap_log_handler)
+
     sgtk_logger.debug("Toolkit core path: %s" % (tk_core_path,))
+    sgtk_logger.debug("Added bootstrap log hander to root logger...")
 
     # set up the toolkit boostrap manager
     toolkit_mgr = sgtk.bootstrap.ToolkitManager()
@@ -155,11 +157,27 @@ def toolkit_bootstrap(root_path, engine_name):
     # engine/app configuration to bootstrap into within the current context.
     sgtk_logger.info("Bootstrapping toolkit...")
     toolkit_mgr.bootstrap_engine(engine_name, entity=None)
-    sgtk_logger.info("Toolkit Bootstrapped!")
 
+    sgtk.LogManager().root_logger.removeHandler(bootstrap_log_handler)
+    sgtk_logger.debug("Removed bootstrap log handler from root logger...")
+
+    sgtk_logger.info("Toolkit Bootstrapped!")
 
 # executed from javascript
 if __name__ == "__main__":
+
+    # the communication port is supplied by javascript. the toolkit engine
+    # env to bootstrap into is also supplied by javascript
+    (port, engine_name, app_id) = sys.argv[1:4]
+
+    try:
+        # first, make sure we can import PySide. If not, there's no need to
+        # continue.
+        from PySide import QtCore, QtGui
+    except ImportError:
+        sys.stdout.write("ERROR: %s" % (traceback.format_exc(),))
+        sys.stdout.flush()
+        sys.exit(EXIT_STATUS_NO_PYSIDE)
 
     # wrap the entire plugin boostrap process so that we can respond to any
     # errors and display them in the panel.
@@ -167,20 +185,11 @@ if __name__ == "__main__":
         # root path is the 'sgtk' directory 2 levels up from this file
         root_path = os.path.dirname(os.path.dirname(__file__))
 
-        # the communication port is supplied by javascript. the toolkit engine
-        # env to bootstrap into is also supplied by javascript
-        (port, engine_name, app_id) = sys.argv[1:4]
-
         # startup the plugin which includes setting up the socket io client,
         # bootstrapping the engine, and starting the Qt event loop
         plugin_bootstrap(root_path, port, engine_name, app_id)
     except Exception, e:
-        print "Shotgun Toolkit failed to bootstrap."
-
-        # TODO: possible to communicate this back via socket.io client?
-        #       try to get a handle on the instance. if can't just print trace
-        traceback.print_exc()
+        sys.stdout.write("ERROR: %s" % (traceback.format_exc(),))
         sys.stdout.flush()
-        sys.exit(1)
-
+        sys.exit(EXIT_STATUS_ERROR)
 
