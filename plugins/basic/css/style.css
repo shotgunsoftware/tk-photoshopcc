@@ -48,10 +48,16 @@ a:active {
     left: 1px
 }
 
-hr.sg_hr {
+hr.sg_hr_right {
     border: 0;
     height: 1px;
     background-image: linear-gradient(to right, #212121, #2A2A2A);
+}
+
+hr.sg_hr_left {
+    border: 0;
+    height: 1px;
+    background-image: linear-gradient(to right, #2A2A2A, #212121);
 }
 
 div.sg_error {
@@ -89,9 +95,44 @@ div.sg_error {
 #sg_panel_contents {
 }
 
+#sg_panel_commands {
+    text-align: left;
+    flex-wrap: wrap;
+    padding: 7px;
+    margin: 0px;
+}
+
+.sg_panel_command_img {
+    -webkit-filter: grayscale(1);
+    width: 42px;
+}
+
+.sg_panel_command_img:hover {
+    -webkit-filter: grayscale(0);
+    width: 42px;
+}
+
+#sg_command_help {
+    text-align: left;
+    color: #C6C6C6;
+    font-size: 10px;
+    margin: 0px;
+    padding-left: 14px;
+    padding-right: 14px;
+    padding-bottom: 14px;
+}
+
 #sg_command_button {
-    display: block;
-    padding-left: 12px;
+    display: inline-block;
+    border-radius: 3px;
+    margin: 4px;
+    padding: 4px;
+    border: 1px solid rgba(0, 0, 0, 0);
+}
+
+#sg_command_button:hover {
+    border: 1px solid #666666;
+    background-color: #454545;
 }
 
 #sg_command_button_icon {
@@ -108,7 +149,7 @@ div.sg_error {
     color: #767676;
     font-family: Verdana;
     font-size: 10px;
-    padding: 4px;
+    padding-top: 7px;
 }
 
 #sg_panel_footer {

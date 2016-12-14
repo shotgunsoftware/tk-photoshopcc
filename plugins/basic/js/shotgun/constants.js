@@ -59,6 +59,7 @@ sg_constants.panel_div_ids = {
     warning: "sg_status_warning",
     header: "sg_panel_header",
     contents: "sg_panel_contents",
+    command_help: "sg_command_help",
     footer: "sg_panel_footer",
     progress: "sg_progress",
     progress_bar: "sg_progress_bar",

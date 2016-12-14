@@ -184,7 +184,7 @@ sg_panel.Panel = new function() {
         _set_header(header_html);
         _show_header(true);
 
-        var commands_html = "";
+        var commands_html = "<div id='sg_panel_commands'>";
         const commands = state["commands"];
 
         commands.forEach(function(command) {
@@ -203,27 +203,20 @@ sg_panel.Panel = new function() {
                 }
 
                 commands_html +=
-                    "<a href='#' class='sg_command_link' onClick='sg_panel.Panel.trigger_command(\"" + command_id + "\", \"" + display_name + "\")'>" +
-                        "<div id='sg_command_button'>" +
-                            "<table>" +
-                                "<tr>" +
-                                    // icon
-                                    "<td id='sg_command_button_icon'>" +
-                                       "<img src='" + icon_path + "' width='48'> " +
-                                    "</td>" +
-                                    // text
-                                    "<td id='sg_command_button_text'>" +
-                                       display_name +
-                                       description_html +
-                                    "</td>" +
-                                "</tr>" +
-                          "</table>" +
-                        "</div>" +
-                    "</a>" +
-                    "<hr class='sg_hr'>";
+                    "<a href='#' class='sg_command_link' " +
+                        "onClick='sg_panel.Panel.trigger_command(\"" +
+                            command_id + "\", \"" + display_name + "\")'>" +
+                        "<div id='sg_command_button' " +
+                            "onmouseover='sg_panel.Panel.show_command_help(\"" +
+                                display_name + "\", \"" + description + "\")' " +
+                            "onmouseout='sg_panel.Panel.hide_command_help()'>" +
+                            "<center><img class='sg_panel_command_img' src='" + icon_path + "'></center>" +
+                        "</div>";
             }
             // TODO: if command is missing something, log it.
         });
+
+        commands_html += "</div>";
 
         _set_contents(commands_html);
         _show_contents(true);
@@ -231,6 +224,19 @@ sg_panel.Panel = new function() {
         // make sure the progress bar and info is hidden
         _show_progress(false);
         _show_info(false);
+    };
+
+    this.show_command_help = function(display_name, description) {
+        var help_html = "<strong>" + display_name + "</strong><br>";
+        if (description && description !== "null") {
+            help_html += "<div class='sg_command_description'>" + description + "</div>";
+        }
+        _set_command_help(help_html);
+        _show_command_help(true);
+    };
+
+    this.hide_command_help = function() {
+        _show_command_help(false);
     };
 
     this.show_console = function(show) {
@@ -680,6 +686,7 @@ sg_panel.Panel = new function() {
     const _set_info = _set_div_html_by_id("info");
     const _set_error = _set_div_html_by_id("error");
     const _set_warning = _set_div_html_by_id("warning");
+    const _set_command_help = _set_div_html_by_id("command_help");
 
     // ---- progress bar methods
 
@@ -719,6 +726,7 @@ sg_panel.Panel = new function() {
     const _show_error = _show_div_by_id("error");
     const _show_warning = _show_div_by_id("warning");
     const _show_progress = _show_div_by_id("progress");
+    const _show_command_help = _show_div_by_id("command_help");
 
     const _clear_messages = function() {
         _show_info(false);
