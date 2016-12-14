@@ -1,10 +1,9 @@
 import atexit
-import threading
 import time
 
 from .exceptions import ConnectionError, TimeoutError, PacketError
 from .heartbeats import HeartbeatThread
-from .logs import LoggingMixin
+from .logs import LoggingMixin, _yield_elapsed_time
 from .namespaces import (
     EngineIONamespace, SocketIONamespace,
     LoggingSocketIONamespace, find_callback, make_logging_prefix)
@@ -244,18 +243,7 @@ class EngineIO(LoggingMixin):
         # Use timeout to unblock recv for websocket transport
         self._transport.set_timeout(seconds=1)
 
-        def _handle_timeout():
-            # No behavior here. We're just testing whether the timer is
-            # actually running to determine whether to stop waiting or
-            # not.
-            pass
-
-        # Using an async timer to handle stopping the wait loop
-        # once the wait period is over.
-        wait_timer = threading.Timer(seconds, _handle_timeout)
-        wait_timer.start()
-
-        while wait_timer.is_alive():
+        for elapsed in _yield_elapsed_time(seconds):
             if self._should_stop_waiting(**kw):
                 break
             try:

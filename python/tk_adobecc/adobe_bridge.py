@@ -102,7 +102,6 @@ class AdobeBridge(Communicator):
             0.5,
         ),
     )
-    WAIT_TIMEOUT = 5.0
 
     def __init__(self, *args, **kwargs):
         super(AdobeBridge, self).__init__(*args, **kwargs)
@@ -153,7 +152,8 @@ class AdobeBridge(Communicator):
     @timeout(SHOTGUN_ADOBE_HEARTBEAT_TIMEOUT, "Ping timed out.")
     def ping(self):
         """
-
+        Pings the socket.io server to test whether the connection is still
+        active.
         """
         super(AdobeBridge, self).ping()
 
@@ -167,17 +167,6 @@ class AdobeBridge(Communicator):
         # encode the python dict as json
         json_state = json.dumps(state)
         self._io.emit("set_state", json_state)
-
-    @timeout(WAIT_TIMEOUT, "SocketIO wait timed out.")
-    def wait(self, timeout=0.1):
-        """
-        Triggers a wait call in the underlying socket.io server. This wait
-        can get hung up if the server is killed, so this methods breaks at
-        5 seconds of duration and raises RPCTimeoutError if it does.
-
-        :param float timeout: The wait duration, in seconds.
-        """
-        super(AdobeBridge, self).wait(timeout)
 
     ##########################################################################################
     # internal methods
