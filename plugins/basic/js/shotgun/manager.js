@@ -249,12 +249,12 @@ sg_manager.Manager = new function() {
 
         // log stdout from python process
         self.python_process.stdout.on("data", function (data) {
-            sg_logging.log(data.toString());
+            sg_logging.python(data.toString());
         });
 
         // log stderr from python process
         self.python_process.stderr.on("data", function (data) {
-            sg_logging.log(data.toString());
+            sg_logging.python(data.toString());
         });
 
         // handle python process disconnection

@@ -62,8 +62,9 @@ sg_logging._log = function(level, message, send_to_rpc) {
 
 sg_logging.debug = sg_logging._get_logger_by_level("debug", true);
 sg_logging.info = sg_logging._get_logger_by_level("info", true);
-// TODO: wonder if we should add 'log_python' or 'python' to be explicit?
-//       maybe better than overtaking the standard 'log' level to mean 'from python'?
-sg_logging.log = sg_logging._get_logger_by_level("log", false);
+sg_logging.log = sg_logging._get_logger_by_level("log", true);
 sg_logging.warn = sg_logging._get_logger_by_level("warn", true);
 sg_logging.error = sg_logging._get_logger_by_level("error", true);
+
+// for log messages coming from python (not sent back via rpc)
+sg_logging.python = sg_logging._get_logger_by_level("python", false);

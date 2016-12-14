@@ -119,12 +119,6 @@ def toolkit_bootstrap(root_path, engine_name):
 
     # ---- setup logging
 
-    # initializes the file where logging output will go
-    sgtk.LogManager().initialize_base_file_handler(engine_name)
-
-    # allows for debugging to be turned on by the plugin build process
-    sgtk.LogManager().global_debug = manifest.debug_logging
-
     # add a custom handler to the root logger so that all toolkit log messages
     # are forwarded back to python via the communicator
     bootstrap_log_formatter = logging.Formatter("%(levelname)s: %(message)s")
@@ -136,8 +130,14 @@ def toolkit_bootstrap(root_path, engine_name):
     else:
         bootstrap_log_handler.setLevel(logging.INFO)
 
-    # now get a logger use during bootstrap
-    sgtk_logger = sgtk.LogManager.get_logger("extension_bootstrap")
+    # allows for debugging to be turned on by the plugin build process
+    sgtk.LogManager().global_debug = manifest.debug_logging
+
+    # initializes the file where logging output will go
+    sgtk.LogManager().initialize_base_file_handler(engine_name)
+
+    # now get a logger to use during bootstrap
+    sgtk_logger = sgtk.LogManager.get_logger("%s.%s" % (engine_name, "bootstrap"))
     sgtk.LogManager().initialize_custom_handler(bootstrap_log_handler)
 
     sgtk_logger.debug("Toolkit core path: %s" % (tk_core_path,))

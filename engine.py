@@ -171,7 +171,7 @@ class AdobeEngine(sgtk.platform.Engine):
 
         # we don't use the handler's format method here because the adobe side
         # expects a certain format.
-        msg_str = "%s: [%s] %s" % (record.levelname, record.name, record.message)
+        msg_str = "\n%s: [%s] %s\n" % (record.levelname, record.name, record.message)
 
         sys.stdout.write(msg_str)
         sys.stdout.flush()
