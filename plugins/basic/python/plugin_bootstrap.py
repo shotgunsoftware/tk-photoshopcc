@@ -41,6 +41,38 @@ class _BootstrapLogHandler(logging.StreamHandler):
         self.flush()
 
 
+def get_sgtk_logger(sgtk):
+    """
+    Sets up a log handler and logger.
+
+    :param sgtk: An sgtk module reference.
+
+    :returns: A logger and log handler.
+    """
+    # initializes the file where logging output will go
+    sgtk.LogManager().initialize_base_file_handler(engine_name)
+
+    # allows for debugging to be turned on by the plugin build process
+    sgtk.LogManager().global_debug = manifest.debug_logging
+
+    # add a custom handler to the root logger so that all toolkit log messages
+    # are forwarded back to python via the communicator
+    bootstrap_log_formatter = logging.Formatter("%(levelname)s: %(message)s")
+    bootstrap_log_handler = _BootstrapLogHandler()
+    bootstrap_log_handler.setFormatter(bootstrap_log_formatter)
+
+    if manifest.debug_logging:
+        bootstrap_log_handler.setLevel(logging.DEBUG)
+    else:
+        bootstrap_log_handler.setLevel(logging.INFO)
+
+    # now get a logger use during bootstrap
+    sgtk_logger = sgtk.LogManager.get_logger("extension_bootstrap")
+    sgtk.LogManager().initialize_custom_handler(bootstrap_log_handler)
+
+    return sgtk_logger, bootstrap_log_handler
+
+
 def progress_handler(value, message):
     """
     Writes the progress values in a special format that can be intercepted by
@@ -57,7 +89,7 @@ def progress_handler(value, message):
     sys.stdout.flush()
 
 
-def plugin_bootstrap(root_path, port, engine_name, app_id):
+def bootstrap(root_path, port, engine_name, app_id):
 
     # set the port in the env so that the engine can pick it up. this also
     # allows engine restarts to find the proper port.
@@ -70,7 +102,10 @@ def plugin_bootstrap(root_path, port, engine_name, app_id):
     # do the toolkit bootstrapping. this will replace the core imported via the
     # sys path with the one specified via the resolved config. it will startup
     # the engine and make Qt available to us.
-    toolkit_bootstrap(root_path, engine_name)
+    if os.environ.get("TANK_CONTEXT") and os.environ.get("TANK_ENGINE"):
+        toolkit_traditional_bootstrap()
+    else:
+        toolkit_plugin_bootstrap(root_path, engine_name)
 
     # core may have been swapped. import sgtk
     import sgtk
@@ -105,11 +140,10 @@ def plugin_bootstrap(root_path, port, engine_name, app_id):
     sys.exit(app.exec_())
 
 
-def toolkit_bootstrap(root_path, engine_name):
+def toolkit_plugin_bootstrap(root_path, engine_name):
     """
-    Business logic for bootstrapping toolkit.
+    Business logic for bootstrapping toolkit as a plugin.
     """
-
     # setup the path to make toolkit importable
     tk_core_path = manifest.get_sgtk_pythonpath(root_path)
     sys.path.append(tk_core_path)
@@ -119,26 +153,7 @@ def toolkit_bootstrap(root_path, engine_name):
 
     # ---- setup logging
 
-    # initializes the file where logging output will go
-    sgtk.LogManager().initialize_base_file_handler(engine_name)
-
-    # allows for debugging to be turned on by the plugin build process
-    sgtk.LogManager().global_debug = manifest.debug_logging
-
-    # add a custom handler to the root logger so that all toolkit log messages
-    # are forwarded back to python via the communicator
-    bootstrap_log_formatter = logging.Formatter("%(levelname)s: %(message)s")
-    bootstrap_log_handler = _BootstrapLogHandler()
-    bootstrap_log_handler.setFormatter(bootstrap_log_formatter)
-
-    if manifest.debug_logging:
-        bootstrap_log_handler.setLevel(logging.DEBUG)
-    else:
-        bootstrap_log_handler.setLevel(logging.INFO)
-
-    # now get a logger use during bootstrap
-    sgtk_logger = sgtk.LogManager.get_logger("extension_bootstrap")
-    sgtk.LogManager().initialize_custom_handler(bootstrap_log_handler)
+    sgtk_logger, log_handler = get_sgtk_logger(sgtk)
 
     sgtk_logger.debug("Toolkit core path: %s" % (tk_core_path,))
     sgtk_logger.debug("Added bootstrap log hander to root logger...")
@@ -158,10 +173,42 @@ def toolkit_bootstrap(root_path, engine_name):
     sgtk_logger.info("Bootstrapping toolkit...")
     toolkit_mgr.bootstrap_engine(engine_name, entity=None)
 
-    sgtk.LogManager().root_logger.removeHandler(bootstrap_log_handler)
+    # ---- tear down logging
+
+    sgtk.LogManager().root_logger.removeHandler(log_handler)
     sgtk_logger.debug("Removed bootstrap log handler from root logger...")
 
     sgtk_logger.info("Toolkit Bootstrapped!")
+
+
+def toolkit_traditional_bootstrap():
+    """
+    Business logic for bootstrapping toolkit as a traditional setup..
+    """
+    import sgtk
+
+    # ---- setup logging
+
+    sgtk_logger, log_handler = get_sgtk_logger(sgtk)
+    sgtk_logger.info("TANK_CONTEXT and TANK_ENGINE variables found.")
+
+    # Deserialize the Context object and use that when starting
+    # the engine.
+    context = sgtk.context.deserialize(os.environ["TANK_CONTEXT"])
+    engine_name = os.environ["TANK_ENGINE"]
+
+    sgtk_logger.info(
+        "Starting %s using context %s..." % (engine_name, context)
+    )
+    engine = sgtk.platform.start_engine(engine_name, context.tank, context)
+
+    # ---- tear down logging
+
+    sgtk.LogManager().root_logger.removeHandler(log_handler)
+    sgtk_logger.debug("Removed bootstrap log handler from root logger...")
+
+    sgtk_logger.info("Toolkit Bootstrapped!")
+
 
 # executed from javascript
 if __name__ == "__main__":
@@ -187,7 +234,7 @@ if __name__ == "__main__":
 
         # startup the plugin which includes setting up the socket io client,
         # bootstrapping the engine, and starting the Qt event loop
-        plugin_bootstrap(root_path, port, engine_name, app_id)
+        bootstrap(root_path, port, engine_name, app_id)
     except Exception, e:
         sys.stdout.write("ERROR: %s" % (traceback.format_exc(),))
         sys.stdout.flush()

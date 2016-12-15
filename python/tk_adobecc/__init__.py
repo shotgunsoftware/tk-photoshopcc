@@ -9,3 +9,4 @@
 # not expressly granted therein are reserved by Shotgun Software Inc.
 
 from .adobe_bridge import AdobeBridge, RPCTimeoutError
+from . import win_32_api

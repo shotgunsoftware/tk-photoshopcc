@@ -29,7 +29,7 @@ class AdobeEngine(sgtk.platform.Engine):
         "SHOTGUN_ADOBE_HEARTBEAT_INTERVAL",
         os.environ.get(
             "SGTK_PHOTOSHOP_HEARTBEAT_INTERVAL",
-            0.2,
+            1.0,
         )
     )
     SHOTGUN_ADOBE_HEARTBEAT_TOLERANCE = os.environ.get(
@@ -320,19 +320,8 @@ class AdobeEngine(sgtk.platform.Engine):
         Get the QWidget parent for all dialogs created through
         show_dialog & show_modal.
         """
-        # determine the parent widget to use:
-        parent_widget = None
-        if sys.platform == "win32":
-            # for windows, we create a proxy window parented to the
-            # main application window that we can then set as the owner
-            # for all Toolkit dialogs
-            parent_widget = self._win32_get_proxy_window()
-        else:
-            from sgtk.platform.qt import QtGui
-            parent_widget = QtGui.QApplication.activeWindow()
-
-        return parent_widget
-
+        from sgtk.platform.qt import QtGui
+        return QtGui.QApplication.activeWindow()
 
     # TODO: see tk-photoshop for handling windows-specific window parenting/display
 
@@ -351,12 +340,19 @@ class AdobeEngine(sgtk.platform.Engine):
         """
         # TODO: ensure dialog is shown above CC
         if not self.has_ui:
-            self.logger.error("Sorry, this environment does not support UI display! Cannot show "
-                           "the requested window '%s'." % title)
+            self.logger.error(
+                "Sorry, this environment does not support UI display! Cannot "
+                "show the requested window '%s'." % title
+            )
             return None
 
         # create the dialog:
-        dialog, widget = self._create_dialog_with_widget(title, bundle, widget_class, *args, **kwargs)
+        dialog, widget = self._create_dialog_with_widget(
+            title,
+            bundle,
+            widget_class,
+            *args, **kwargs
+        )
 
         # Note - the base engine implementation will try to clean up
         # dialogs and widgets after they've been closed.  However this
