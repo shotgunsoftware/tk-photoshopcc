@@ -17,6 +17,7 @@ import time
 # Add our third-party packages to sys.path.
 sys.path.append(os.path.join(os.path.dirname(__file__), "packages"))
 
+import socketIO_client.exceptions
 from socketIO_client import SocketIO, BaseNamespace
 from .proxy import ProxyScope, ProxyWrapper, ClassInstanceProxyWrapper
 
@@ -124,7 +125,14 @@ class Communicator(object):
             start = time.time()
 
             while wait >= (time.time() - start):
-                self._io._process_packets()
+                try:
+                    self._io._process_packets()
+                except socketIO_client.exceptions.TimeoutError:
+                    # Timeouts here are not a problem. It can be something
+                    # as simple as the server being busy and not responding
+                    # quickly enough, in which case subsequent attempts will
+                    # go through without a problem.
+                    pass
         finally:
             self._io._heartbeat_thread.relax()
             self._io._transport.set_timeout()
