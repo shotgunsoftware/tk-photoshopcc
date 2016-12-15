@@ -1,9 +1,8 @@
 import atexit
-import time
 
 from .exceptions import ConnectionError, TimeoutError, PacketError
 from .heartbeats import HeartbeatThread
-from .logs import LoggingMixin, _yield_elapsed_time
+from .logs import LoggingMixin
 from .namespaces import (
     EngineIONamespace, SocketIONamespace,
     LoggingSocketIONamespace, find_callback, make_logging_prefix)
@@ -242,8 +241,9 @@ class EngineIO(LoggingMixin):
         self._heartbeat_thread.hurry()
         # Use timeout to unblock recv for websocket transport
         self._transport.set_timeout(seconds=1)
-
-        for elapsed in _yield_elapsed_time(seconds):
+        # Listen
+        warning_screen = self._yield_warning_screen(seconds)
+        for elapsed_time in warning_screen:
             if self._should_stop_waiting(**kw):
                 break
             try:
@@ -266,11 +266,6 @@ class EngineIO(LoggingMixin):
                     namespace._find_packet_callback('disconnect')()
                 except PacketError:
                     pass
-
-            # Slow the loop down a bit so that it doesn't
-            # eat up a ton of CPU.
-            time.sleep(0.01)
-
         self._heartbeat_thread.relax()
         self._transport.set_timeout()
 

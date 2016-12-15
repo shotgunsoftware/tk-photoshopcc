@@ -154,10 +154,7 @@ class AdobeEngine(sgtk.platform.Engine):
 
             # Will allow queued up messages (like logging calls)
             # to be handled on the Python end.
-            try:
-                self.adobe.wait(0.01)
-            except self.__tk_adobecc.RPCTimeoutError:
-                self.disconnected()
+            self.adobe.process_new_messages()
 
     def _emit_log_message(self, handler, record):
         """
