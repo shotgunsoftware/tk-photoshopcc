@@ -12,6 +12,7 @@ import json
 import threading
 import sys
 import os.path
+import time
 
 # Add our third-party packages to sys.path.
 sys.path.append(os.path.join(os.path.dirname(__file__), "packages"))
@@ -109,6 +110,24 @@ class Communicator(object):
         Pings the host, testing whether the connection is still live.
         """
         self._io._ping()
+
+    def process_new_messages(self, wait=0.01):
+        """
+        Processes new messages that have arrived but that have not been
+        previously handled.
+
+        :param float wait: How long to poll for new messages, in seconds.
+        """
+        try:
+            self._io._heartbeat_thread.hurry()
+            self._io._transport.set_timeout(seconds=1)
+            start = time.time()
+
+            while wait >= (time.time() - start):
+                self._io._process_packets()
+        finally:
+            self._io._heartbeat_thread.relax()
+            self._io._transport.set_timeout()
 
     def rpc_call(self, proxy_object, params=[], parent=None):
         """

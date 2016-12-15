@@ -1,6 +1,4 @@
 import atexit
-import threading
-import time
 
 from .exceptions import ConnectionError, TimeoutError, PacketError
 from .heartbeats import HeartbeatThread
@@ -243,19 +241,9 @@ class EngineIO(LoggingMixin):
         self._heartbeat_thread.hurry()
         # Use timeout to unblock recv for websocket transport
         self._transport.set_timeout(seconds=1)
-
-        def _handle_timeout():
-            # No behavior here. We're just testing whether the timer is
-            # actually running to determine whether to stop waiting or
-            # not.
-            pass
-
-        # Using an async timer to handle stopping the wait loop
-        # once the wait period is over.
-        wait_timer = threading.Timer(seconds, _handle_timeout)
-        wait_timer.start()
-
-        while wait_timer.is_alive():
+        # Listen
+        warning_screen = self._yield_warning_screen(seconds)
+        for elapsed_time in warning_screen:
             if self._should_stop_waiting(**kw):
                 break
             try:
@@ -278,11 +266,6 @@ class EngineIO(LoggingMixin):
                     namespace._find_packet_callback('disconnect')()
                 except PacketError:
                     pass
-
-            # Slow the loop down a bit so that it doesn't
-            # eat up a ton of CPU.
-            time.sleep(0.01)
-
         self._heartbeat_thread.relax()
         self._transport.set_timeout()
 
