@@ -18,14 +18,6 @@ configuration:
         description: Controls whether debug messages should be emitted to the logger
         default_value: false
 
-    dialogs_always_on_top:
-        type: bool
-        description: "If True, set the Qt window flag to ensure the toolkit
-                      dialogs stay above all other windows (including non-adobe
-                      windows). If this is not set, then the dialogs may be
-                      hidden when the Adobe product window has focus."
-        default_value: false
-
 # the Shotgun fields that this engine needs in order to operate correctly
 requires_shotgun_fields:
 

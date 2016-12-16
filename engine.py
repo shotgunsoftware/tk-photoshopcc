@@ -365,16 +365,6 @@ class AdobeEngine(sgtk.platform.Engine):
         # Keeping track of all dialogs will ensure this doesn't happen
         self.__qt_dialogs.append(dialog)
 
-        # if the dialogs are configured to always be on top, set the proper
-        # hint on the dialog.
-        if self.get_setting("dialogs_always_on_top", True):
-            from sgtk.platform.qt import QtCore
-            dialog.setWindowFlags(
-                dialog.windowFlags() |
-                QtCore.Qt.CustomizeWindowHint |
-                QtCore.Qt.WindowStaysOnTopHint
-            )
-
         # show the dialog:
         dialog.show()
 
@@ -412,16 +402,6 @@ class AdobeEngine(sgtk.platform.Engine):
         # an event after the dialog has been deleted.
         # Keeping track of all dialogs will ensure this doesn't happen
         self.__qt_dialogs.append(dialog)
-
-        # if the dialogs are configured to always be on top, set the proper
-        # hint on the dialog.
-        if self.get_setting("dialogs_always_on_top", True):
-            from sgtk.platform.qt import QtCore
-            dialog.setWindowFlags(
-                dialog.windowFlags() |
-                QtCore.Qt.CustomizeWindowHint |
-                QtCore.Qt.WindowStaysOnTopHint
-            )
 
         # make sure the window raised so it doesn't
         # appear behind the main Photoshop window

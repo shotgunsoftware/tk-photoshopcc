@@ -27,6 +27,13 @@ sg_panel.Panel = new function() {
     // adobe interface
     const _cs_interface = new CSInterface();
 
+    var _tooltip_timeout_id = undefined;
+
+    var _cur_mouse_pos = {
+        x: undefined,
+        y: undefined
+    };
+
     // ---- public methods
 
     this.clear = function() {
@@ -45,6 +52,108 @@ sg_panel.Panel = new function() {
         _set_info(
             "Loading Shotgun Integration..."
         );
+    };
+
+    this.show_command_help = function(title, help, favorite) {
+
+        _tooltip_timeout_id = setTimeout(
+            function(){_on_show_command_help_timeout(help)}, 1500);
+
+        if (favorite) {
+            const fav_header_div = document.getElementById("sg_panel_favorites_header");
+            fav_header_div.innerHTML = title;
+        }
+    };
+
+    const _on_show_command_help_timeout = function(help) {
+
+        if (!help || help === "null") {
+            help = "Could not find a description for this command. " +
+                   "Please check with the author of the app to see about " +
+                   "making a description available."
+        }
+
+        // mouse pos. always align left to right from mouse position.
+        // if help div will go past right and/or bottom border, adjust accordingly.
+
+        const mouse_x = _cur_mouse_pos.x;
+        const mouse_y = _cur_mouse_pos.y;
+
+        const command_div = document.elementFromPoint(mouse_x, mouse_y);
+
+        const offset = 8;
+        const margin = 8;
+
+        _set_command_help(help);
+
+        const help_div_id = sg_constants.panel_div_ids["command_help"];
+        const help_div = document.getElementById(help_div_id);
+
+        const help_div_rect = help_div.getBoundingClientRect();
+
+        const help_width = help_div_rect.width;
+        const help_height = help_div_rect.height;
+
+        const far_right = mouse_x + offset + margin + help_width;
+        const far_bottom = mouse_y + offset + margin + help_height;
+
+        const win_width = window.innerWidth;
+        const win_height = window.innerHeight;
+
+        const beyond_right = far_right - win_width + margin;
+        const beyond_bottom = far_bottom - win_height + margin;
+
+        var adjust_left = 0;
+        var adjust_top = 0;
+
+        if (beyond_right > 0) {
+            adjust_left = -1 * beyond_right;
+        }
+
+        if (beyond_bottom > 0) {
+            adjust_top = -1 * beyond_bottom;
+        }
+
+        const new_left = mouse_x + offset + adjust_left + window.scrollX;
+        const new_top = mouse_y + offset + adjust_top + window.scrollY;
+
+        help_div.style.left = new_left + "px";
+        help_div.style.top = new_top + "px";
+
+        const new_help_div_rect = help_div.getBoundingClientRect();
+
+        if (_point_in_rect(_cur_mouse_pos, new_help_div_rect)) {
+            // the mouse is now inside the help div. need to adjust more
+
+            var additional_offset_y = 0;
+
+            if (beyond_bottom > 0) {
+                // we already adjusted up, keep going. we know we need to get
+                // at least `offset` pixels past the mouse. then it's just the
+                // difference
+                additional_offset_y = -1 * (offset + new_help_div_rect.bottom - mouse_y);
+            }
+
+            help_div.style.top = new_top + additional_offset_y + "px";
+        }
+
+        _show_command_help(true);
+    };
+
+    const _point_in_rect = function(point, rect) {
+
+        return ((point.x >= rect.left) && (point.x <= rect.right) &&
+                (point.y >= rect.top)  && (point.y <= rect.bottom));
+    };
+
+    this.hide_command_help = function() {
+        if (_tooltip_timeout_id !== undefined) {
+            clearTimeout(_tooltip_timeout_id);
+        }
+        _show_command_help(false);
+
+        const fav_header_div = document.getElementById("sg_panel_favorites_header");
+        fav_header_div.innerHTML = "Commands";
     };
 
     this.email_support = function(subject, body) {
@@ -100,6 +209,9 @@ sg_panel.Panel = new function() {
             // TODO: handle case where manager or python don't respond
             // TODO: use setTimeout to display an error
             sg_panel.REQUEST_STATE.emit();
+
+            // track the mouse
+            document.onmousemove = _on_mouse_move;
 
         } catch(error) {
             sg_logging.error("Manager startup error: " + error.stack);
@@ -176,7 +288,9 @@ sg_panel.Panel = new function() {
                         "<img src='../images/sg_logo.png' height='64'>" +
                     "</td>" +
                     "<td>" +
-                        fields_table +
+                        "<strong>" +
+                            fields_table +
+                        "</strong>" +
                     "</td>" +
                 "</tr>" +
             "</table>";
@@ -184,9 +298,16 @@ sg_panel.Panel = new function() {
         _set_header(header_html);
         _show_header(true);
 
-        var commands_html = "<div id='sg_panel_commands'>";
         const commands = state["commands"];
 
+        // TODO: identify favorites, others, and flyout commands
+        // TODO: don't show favorites if there aren't any
+
+        var favorites_html = "<div id='sg_panel_favorites'>" +
+            "<div id='sg_panel_favorites_header'>Commands</div>";
+
+
+        // loop over favorites here
         commands.forEach(function(command) {
             if (command.hasOwnProperty("uid") &&
                 command.hasOwnProperty("display_name") &&
@@ -197,46 +318,79 @@ sg_panel.Panel = new function() {
                 const icon_path = command["icon_path"];
                 const description = command["description"];
 
-                var description_html = "";
-                if (description) {
-                    description_html = "<br><div class=sg_command_description>" + description + "</div>";
-                }
-
-                commands_html +=
-                    "<a href='#' class='sg_command_link' " +
-                        "onClick='sg_panel.Panel.trigger_command(\"" +
-                            command_id + "\", \"" + display_name + "\")'>" +
-                        "<div id='sg_command_button' " +
-                            "onmouseover='sg_panel.Panel.show_command_help(\"" +
-                                display_name + "\", \"" + description + "\")' " +
-                            "onmouseout='sg_panel.Panel.hide_command_help()'>" +
-                            "<center><img class='sg_panel_command_img' src='" + icon_path + "'></center>" +
-                        "</div>";
+                // TODO: this is the favorites
+                favorites_html +=
+                    "<a href='#' class='sg_command_link' "  +
+                        "onClick='sg_panel.Panel.trigger_command(\"" + command_id + "\", \"" + display_name + "\")'" +
+                    ">" +
+                        "<div class='sg_command_button' " +
+                              "onmouseover='sg_panel.Panel.show_command_help(\"" + display_name + "\", \"" +description + "\", true)' " +
+                              "onmouseout='sg_panel.Panel.hide_command_help()' " +
+                        ">" +
+                            "<center>" +
+                                "<img class='sg_panel_command_img' src='" + icon_path + "'>" +
+                            "</center>" +
+                        "</div>" +
+                    "</a>";
             }
             // TODO: if command is missing something, log it.
         });
 
-        commands_html += "</div>";
+        favorites_html += "</div>";
 
-        _set_contents(commands_html);
+        var others_html = "<div id='sg_panel_others'>";
+
+        // TODO: this should be the "other" commands (not favorites)
+        commands.forEach(function(command) {
+            if (command.hasOwnProperty("uid") &&
+                command.hasOwnProperty("display_name") &&
+                command.hasOwnProperty("icon_path")) {
+
+                const command_id = command["uid"];
+                const display_name = command["display_name"];
+                const icon_path = command["icon_path"];
+                const description = command["description"];
+
+                // TODO: this is the others
+                others_html +=
+                    "<div class='sg_panel_other_command' " +
+                        "onmouseover='sg_panel.Panel.show_command_help(\"\", \"" +description + "\", false)' " +
+                        "onmouseout='sg_panel.Panel.hide_command_help()' " +
+                    ">" +
+                    "<table style='width:100%;'>" +
+                      "<colgroup>" +
+                        "<col width='0%' />" +
+                        "<col width='100%' />" +
+                      "</colgroup>" +
+                      "<tr>" +
+                        "<td align='left' width='30px' style='vertical-align:middle;'>" +
+                            "<a href='#' class='sg_command_link' "  +
+                                "onClick='sg_panel.Panel.trigger_command(\"" + command_id + "\", \"" + display_name + "\")'" +
+                            ">" +
+                                "<img class='sg_panel_other_img' src='" + icon_path + "'>" +
+                            "</a>" +
+                        "</td>" +
+                        "<td align='left' style='padding-left:10px; vertical-align:middle; white-space:nowrap;'>" +
+                            "<a href='#' class='sg_command_link' "  +
+                                "onClick='sg_panel.Panel.trigger_command(\"" + command_id + "\", \"" + display_name + "\")'" +
+                            ">" +
+                                display_name +
+                            "</a>" +
+                        "</td>" +
+                      "</tr>" +
+                    "</table>" +
+                    "</div>";
+            }
+        });
+
+        others_html += "</div>";
+
+        _set_contents(favorites_html + others_html);
         _show_contents(true);
 
         // make sure the progress bar and info is hidden
         _show_progress(false);
         _show_info(false);
-    };
-
-    this.show_command_help = function(display_name, description) {
-        var help_html = "<strong>" + display_name + "</strong><br>";
-        if (description && description !== "null") {
-            help_html += "<div class='sg_command_description'>" + description + "</div>";
-        }
-        _set_command_help(help_html);
-        _show_command_help(true);
-    };
-
-    this.hide_command_help = function() {
-        _show_command_help(false);
     };
 
     this.show_console = function(show) {
@@ -434,6 +588,13 @@ sg_panel.Panel = new function() {
         _set_error(
             "Uh oh! Something went wrong."
         );
+    };
+
+    const _on_mouse_move = function(event) {
+        _cur_mouse_pos = {
+            x: event.clientX,
+            y: event.clientY
+        };
     };
 
     const _on_pyside_unavailable = function(event) {
