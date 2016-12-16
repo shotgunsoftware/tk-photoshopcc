@@ -209,7 +209,7 @@ sg_manager.Manager = new function() {
         // use the system installed python
         var python_exe_path = "python";
 
-        if (process.env["SHOTGUN_ADOBECC_PYTHON"]) {
+        if (process.env["SHOTGUN_ADOBE_PYTHON"]) {
             // use the python specified in the environment if it exists
             python_exe_path = process.env.SHOTGUN_ADOBECC_PYTHON;
         }
