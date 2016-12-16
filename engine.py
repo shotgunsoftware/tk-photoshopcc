@@ -47,6 +47,21 @@ class AdobeEngine(sgtk.platform.Engine):
     _FAILED_PINGS = 0
 
     ##########################################################################################
+    # context changing
+
+    def post_context_change(self, old_context, new_context):
+        """
+        Runs after a context change has occurred. This will trigger the
+        new state to be sent to the Adobe CC host application.
+
+        :param old_context: The previous context.
+        :param new_context: The current context.
+        """
+        self.__send_state()
+
+    ##########################################################################################
+    # engine initialization
+
     def pre_app_init(self):
         self.__tk_adobecc = self.import_module("tk_adobecc")
 
@@ -285,6 +300,13 @@ class AdobeEngine(sgtk.platform.Engine):
         PHSP for Photoshop, or AEFT for After Effect.
         """
         return self._app_id
+
+    @property
+    def context_change_allowed(self):
+        """
+        Specifies that context changes are allowed by the engine.
+        """
+        return True
 
     ##########################################################################################
     # UI
