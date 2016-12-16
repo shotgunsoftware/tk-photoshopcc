@@ -121,9 +121,9 @@ sg_socket_io.SocketManager = new function() {
         var ext_dir = csLib.getSystemPath(SystemPath.APPLICATION);
         var js_dir = path.join(ext_dir, "js", "shotgun");
 
-        // Tell ExtendScript to load the rpc.jsx file that contains our
+        // Tell ExtendScript to load the rpc.js file that contains our
         // helper functions.
-        var jsx_rpc_path = sanitize_path(path.join(js_dir, "ECMA", "rpc.jsx"));
+        var jsx_rpc_path = sanitize_path(path.join(js_dir, "ECMA", "rpc.js"));
         csLib.evalScript('$.evalFile("' + jsx_rpc_path + '")');
 
         sg_logging.info("Establishing jrpc interface.");
