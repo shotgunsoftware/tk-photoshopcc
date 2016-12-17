@@ -39,6 +39,10 @@ class AdobeEngine(sgtk.platform.Engine):
             2,
         ),
     )
+    SHOTGUN_ADOBE_NETWORK_DEBUG = (
+        "SGTK_PHOTOSHOP_NETWORK_DEBUG" in os.environ or
+        "SHOTGUN_ADOBE_NETWORK_DEBUG" in os.environ
+    )
 
     TEST_SCRIPT_BASENAME = "run_tests.py"
 
@@ -74,7 +78,11 @@ class AdobeEngine(sgtk.platform.Engine):
         self._adobe = self.__tk_adobecc.AdobeBridge.get_or_create(
             identifier=self.instance_name,
             port=self.SHOTGUN_ADOBE_PORT,
+            logger=self.logger,
+            network_debug=self.SHOTGUN_ADOBE_NETWORK_DEBUG,
         )
+
+        self.logger.debug("Network debug logging is %s" % self._adobe.network_debug)
 
         self.logger.debug("%s: Initializing..." % (self,))
         self.__qt_dialogs = []
