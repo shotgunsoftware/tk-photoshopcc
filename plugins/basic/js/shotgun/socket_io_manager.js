@@ -116,7 +116,13 @@ sg_socket_io.SocketManager = new function() {
         // "no, there weren't any errors." We need to check the
         // result data structure here and make that determination
         // instead of always assuming success.
-        next(false, result);
+        if ( result == "EvalScript error." ) {
+            sg_logging.error(result);
+            next(true, result);
+        }
+        else {
+            next(false, result);
+        }
     };
 
     this.start_socket_server = function (port, csLib) {

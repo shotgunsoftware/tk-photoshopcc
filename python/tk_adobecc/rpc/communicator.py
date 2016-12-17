@@ -14,7 +14,6 @@ import sys
 import os.path
 import time
 import logging
-import pprint
 
 # Add our third-party packages to sys.path.
 sys.path.append(os.path.join(os.path.dirname(__file__), "packages"))
@@ -354,7 +353,7 @@ class Communicator(object):
         """
         self.log_network_debug("Getting the remote global scope...")
         payload = self._get_payload("get_global_scope")
-        self.log_network_debug("Payload: %s" % pprint.pformat(payload, indent=4))
+        self.log_network_debug("Payload: %s" % payload)
 
         self._io.emit(self._RPC_EXECUTE_COMMAND, payload)
         uid = payload["id"]
@@ -391,9 +390,7 @@ class Communicator(object):
         else:
             payload["params"] = self.__prepare_params(params)
 
-        self.log_network_debug(
-            "Payload constructed: %s" % pprint.pformat(payload, indent=4)
-        )
+        self.log_network_debug("Payload constructed: %s" % payload)
 
         return payload
 
@@ -416,11 +413,14 @@ class Communicator(object):
                 self._RESULTS[uid] = json.loads(result["result"])
             except (TypeError, ValueError):
                 self._RESULTS[uid] = result.get("result")
+            except KeyError:
+                self.logger.error("RPC command (UID=%s) failed!" % uid)
+                self.logger.debug("Failure raw response: %s" % response)
+                self.logger.debug("Failure results: %s" % result)
+                raise RuntimeError("RPC command (UID=%s) failed!" % uid)
 
             self.log_network_debug(
-                "Processed response data: %s" % pprint.pformat(
-                    self._RESULTS[uid]
-                )
+                "Processed response data: %s" % self._RESULTS[uid]
             )
 
     def _wait_for_response(self, uid):
