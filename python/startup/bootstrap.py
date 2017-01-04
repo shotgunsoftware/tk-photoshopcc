@@ -25,6 +25,18 @@ def bootstrap(engine_name, context, app_path, app_args, **kwargs):
     :returns: The host application path and arguments.
     """
     os.environ["SHOTGUN_ADOBE_PYTHON"] = sys.executable
-    sgtk.util.append_path_to_env_var("PYTHONPATH", ";".join(sys.path))
+
+    # We're going to append all of this Python process's sys.path to the
+    # PYTHONPATH environment variable. This will ensure that we have access
+    # to all libraries available in this process in subprocesses like the
+    # Python process that is spawned by the Shotgun CEP extension on launch
+    # of an Adobe host application. We're appending instead of setting because
+    # we don't want to stomp on any PYTHONPATH that might already exist that
+    # we want to persist when the Python subprocess is spawned.
+    sgtk.util.append_path_to_env_var(
+        "PYTHONPATH",
+        os.pathsep.join(sys.path),
+    )
+
     return (app_path, app_args)
 
