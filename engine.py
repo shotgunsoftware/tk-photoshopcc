@@ -334,8 +334,6 @@ class AdobeEngine(sgtk.platform.Engine):
         return parent_widget
 
 
-    # TODO: see tk-photoshop for handling windows-specific window parenting/display
-
     def show_dialog(self, title, bundle, widget_class, *args, **kwargs):
         """
         Shows a non-modal dialog window in a way suitable for this engine.
@@ -465,7 +463,70 @@ class AdobeEngine(sgtk.platform.Engine):
 
     def __send_state(self):
 
-        # TODO: thumbnail path for current context
+        # --- process the menu favorites setting
+
+        fav_lookup = {}
+        fav_index = 0
+
+        # create a lookup of the combined app instance name with the display name.
+        # that should be unique and provide an easy lookup to match against.
+        # we'll remember the order processed in order to sort our favorites list
+        # once all the registered commands are processed
+        for fav_command in self.get_setting("menu_favorites"):
+            app_instance_name = fav_command["app_instance"]
+            display_name = fav_command["name"]
+            fav_id = app_instance_name + display_name
+            fav_lookup[fav_id] = fav_index
+            fav_index += 1
+
+        # keep a list of each type of command since they'll be displayed
+        # differently on the adobe side.
+        favorites = []
+        commands = []
+
+        # iterate over all the registered commands and gather the necessary info
+        # to display them in adobe
+        for (command_name, command_info) in self.commands.iteritems():
+            properties = command_info.get("properties", {})
+
+            # ---- determine the app's instance name
+
+            app_instance = properties.get("app", None)
+            app_name = None
+
+            # check this command's app against the engine's apps.
+            if app_instance:
+                for (app_instance_name, app_instance_obj) in self.apps.items():
+                    if app_instance_obj == app_instance:
+                        app_name = app_instance_name
+
+            # create the command dict to hand over to adobe
+            command = dict(
+                uid=properties.get("uid"),
+                display_name=command_name,
+                icon_path=properties.get("icon"),
+                description=properties.get("description"),
+                type=properties.get("type", "default"),
+            )
+
+            # build the lookup string to see if this app is a favorite
+            fav_name = str(app_name) + command_name
+
+            if fav_name in fav_lookup:
+                # add the fav index to the command so that we can sort after
+                # all favorites are identified.
+                command["fav_index"] = fav_lookup[fav_name]
+                favorites.append(command)
+            else:
+                commands.append(command)
+
+        # sort the favorites based on their index
+        favorites = sorted(favorites, key=lambda d: d["fav_index"])
+
+        # sort the other commands alphabetically by display name
+        commands = sorted(commands, key=lambda d: d["display_name"])
+
+        # ---- process the context for display
 
         context = self.context
         context_fields = [
@@ -475,9 +536,11 @@ class AdobeEngine(sgtk.platform.Engine):
                 "url": self.sgtk.shotgun_url,
             }
         ]
+
+        # TODO: thumbnail path for current context
         thumbnail_entity = None
 
-        for entity in [context.project, context.entity, context.step, context.task]:
+        for entity in [context.project, context.entity, context.task]:
 
             if not entity:
                 continue
@@ -491,24 +554,14 @@ class AdobeEngine(sgtk.platform.Engine):
             })
             thumbnail_entity = entity
 
+        # ---- populate the state structure to hand over to adobe
+
         state = {
             "context_fields": context_fields,
-            "commands": [],
+            "favorites": favorites,
+            "commands": commands,
         }
 
-        for (command_name, command_info) in self.commands.iteritems():
-            properties = command_info.get("properties", {})
-
-            command = dict(
-                uid=properties.get("uid"),
-                display_name=command_name,
-                icon_path=properties.get("icon"),
-                description=properties.get("description"),
-            )
-
-            state["commands"].append(command)
-
-        # TODO: send to javascript
         self.logger.debug("Sending state: %s" % str(state))
         self.adobe.send_state(state)
 

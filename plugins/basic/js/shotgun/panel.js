@@ -27,7 +27,8 @@ sg_panel.Panel = new function() {
     // adobe interface
     const _cs_interface = new CSInterface();
 
-    var _tooltip_timeout_id = undefined;
+    var _show_tooltip_timeout_id = undefined;
+    var _hide_tooltip_timeout_id = undefined;
 
     var _cur_mouse_pos = {
         x: undefined,
@@ -41,6 +42,8 @@ sg_panel.Panel = new function() {
         //
         // Since we don't really want to stay in this state, the panel shows
         // a message to the user saying that the panel is loading.
+
+        _set_bg_color("#222222");
 
         _show_header(false);
         _set_contents(
@@ -56,7 +59,11 @@ sg_panel.Panel = new function() {
 
     this.show_command_help = function(title, help, favorite) {
 
-        _tooltip_timeout_id = setTimeout(
+        if (_hide_tooltip_timeout_id !== undefined) {
+            clearTimeout(_hide_tooltip_timeout_id);
+        }
+
+        _show_tooltip_timeout_id = setTimeout(
             function(){_on_show_command_help_timeout(help)}, 1500);
 
         if (favorite) {
@@ -84,10 +91,15 @@ sg_panel.Panel = new function() {
         const offset = 8;
         const margin = 8;
 
-        _set_command_help(help);
 
         const help_div_id = sg_constants.panel_div_ids["command_help"];
         const help_div = document.getElementById(help_div_id);
+
+        // reset to the top left to allow it to grow as needed when contest set
+        help_div.style.left = "0px";
+        help_div.style.top = "0px";
+
+        _set_command_help(help);
 
         const help_div_rect = help_div.getBoundingClientRect();
 
@@ -138,6 +150,9 @@ sg_panel.Panel = new function() {
         }
 
         _show_command_help(true);
+
+        _hide_tooltip_timeout_id = setTimeout(
+            function(){ self.hide_command_help()}, 5000);
     };
 
     const _point_in_rect = function(point, rect) {
@@ -147,13 +162,13 @@ sg_panel.Panel = new function() {
     };
 
     this.hide_command_help = function() {
-        if (_tooltip_timeout_id !== undefined) {
-            clearTimeout(_tooltip_timeout_id);
+        if (_show_tooltip_timeout_id !== undefined) {
+            clearTimeout(_show_tooltip_timeout_id);
         }
         _show_command_help(false);
 
         const fav_header_div = document.getElementById("sg_panel_favorites_header");
-        fav_header_div.innerHTML = "Commands";
+        fav_header_div.innerHTML = "Run a Command";
     };
 
     this.email_support = function(subject, body) {
@@ -224,8 +239,6 @@ sg_panel.Panel = new function() {
     this.on_unload = function() {
         // code to run when the extension panel is unloaded
         sg_logging.debug("Panel unloaded.");
-
-        // TODO: do we need to remove event listeners? do they persist?
     };
 
     this.open_external_url = function(url) {
@@ -298,94 +311,103 @@ sg_panel.Panel = new function() {
         _set_header(header_html);
         _show_header(true);
 
-        const commands = state["commands"];
+        // Favorite commands
 
-        // TODO: identify favorites, others, and flyout commands
-        // TODO: don't show favorites if there aren't any
+        const favorites = state["favorites"];
+        var favorites_html = "";
 
-        var favorites_html = "<div id='sg_panel_favorites'>" +
-            "<div id='sg_panel_favorites_header'>Commands</div>";
+        if (favorites.length > 0) {
 
+            favorites_html = "<div id='sg_panel_favorites'>" +
+                "<div id='sg_panel_favorites_header'>Run a Command</div>";
 
-        // loop over favorites here
-        commands.forEach(function(command) {
-            if (command.hasOwnProperty("uid") &&
-                command.hasOwnProperty("display_name") &&
-                command.hasOwnProperty("icon_path")) {
+            // loop over favorites here
+            favorites.forEach(function(favorite) {
+                if (favorite.hasOwnProperty("uid") &&
+                    favorite.hasOwnProperty("display_name") &&
+                    favorite.hasOwnProperty("icon_path")) {
 
-                const command_id = command["uid"];
-                const display_name = command["display_name"];
-                const icon_path = command["icon_path"];
-                const description = command["description"];
+                    const command_id = favorite["uid"];
+                    const display_name = favorite["display_name"];
+                    const icon_path = favorite["icon_path"];
+                    const description = favorite["description"];
 
-                // TODO: this is the favorites
-                favorites_html +=
-                    "<a href='#' class='sg_command_link' "  +
-                        "onClick='sg_panel.Panel.trigger_command(\"" + command_id + "\", \"" + display_name + "\")'" +
-                    ">" +
-                        "<div class='sg_command_button' " +
-                              "onmouseover='sg_panel.Panel.show_command_help(\"" + display_name + "\", \"" +description + "\", true)' " +
-                              "onmouseout='sg_panel.Panel.hide_command_help()' " +
+                    favorites_html +=
+                        "<a href='#' "  +
+                            "onClick='sg_panel.Panel.trigger_command(\"" + command_id + "\", \"" + display_name + "\")'" +
                         ">" +
-                            "<center>" +
-                                "<img class='sg_panel_command_img' src='" + icon_path + "'>" +
-                            "</center>" +
-                        "</div>" +
-                    "</a>";
-            }
-            // TODO: if command is missing something, log it.
-        });
+                            "<div class='sg_command_button' " +
+                                "onmouseover='sg_panel.Panel.show_command_help(\"" + display_name + "\", \"" +description + "\", true)' " +
+                                "onmouseout='sg_panel.Panel.hide_command_help()' " +
+                            ">" +
+                                "<center>" +
+                                    "<img class='sg_panel_command_img' src='" + icon_path + "'>" +
+                                "</center>" +
+                            "</div>" +
+                        "</a>";
+                }
+                // TODO: if command is missing something, log it.
+            });
 
-        favorites_html += "</div>";
+            favorites_html += "</div>";
+        }
 
-        var others_html = "<div id='sg_panel_others'>";
+        // Now process the non-favorite commands
 
-        // TODO: this should be the "other" commands (not favorites)
-        commands.forEach(function(command) {
-            if (command.hasOwnProperty("uid") &&
-                command.hasOwnProperty("display_name") &&
-                command.hasOwnProperty("icon_path")) {
+        const commands = state["commands"];
+        var commands_html = "";
 
-                const command_id = command["uid"];
-                const display_name = command["display_name"];
-                const icon_path = command["icon_path"];
-                const description = command["description"];
+        if (commands.length > 0) {
 
-                // TODO: this is the others
-                others_html +=
-                    "<div class='sg_panel_other_command' " +
-                        "onmouseover='sg_panel.Panel.show_command_help(\"\", \"" +description + "\", false)' " +
+            commands_html = "<div id='sg_panel_commands'>";
+
+            commands.forEach(function(command) {
+                if (command.hasOwnProperty("uid") &&
+                    command.hasOwnProperty("display_name") &&
+                    command.hasOwnProperty("icon_path")) {
+
+                    const command_id = command["uid"];
+                    const display_name = command["display_name"];
+                    const icon_path = command["icon_path"];
+                    const description = command["description"];
+
+                    commands_html +=
+                        "<div class='sg_panel_command' " +
+                            "onmouseover='sg_panel.Panel.show_command_help(\"\", \"" +description + "\", false)' " +
                         "onmouseout='sg_panel.Panel.hide_command_help()' " +
-                    ">" +
-                    "<table style='width:100%;'>" +
-                      "<colgroup>" +
-                        "<col width='0%' />" +
-                        "<col width='100%' />" +
-                      "</colgroup>" +
-                      "<tr>" +
-                        "<td align='left' width='30px' style='vertical-align:middle;'>" +
-                            "<a href='#' class='sg_command_link' "  +
-                                "onClick='sg_panel.Panel.trigger_command(\"" + command_id + "\", \"" + display_name + "\")'" +
-                            ">" +
-                                "<img class='sg_panel_other_img' src='" + icon_path + "'>" +
-                            "</a>" +
-                        "</td>" +
-                        "<td align='left' style='padding-left:10px; vertical-align:middle; white-space:nowrap;'>" +
-                            "<a href='#' class='sg_command_link' "  +
-                                "onClick='sg_panel.Panel.trigger_command(\"" + command_id + "\", \"" + display_name + "\")'" +
-                            ">" +
-                                display_name +
-                            "</a>" +
-                        "</td>" +
-                      "</tr>" +
-                    "</table>" +
+                        ">" +
+                        "<table style='width:100%;'>" +
+                            "<colgroup>" +
+                                "<col width='0%' />" +
+                                "<col width='100%' />" +
+                            "</colgroup>" +
+                            "<tr>" +
+                                "<td align='left' width='30px' style='vertical-align:middle;'>" +
+                                    "<a href='#' class='sg_command_link' "  +
+                                        "onClick='sg_panel.Panel.trigger_command(\"" + command_id + "\", \"" + display_name + "\")'" +
+                                    ">" +
+                                    "<img class='sg_panel_command_img' src='" + icon_path + "'>" +
+                                    "</a>" +
+                                "</td>" +
+                                "<td align='left' style='padding-left:10px; vertical-align:middle; white-space:nowrap;'>" +
+                                    "<a href='#' class='sg_command_link' "  +
+                                        "onClick='sg_panel.Panel.trigger_command(\"" + command_id + "\", \"" + display_name + "\")'" +
+                                    ">" +
+                                        display_name +
+                                    "</a>" +
+                                "</td>" +
+                            "</tr>" +
+                        "</table>" +
                     "</div>";
-            }
-        });
+                }
+            });
 
-        others_html += "</div>";
+            commands_html += "</div>";
+        }
 
-        _set_contents(favorites_html + others_html);
+        _set_bg_color("#4D4D4D");
+
+        _set_contents(favorites_html + commands_html);
         _show_contents(true);
 
         // make sure the progress bar and info is hidden
@@ -531,6 +553,7 @@ sg_panel.Panel = new function() {
 
     const _on_critical_error = function(event) {
 
+        _set_bg_color("#222222");
         _clear_messages();
 
         const message = event.data.message;
@@ -599,6 +622,7 @@ sg_panel.Panel = new function() {
 
     const _on_pyside_unavailable = function(event) {
 
+        _set_bg_color("#222222");
         _clear_messages();
 
         sg_logging.error("Critical: PySide is unavailable");
@@ -949,6 +973,10 @@ sg_panel.Panel = new function() {
     const _show_warning = _show_div_by_id("warning");
     const _show_progress = _show_div_by_id("progress");
     const _show_command_help = _show_div_by_id("command_help");
+
+    const _set_bg_color = function(color) {
+        document.body.style.background = color;
+    };
 
     const _clear_messages = function() {
         _show_info(false);

@@ -13,6 +13,22 @@
 # expected fields in the configuration file for this engine
 configuration:
 
+    menu_favorites:
+        type: list
+        description:
+          Controls the favorites section on the main menu. This is a list
+          and each menu item is a dictionary with keys app_instance and name.
+          The app_instance parameter connects this entry to a particular
+          app instance defined in the environment configuration file. The name
+          is a menu name to make a favorite.
+        allows_empty: True
+        default_value: []
+        values:
+            type: dict
+            items:
+                name: { type: str }
+                app_instance: { type: str }
+
     debug_logging:
         type: bool
         description: Controls whether debug messages should be emitted to the logger

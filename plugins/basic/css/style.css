@@ -10,11 +10,20 @@ Pipeline Toolkit Source Code License. All rights not expressly granted therein
 are reserved by Shotgun Software Inc.
 */
 
-/* XXX some quick, temporary styling during dev XXX */
-
 @font-face {
     font-family: "Open Sans";
     src: url("../fonts/OpenSans/OpenSans-Regular.ttf");
+}
+
+@font-face {
+    font-family: "Open Sans";
+    src: url("../fonts/OpenSans/OpenSans-Bold.ttf");
+    font-weight: bold;
+}
+@font-face {
+    font-family: "Open Sans";
+    src: url("../fonts/OpenSans/OpenSans-Italic.ttf");
+    font-style: italic;
 }
 
 body {
@@ -134,12 +143,12 @@ div.sg_error {
     vertical-align: middle;
 }
 
-#sg_panel_others {
+#sg_panel_commands {
     margin: 0px;
     background-color: #4D4D4D;
 }
 
-.sg_panel_other_command {
+.sg_panel_command {
     border-bottom: 1px solid #373737;
     height: 34px;
     padding-left: 18px;
@@ -148,27 +157,22 @@ div.sg_error {
     color: #D7D7D7;
 }
 
-.sg_panel_other_command a:link {
+.sg_panel_command a:link {
     color: #D7D7D7;
 }
 
-.sg_panel_other_command a:link:hover {
+.sg_panel_command a:link:hover {
     color: white;
 }
 
-.sg_panel_other_command:hover {
+.sg_panel_command:hover {
     background-color: #6B6B6B;
     color: white;
     -webkit-filter: grayscale(0);
 }
 
-.sg_panel_other_command:hover a:link {
+.sg_panel_command:hover a:link {
     color: white;
-}
-
-.sg_panel_other_img {
-    width: 26px;
-    height: 26px;
 }
 
 #sg_panel_command_help {
