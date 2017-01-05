@@ -35,6 +35,8 @@ sg_panel.Panel = new function() {
         y: undefined
     };
 
+    var _context_menu_lookup = {};
+
     // ---- public methods
 
     this.clear = function() {
@@ -47,9 +49,7 @@ sg_panel.Panel = new function() {
 
         _show_header(false);
         _set_contents(
-            "<br><br>" +
-            "<center><img src='../images/sg_logo_loading.png'></center>"
-        );
+            "<img id='loading_img' src='../images/sg_logo_loading.png'>");
 
         _show_info(true);
         _set_info(
@@ -168,7 +168,9 @@ sg_panel.Panel = new function() {
         _show_command_help(false);
 
         const fav_header_div = document.getElementById("sg_panel_favorites_header");
-        fav_header_div.innerHTML = "Run a Command";
+        if (fav_header_div) {
+            fav_header_div.innerHTML = "Run a Command";
+        }
     };
 
     this.email_support = function(subject, body) {
@@ -198,15 +200,16 @@ sg_panel.Panel = new function() {
 
             // build the flyout menu. always do this first so we can have access
             // to the debug console no matter what happens during bootstrap.
-            _build_flyout_menu();
+            _build_flyout_menu([]);
+
+            // Listen for the Flyout menu clicks
+            _cs_interface.addEventListener(
+                "com.adobe.csxs.events.flyoutMenuClicked",
+                _on_flyout_menu_clicked
+            );
 
             // setup event listeners first so we can react to various events
             _setup_event_listeners();
-
-            sg_logging.error("PANEL: test error");
-            sg_logging.warn("PANEL: test warning");
-            sg_logging.info("PANEL: test info");
-            sg_logging.debug("PANEL: test debug");
 
             // If the current Adobe application is photoshop, turn on persistence.
             // This isn't required, but provides a better user experience by not
@@ -413,6 +416,11 @@ sg_panel.Panel = new function() {
         // make sure the progress bar and info is hidden
         _show_progress(false);
         _show_info(false);
+
+        // now build the context menu with the context menu commands
+        const context_menu_cmds = state["context_menu_cmds"];
+        _build_flyout_menu(context_menu_cmds);
+
     };
 
     this.show_console = function(show) {
@@ -437,7 +445,7 @@ sg_panel.Panel = new function() {
 
         // show the progress message temporarily
         _set_info("Launching: " + command_display);
-        setTimeout(_clear_info, 3000);
+        setTimeout(_clear_info, 2000);
 
         // trigger the command
         sg_panel.REGISTERED_COMMAND_TRIGGERED.emit(command_id);
@@ -445,21 +453,38 @@ sg_panel.Panel = new function() {
 
     // ---- private methods
 
-    const _build_flyout_menu = function() {
+    const _build_flyout_menu = function(context_menu_cmds) {
         // Builds the flyout menu with the debug/reload options.
 
+        // clear the context menu lookup
+        _context_menu_lookup = {};
+
         // the xml that defines the flyout menu
-        var flyout_xml =
-            '<Menu> \
-                <MenuItem Id="sg_about" \
-                          Label="About..." \
-                          Enabled="true" \
-                          Checked="false"/> \
+        var flyout_xml = "<Menu>";
+
+        context_menu_cmds.forEach(function(command) {
+            if (command.hasOwnProperty("uid") &&
+                command.hasOwnProperty("display_name") &&
+                command.hasOwnProperty("icon_path")) {
+
+                const command_id = command["uid"];
+                const display_name = command["display_name"];
+
+                _context_menu_lookup[command_id] = display_name;
+
+                flyout_xml +=
+                    '<MenuItem Id="' + command_id + '" \
+                               Label="'+ display_name + '" \
+                               Enabled="true" \
+                               Checked="false"/>';
+            }
+        });
+
+        flyout_xml += '<MenuItem Label="---" /> \
                 <MenuItem Id="sg_console" \
                           Label="Console" \
                           Enabled="true" \
                           Checked="false"/> \
-                <MenuItem Label="---" /> \
                 <MenuItem Id="sg_dev_debug" \
                           Label="Chrome Console..." \
                           Enabled="true" \
@@ -467,7 +492,7 @@ sg_panel.Panel = new function() {
                 <MenuItem Id="sg_dev_reload" \
                           Label="Reload" \
                           Enabled="true" \
-                          Checked="false"/>'
+                          Checked="false"/>';
 
         if (process.env["SHOTGUN_ADOBECC_TESTS_ROOT"]) {
             flyout_xml += '   <MenuItem Id="sg_dev_tests" \
@@ -479,12 +504,6 @@ sg_panel.Panel = new function() {
 
         // build the menu
         _cs_interface.setPanelFlyoutMenu(flyout_xml);
-
-        // Listen for the Flyout menu clicks
-        _cs_interface.addEventListener(
-            "com.adobe.csxs.events.flyoutMenuClicked",
-            _on_flyout_menu_clicked
-        );
     };
 
     const _make_persistent = function(persistent) {
@@ -505,7 +524,10 @@ sg_panel.Panel = new function() {
     const _on_flyout_menu_clicked = function(event) {
         // Handles flyout menu clicks
 
-        switch (event.data.menuId) {
+        const cmd_id = event.data.menuId;
+        const cmd_name = event.data.menuName;
+
+        switch (cmd_id) {
 
             // NOTE: Looks like you can't use `const` in the switch cases.
             // The panel won't even load if you do. Perhaps some type of failed
@@ -526,16 +548,6 @@ sg_panel.Panel = new function() {
                 break;
 
             // about the extension
-            case "sg_about":
-                // TODO: show a Qt about dialog here.
-                // Send information about the current CC product to python and
-                // launch the about dialog from there. That will prevent us from
-                // having to navigate away from the current panel and its contents.
-                // Alternatively, display an overlay in the panel.
-                alert("ABOUT dialog goes here.");
-                break;
-
-            // about the extension
             case "sg_console":
                 self.show_console(true);
                 break;
@@ -547,7 +559,16 @@ sg_panel.Panel = new function() {
                 break;
 
             default:
-                sg_logging.warn("Unhandled menu event '" + event.data.menuName + "' clicked.");
+
+                // see if the command id matches one of the context menu ids
+                if (cmd_id in _context_menu_lookup) {
+                    self.trigger_command(cmd_id, cmd_name);
+
+                // can't determine what this is
+                } else {
+                    sg_logging.warn(
+                        "Unhandled menu event '" + cmd_name + "' clicked.");
+                }
         }
     };
 

@@ -98,6 +98,19 @@ def plugin_bootstrap(root_path, port, engine_name, app_id):
     # some operations can't be done until a qapplication exists.
     engine.post_qt_init()
 
+    # log metrics for the app name and version
+    engine.log_user_attribute_metric(
+        "%s Version" % engine.adobe.app.name,
+        engine.adobe.app.version
+    )
+
+    # debug logging for the app name/version as well
+    engine.logger.debug("Adobe CC Product: %s" % engine.adobe.app.name)
+    engine.logger.debug("Adobe CC Version: %s" % engine.adobe.app.version)
+
+    # log the build date of the plugin itself
+    engine.logger.debug("Shotgun plugin build date: %s" % manifest.BUILD_DATE)
+
     # once the event loop starts, the bootstrap process is complete and
     # everything should be connected. this is a blocking call, so nothing else
     # can happen afterward.
@@ -187,7 +200,12 @@ if __name__ == "__main__":
 
         # startup the plugin which includes setting up the socket io client,
         # bootstrapping the engine, and starting the Qt event loop
-        plugin_bootstrap(root_path, port, engine_name, app_id)
+        plugin_bootstrap(
+            root_path,
+            port,
+            engine_name,
+            app_id,
+        )
     except Exception, e:
         sys.stdout.write("ERROR: %s" % (traceback.format_exc(),))
         sys.stdout.flush()

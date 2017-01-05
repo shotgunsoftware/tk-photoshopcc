@@ -62,6 +62,16 @@ a:active {
     left: 1px
 }
 
+#loading_img {
+   position: absolute;
+   top: 50%;
+   left: 50%;
+   width: 270px;
+   height: 193px;
+   margin-top: -96px;
+   margin-left: -135px;
+}
+
 div.sg_error {
     width: 90%;
     height: 100px;

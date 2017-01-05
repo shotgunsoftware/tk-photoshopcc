@@ -64,11 +64,6 @@ class AdobeEngine(sgtk.platform.Engine):
         self.logger.debug("%s: Initializing..." % (self,))
         self.__qt_dialogs = []
 
-        self.logger.error("PYTHON: test error")
-        self.logger.warning("PYTHON: test warning")
-        self.logger.info("PYTHON: test info")
-        self.logger.debug("PYTHON: test debug")
-
         self.adobe.logging_received.connect(self._handle_logging)
         self.adobe.command_received.connect(self._handle_command)
         self.adobe.run_tests_request_received.connect(self._run_tests)
@@ -77,6 +72,34 @@ class AdobeEngine(sgtk.platform.Engine):
         self.__qt_dialogs = []
 
     def post_app_init(self):
+
+        # ---- register common engine commands
+
+        # register the "Jump to Shotgun" command
+        sg_icon = os.path.join(self.disk_location, "resources", "shotgun_logo.png")
+        self.register_command(
+            "Jump to Shotgun",
+            self._jump_to_sg,
+            {
+                "description": "Open the current Shotgun context in your web browser.",
+                "type": "context_menu",
+                "short_name": "jump_to_sg",
+                "icon": sg_icon,
+            }
+        )
+
+        # register the "Jump to File System" command
+        fs_icon = os.path.join(self.disk_location, "resources", "shotgun_folder.png")
+        self.register_command(
+            "Jump to File System",
+            self._jump_to_fs,
+            {
+                "description": "Open the current Shotgun context in your file browser.",
+                "type": "context_menu",
+                "short_name": "jump_to_fs",
+                "icon": fs_icon,
+            }
+        )
 
         # list the registered commands for debugging purposes
         self.logger.debug("Registered Commands:")
@@ -482,6 +505,7 @@ class AdobeEngine(sgtk.platform.Engine):
         # keep a list of each type of command since they'll be displayed
         # differently on the adobe side.
         favorites = []
+        context_menu_cmds = []
         commands = []
 
         # iterate over all the registered commands and gather the necessary info
@@ -500,6 +524,8 @@ class AdobeEngine(sgtk.platform.Engine):
                     if app_instance_obj == app_instance:
                         app_name = app_instance_name
 
+            cmd_type = properties.get("type", "default")
+
             # create the command dict to hand over to adobe
             command = dict(
                 uid=properties.get("uid"),
@@ -512,7 +538,9 @@ class AdobeEngine(sgtk.platform.Engine):
             # build the lookup string to see if this app is a favorite
             fav_name = str(app_name) + command_name
 
-            if fav_name in fav_lookup:
+            if cmd_type == "context_menu":
+                context_menu_cmds.append(command)
+            elif fav_name in fav_lookup:
                 # add the fav index to the command so that we can sort after
                 # all favorites are identified.
                 command["fav_index"] = fav_lookup[fav_name]
@@ -525,6 +553,9 @@ class AdobeEngine(sgtk.platform.Engine):
 
         # sort the other commands alphabetically by display name
         commands = sorted(commands, key=lambda d: d["display_name"])
+
+        # sort the context menu commands alphabetically by display name
+        context_menu_cmds = sorted(context_menu_cmds, key=lambda d: d["display_name"])
 
         # ---- process the context for display
 
@@ -560,6 +591,7 @@ class AdobeEngine(sgtk.platform.Engine):
             "context_fields": context_fields,
             "favorites": favorites,
             "commands": commands,
+            "context_menu_cmds": context_menu_cmds,
         }
 
         self.logger.debug("Sending state: %s" % str(state))
@@ -651,3 +683,39 @@ class AdobeEngine(sgtk.platform.Engine):
 
         return self._win32_proxy_win
 
+    def _jump_to_sg(self):
+        """
+        Jump to shotgun, launch web browser
+        """
+
+        from sgtk.platform.qt import QtGui, QtCore
+        url = self.context.shotgun_url
+        QtGui.QDesktopServices.openUrl(QtCore.QUrl(url))
+
+
+    def _jump_to_fs(self):
+        """
+        Jump from context to FS
+        """
+
+        # launch one window for each location on disk
+        paths = self.context.filesystem_locations
+        self.logger.debug("FS paths: %s" % (str(paths),))
+        for disk_location in paths:
+
+            # get the setting
+            system = sys.platform
+
+            # run the app
+            if system == "linux2":
+                cmd = 'xdg-open "%s"' % disk_location
+            elif system == "darwin":
+                cmd = 'open "%s"' % disk_location
+            elif system == "win32":
+                cmd = 'cmd.exe /C start "Folder" "%s"' % disk_location
+            else:
+                raise Exception("Platform '%s' is not supported." % system)
+
+            exit_code = os.system(cmd)
+            if exit_code != 0:
+                self.logger.error("Failed to launch '%s'!" % cmd)
