@@ -495,7 +495,7 @@ class AdobeEngine(sgtk.platform.Engine):
         # that should be unique and provide an easy lookup to match against.
         # we'll remember the order processed in order to sort our favorites list
         # once all the registered commands are processed
-        for fav_command in self.get_setting("menu_favorites"):
+        for fav_command in self.get_setting("shelf_favorites"):
             app_instance_name = fav_command["app_instance"]
             display_name = fav_command["name"]
             fav_id = app_instance_name + display_name
