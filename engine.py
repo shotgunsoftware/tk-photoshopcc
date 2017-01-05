@@ -39,6 +39,10 @@ class AdobeEngine(sgtk.platform.Engine):
             2,
         ),
     )
+    SHOTGUN_ADOBE_NETWORK_DEBUG = (
+        "SGTK_PHOTOSHOP_NETWORK_DEBUG" in os.environ or
+        "SHOTGUN_ADOBE_NETWORK_DEBUG" in os.environ
+    )
 
     TEST_SCRIPT_BASENAME = "run_tests.py"
 
@@ -47,6 +51,21 @@ class AdobeEngine(sgtk.platform.Engine):
     _FAILED_PINGS = 0
 
     ##########################################################################################
+    # context changing
+
+    def post_context_change(self, old_context, new_context):
+        """
+        Runs after a context change has occurred. This will trigger the
+        new state to be sent to the Adobe CC host application.
+
+        :param old_context: The previous context.
+        :param new_context: The current context.
+        """
+        self.__send_state()
+
+    ##########################################################################################
+    # engine initialization
+
     def pre_app_init(self):
         self.__tk_adobecc = self.import_module("tk_adobecc")
 
@@ -59,7 +78,11 @@ class AdobeEngine(sgtk.platform.Engine):
         self._adobe = self.__tk_adobecc.AdobeBridge.get_or_create(
             identifier=self.instance_name,
             port=self.SHOTGUN_ADOBE_PORT,
+            logger=self.logger,
+            network_debug=self.SHOTGUN_ADOBE_NETWORK_DEBUG,
         )
+
+        self.logger.debug("Network debug logging is %s" % self._adobe.network_debug)
 
         self.logger.debug("%s: Initializing..." % (self,))
         self.__qt_dialogs = []
@@ -285,6 +308,13 @@ class AdobeEngine(sgtk.platform.Engine):
         PHSP for Photoshop, or AEFT for After Effect.
         """
         return self._app_id
+
+    @property
+    def context_change_allowed(self):
+        """
+        Specifies that context changes are allowed by the engine.
+        """
+        return True
 
     ##########################################################################################
     # UI

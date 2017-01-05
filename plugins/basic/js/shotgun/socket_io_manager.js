@@ -47,6 +47,7 @@ sg_socket_io.rpc_log = function(level, message) {
 sg_socket_io.rpc_state_requested = function() {
     // Emits a "state_requested" message from the currently open socket.io
     // server.
+    sg_logging.debug("Emitting 'rpc_state_requested' message via socket.io.");
     sg_socket_io.emit("state_requested");
 };
 
@@ -61,6 +62,7 @@ sg_socket_io.rpc_command = function(uid) {
                 by the remote client. 
 
     */
+    sg_logging.debug("Emitting 'rpc_command' message via socket.io.");
     sg_socket_io.emit("command", uid);
 };
 
@@ -76,6 +78,21 @@ sg_socket_io.rpc_run_tests = function() {
 sg_socket_io.SocketManager = new function() {
     var self = this;
     var io = undefined;
+
+    var log_network_debug = function(msg) {
+        /*
+        Emits a debug logging message only if network logging has been
+        turned on via the environment.
+
+        :param msg: The logging message.
+        */
+        const legacy_env = process.env.SGTK_PHOTOSHOP_NETWORK_DEBUG;
+        const env_var = process.env.SHOTGUN_ADOBE_NETWORK_DEBUG;
+
+        if ( legacy_env || env_var ) {
+            sg_logging.debug(msg);
+        }
+    };
 
     var sanitize_path = function(file_path) {
         /*
@@ -99,7 +116,13 @@ sg_socket_io.SocketManager = new function() {
         // "no, there weren't any errors." We need to check the
         // result data structure here and make that determination
         // instead of always assuming success.
-        next(false, result);
+        if ( result == "EvalScript error." ) {
+            sg_logging.error(result);
+            next(true, result);
+        }
+        else {
+            next(false, result);
+        }
     };
 
     this.start_socket_server = function (port, csLib) {
@@ -124,7 +147,9 @@ sg_socket_io.SocketManager = new function() {
         // Tell ExtendScript to load the rpc.js file that contains our
         // helper functions.
         var jsx_rpc_path = sanitize_path(path.join(js_dir, "ECMA", "rpc.js"));
-        csLib.evalScript('$.evalFile("' + jsx_rpc_path + '")');
+        var cmd = '$.evalFile("' + jsx_rpc_path + '")';
+        sg_logging.debug("Sourcing rpc.js: " + cmd);
+        csLib.evalScript(cmd);
 
         sg_logging.info("Establishing jrpc interface.");
 
@@ -147,10 +172,9 @@ sg_socket_io.SocketManager = new function() {
                              the return of data to the caller and causes the
                              next RPC call queued up to be processed.
                 */
-                csLib.evalScript(
-                    "map_global_scope()",
-                    _eval_callback.bind(self, next)
-                );
+                const cmd = "map_global_scope()";
+                log_network_debug(cmd);
+                csLib.evalScript(cmd, _eval_callback.bind(self, next));
             };
 
             this.eval = function(params, next) {
@@ -164,6 +188,7 @@ sg_socket_io.SocketManager = new function() {
                              the return of data to the caller and causes the
                              next RPC call queued up to be processed.
                 */
+                log_network_debug(params[0]);
                 csLib.evalScript(params[0], function(result) {
                     next(false, result);
                 });
@@ -183,7 +208,7 @@ sg_socket_io.SocketManager = new function() {
                 */
                 var class_name = JSON.stringify(params.shift());
                 var cmd = "rpc_new(" + class_name + ")";
-                sg_logging.debug(cmd);
+                log_network_debug(cmd);
 
                 csLib.evalScript(
                     cmd,
@@ -205,6 +230,7 @@ sg_socket_io.SocketManager = new function() {
                 var property = params.shift();
                 var args = [base.__uniqueid, JSON.stringify(property)].join();
                 var cmd = "rpc_get(" + args + ")";
+                log_network_debug(cmd);
 
                 csLib.evalScript(
                     cmd,
@@ -227,6 +253,7 @@ sg_socket_io.SocketManager = new function() {
                 var index = JSON.stringify(params.shift());
                 var args = [base.__uniqueid, index].join();
                 var cmd = "rpc_get_index(" + args + ")";
+                log_network_debug(cmd);
 
                 csLib.evalScript(
                     cmd,
@@ -254,6 +281,7 @@ sg_socket_io.SocketManager = new function() {
                 ].join();
 
                 var cmd = "rpc_set(" + args + ")";
+                log_network_debug(cmd);
 
                 csLib.evalScript(
                     cmd,
@@ -290,6 +318,7 @@ sg_socket_io.SocketManager = new function() {
                 }
 
                 var cmd = "rpc_call(" + args + ")";
+                log_network_debug(cmd);
 
                 csLib.evalScript(
                     cmd,

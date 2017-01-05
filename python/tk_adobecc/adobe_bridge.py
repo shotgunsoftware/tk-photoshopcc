@@ -106,6 +106,16 @@ class AdobeBridge(Communicator):
     def __init__(self, *args, **kwargs):
         super(AdobeBridge, self).__init__(*args, **kwargs)
 
+        self.logger.debug(
+            "SHOTGUN_ADOBE_RESPONSE_TIMEOUT "
+            "is %s" % self.SHOTGUN_ADOBE_RESPONSE_TIMEOUT
+        )
+
+        self.logger.debug(
+            "SHOTGUN_ADOBE_HEARTBEAT_TIMEOUT "
+            "is %s" % self.SHOTGUN_ADOBE_HEARTBEAT_TIMEOUT
+        )
+
         self._emitter = MessageEmitter()
         self._io.on("logging", self._forward_logging)
         self._io.on("command", self._forward_command)
@@ -166,6 +176,7 @@ class AdobeBridge(Communicator):
         """
         # encode the python dict as json
         json_state = json.dumps(state)
+        self.logger.debug("Sending state: %s" % json_state) 
         self._io.emit("set_state", json_state)
 
     ##########################################################################################
@@ -179,6 +190,7 @@ class AdobeBridge(Communicator):
                          will take the form of a JSON encoded integeter
                          that is the unique id of the command to be called.
         """
+        self.logger.debug("Emitting command_received signal.")
         self.command_received.emit(int(json.loads(response)))
 
     def _forward_logging(self, response):
@@ -204,6 +216,7 @@ class AdobeBridge(Communicator):
         :param response: The data received with the message. This
                          is disregarded.
         """
+        self.logger.debug("Emitting run_tests_request_received signal.")
         self.run_tests_request_received.emit()
 
     def _forward_state_request(self, response):
@@ -213,6 +226,7 @@ class AdobeBridge(Communicator):
         :param response: The data received with the message. This
                          is disregarded.
         """
+        self.logger.debug("Emitting state_requested signal.")
         self.state_requested.emit()
 
     @timeout(SHOTGUN_ADOBE_RESPONSE_TIMEOUT, "Timed out waiting for response.")

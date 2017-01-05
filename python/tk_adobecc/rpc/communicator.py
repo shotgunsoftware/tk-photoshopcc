@@ -13,6 +13,7 @@ import threading
 import sys
 import os.path
 import time
+import logging
 
 # Add our third-party packages to sys.path.
 sys.path.append(os.path.join(os.path.dirname(__file__), "packages"))
@@ -35,7 +36,7 @@ class Communicator(object):
     _RPC_EXECUTE_COMMAND = "execute_command"
     _REGISTRY = dict()
 
-    def __init__(self, port=8090, host="localhost", disconnect_callback=None):
+    def __init__(self, port=8090, host="localhost", disconnect_callback=None, logger=None, network_debug=False):
         """
         Constructor. Rather than instantiating the Communicator directly,
         it is advised to make use of the get_or_create() classmethod as
@@ -45,9 +46,14 @@ class Communicator(object):
         :param str host: The host to connect to. Default is localhost.
         :param disconnect_callback: A callback to call if a disconnect
                                     message is received from the host.
+        :param logger: A standard Python logger to use for network debug
+                       logging.
+        :param bool network_debug: Whether network debug logging is desired.
         """
         self._port = port
         self._host = host
+        self._network_debug = network_debug
+        self._logger = logger or logging.getLogger(__name__)
 
         self._io = SocketIO(host, port)
         self._io.on("return", self._handle_response)
@@ -81,9 +87,11 @@ class Communicator(object):
         """
         if identifier in cls._REGISTRY:
             instance = cls._REGISTRY[identifier]
+            instance.logger.debug("Reusing Communicator by id '%s'" % identifier)
         else:
             instance = cls(*args, **kwargs)
             cls._REGISTRY[identifier] = instance
+            instance.logger.debug("New Communicator of id '%s'" % identifier)
         return instance
 
     ##########################################################################################
@@ -95,6 +103,28 @@ class Communicator(object):
         The host that was connected to.
         """
         return self._host
+
+    @property
+    def logger(self):
+        """
+        The standard Python logger used by the communicator.
+        """
+        return self._logger
+
+    @logger.setter
+    def logger(self, logger):
+        self._logger = logger
+
+    @property
+    def network_debug(self):
+        """
+        Whether network debugging messages are logged.
+        """
+        return self._network_debug
+
+    @network_debug.setter
+    def network_debug(self, state):
+        self._network_debug = bool(state)
 
     @property
     def port(self):
@@ -119,6 +149,8 @@ class Communicator(object):
 
         :param float wait: How long to poll for new messages, in seconds.
         """
+        self.log_network_debug("Processing new messages, wait is %s" % wait)
+
         try:
             self._io._heartbeat_thread.hurry()
             self._io._transport.set_timeout(seconds=1)
@@ -132,10 +164,16 @@ class Communicator(object):
                     # as simple as the server being busy and not responding
                     # quickly enough, in which case subsequent attempts will
                     # go through without a problem.
+                    self.log_network_debug(
+                        "Timed out during _process_packets call. This is "
+                        "likely not a problem if it only happens occasionally."
+                    )
                     pass
         finally:
             self._io._heartbeat_thread.relax()
             self._io._transport.set_timeout()
+
+        self.log_network_debug("New message processing complete.")
 
     def rpc_call(self, proxy_object, params=[], parent=None):
         """
@@ -153,9 +191,13 @@ class Communicator(object):
         :returns: The data returned by the callable when it is
                   called.
         """
+        self.log_network_debug("Sending a call message using rpc_call...")
+
         if parent:
             params.insert(0, parent.uid)
+            self.log_network_debug("Parent given, UID is %s" % parent.uid)
         else:
+            self.log_network_debug("No parent given.")
             params.insert(0, None)
 
         return self.__run_rpc_command(
@@ -173,6 +215,9 @@ class Communicator(object):
 
         :returns: The data returned by the evaluated command.
         """
+        self.log_network_debug("Sending an eval message using rpc_eval...")
+        self.log_network_debug("Command is: %s" % command)
+
         return self.__run_rpc_command(
             method="eval",
             proxy_object=None,
@@ -191,6 +236,14 @@ class Communicator(object):
 
         :returns: The value of the property of the remote object.
         """
+        self.log_network_debug("Sending a get message using rpc_get...")
+        self.log_network_debug(
+            "Getting property %s from object UID %s" % (
+                property_name,
+                proxy_object.uid
+            )
+        )
+
         return self.__run_rpc_command(
             method="get",
             proxy_object=proxy_object,
@@ -208,6 +261,14 @@ class Communicator(object):
 
         :returns: The value of the index of the remote object.
         """
+        self.log_network_debug("Sending a get_index message using rpc_get_index...")
+        self.log_network_debug(
+            "Getting index %s of object UID %s" % (
+                index,
+                proxy_object.uid
+            )
+        )
+
         return self.__run_rpc_command(
             method="get_index",
             proxy_object=proxy_object,
@@ -224,6 +285,9 @@ class Communicator(object):
         :returns: A proxy object pointing to the instantiated
                   remote object.
         """
+        self.log_network_debug("Sending a 'new' message using rpc_new...")
+        self.log_network_debug("Instantiating class %s" % class_name)
+
         return self.__run_rpc_command(
             method="new",
             proxy_object=None,
@@ -240,6 +304,15 @@ class Communicator(object):
         :param str property_name: The name of the property to set.
         :param value: The value to set the property to.
         """
+        self.log_network_debug("Sending a set message using rpc_set...")
+        self.log_network_debug(
+            "Setting property %s to %s for object UID %s" % (
+                property_name,
+                value,
+                proxy_object.uid
+            )
+        )
+
         return self.__run_rpc_command(
             method="set",
             proxy_object=proxy_object,
@@ -255,7 +328,20 @@ class Communicator(object):
         :param float timeout: The duration of time, in seconds, to
                               wait.
         """
+        self.log_network_debug("Triggering a wait of duration %s" % timeout)
         self._io.wait(float(timeout))
+
+    ##########################################################################################
+    # logging
+
+    def log_network_debug(self, msg):
+        """
+        Logs a debug message if 'network_debug' is turned on.
+
+        :param str msg: The log message.
+        """
+        if self.network_debug:
+            self.logger.debug(msg)
 
     ##########################################################################################
     # internal methods
@@ -265,11 +351,15 @@ class Communicator(object):
         Emits a message requesting that the remote global scope be
         introspected, wrapped, and returned as JSON data.
         """
+        self.log_network_debug("Getting the remote global scope...")
         payload = self._get_payload("get_global_scope")
+        self.log_network_debug("Payload: %s" % payload)
 
         self._io.emit(self._RPC_EXECUTE_COMMAND, payload)
         uid = payload["id"]
         results = self._wait_for_response(uid)
+
+        self.log_network_debug("Raw data response: %s" % results)
 
         self._global_scope = ProxyScope(results, self)
 
@@ -300,6 +390,8 @@ class Communicator(object):
         else:
             payload["params"] = self.__prepare_params(params)
 
+        self.log_network_debug("Payload constructed: %s" % payload)
+
         return payload
 
     def _handle_response(self, response, *args):
@@ -310,14 +402,26 @@ class Communicator(object):
 
         :returns: The decoded result data.
         """
+        self.log_network_debug("Handling RPC response...")
+
         with self._LOCK:
             result = json.loads(response)
             uid = result["id"]
+            self.log_network_debug("Response UID is %s" % uid)
 
             try:
                 self._RESULTS[uid] = json.loads(result["result"])
             except (TypeError, ValueError):
                 self._RESULTS[uid] = result.get("result")
+            except KeyError:
+                self.logger.error("RPC command (UID=%s) failed!" % uid)
+                self.logger.debug("Failure raw response: %s" % response)
+                self.logger.debug("Failure results: %s" % result)
+                raise RuntimeError("RPC command (UID=%s) failed!" % uid)
+
+            self.log_network_debug(
+                "Processed response data: %s" % self._RESULTS[uid]
+            )
 
     def _wait_for_response(self, uid):
         """
@@ -327,11 +431,16 @@ class Communicator(object):
 
         :returns: The raw returned results data.
         """
+        self.log_network_debug("Waiting for RPC response for UID %s..." % uid)
+        self.log_network_debug("Interval is %s" % self._WAIT_INTERVAL)
+
         while uid not in self._RESULTS:
             self._io.wait(self._WAIT_INTERVAL)
 
         results = self._RESULTS[uid]
         del self._RESULTS[uid]
+
+        self.log_network_debug("Results arrived for UID %s" % uid)
         return results
 
     ##########################################################################################

@@ -46,6 +46,7 @@ class ProxyScope(object):
         """
         try:
             for item_name, item in self._data.iteritems():
+                self._communicator.log_network_debug("Scope registry: %s" % item_name)
                 self.__registry[item_name] = ProxyWrapper(
                     item,
                     self._communicator,
