@@ -75,14 +75,15 @@ class MessageEmitter(QtCore.QObject):
         be run has been received.
     :signal state_requested: Fires when the remote process requests the current
         state.
-    :signal active_document_changed: Fires when alerted to a change in active
-        document by the RPC server.
+    :signal active_document_changed(str): Fires when alerted to a change in active
+        document by the RPC server. The string value is the path to the new
+        active document, or an empty string if the active document is unsaved.
     """
     logging_received = QtCore.Signal(str, str)
     command_received = QtCore.Signal(int)
     run_tests_request_received = QtCore.Signal()
     state_requested = QtCore.Signal()
-    active_document_changed = QtCore.Signal()
+    active_document_changed = QtCore.Signal(str)
 
 
 class AdobeBridge(Communicator):
@@ -203,7 +204,8 @@ class AdobeBridge(Communicator):
                          is disregarded.
         """
         self.logger.debug("Emitting active_document_changed signal.")
-        self.active_document_changed.emit()
+        response = json.loads(response)
+        self.active_document_changed.emit(response.get("active_document_path"))
 
     def _forward_command(self, response):
         """

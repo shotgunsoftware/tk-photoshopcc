@@ -506,7 +506,7 @@ sg_manager.Manager = new function() {
                             if ( __active_document != undefined ) {
                                 sg_logging.debug("Active document changed to undefined");
                                 __active_document = undefined;
-                                sg_socket_io.rpc_active_document_changed();
+                                sg_socket_io.rpc_active_document_changed("");
                             }
                         }
                         else {
@@ -514,7 +514,7 @@ sg_manager.Manager = new function() {
                             if ( __active_document != result ) {
                                 sg_logging.debug("Active document changed to " + result);
                                 __active_document = result;
-                                sg_socket_io.rpc_active_document_changed();
+                                sg_socket_io.rpc_active_document_changed(result);
                             }
                         }
                     }

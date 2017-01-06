@@ -205,15 +205,16 @@ class AdobeEngine(sgtk.platform.Engine):
         sys.stdout.write(msg_str)
         sys.stdout.flush()
 
-    def _handle_active_document_change(self):
+    def _handle_active_document_change(self, active_document_path):
         """
         Gets the active document from the host application, determines which
         context it belongs to, and changes to that context.
+
+        :param str active_document_path: The path to the new active document.
         """
-        try:
-            active_document_path = self.adobe.app.activeDocument.fullName.fsName
+        if active_document_path:
             self.log_debug("New active document is %s" % active_document_path)
-        except RuntimeError:
+        else:
             self.log_debug(
                 "New active document check failed. This is likely due to the "
                 "new active document being in an unsaved state. Setting "

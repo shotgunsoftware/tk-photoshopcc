@@ -28,13 +28,15 @@ sg_socket_io.emit = function(message_type, payload) {
     }
 };
 
-sg_socket_io.rpc_active_document_changed = function() {
+sg_socket_io.rpc_active_document_changed = function(active_document_path) {
     /*
     Emits a message that informs any listeners of a change in active
     document within the host application.
     */
     sg_logging.debug("Emitting 'active_document_changed' message via socket.io.");
-    sg_socket_io.emit("active_document_changed");
+    var msg = {};
+    msg.active_document_path = active_document_path;
+    sg_socket_io.emit("active_document_changed", msg);
 };
 
 sg_socket_io.rpc_log = function(level, message) {
