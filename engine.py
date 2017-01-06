@@ -65,6 +65,19 @@ class AdobeEngine(sgtk.platform.Engine):
         self.__send_state()
 
     ##########################################################################################
+    # context changing
+
+    def post_context_change(self, old_context, new_context):
+        """
+        Runs after a context change has occurred. This will trigger the
+        new state to be sent to the Adobe CC host application.
+
+        :param old_context: The previous context.
+        :param new_context: The current context.
+        """
+        self.__send_state()
+
+    ##########################################################################################
     # engine initialization
 
     def pre_app_init(self):
