@@ -75,11 +75,14 @@ class MessageEmitter(QtCore.QObject):
         be run has been received.
     :signal state_requested: Fires when the remote process requests the current
         state.
+    :signal active_document_changed: Fires when alerted to a change in active
+        document by the RPC server.
     """
     logging_received = QtCore.Signal(str, str)
     command_received = QtCore.Signal(int)
     run_tests_request_received = QtCore.Signal()
     state_requested = QtCore.Signal()
+    active_document_changed = QtCore.Signal()
 
 
 class AdobeBridge(Communicator):
@@ -121,9 +124,18 @@ class AdobeBridge(Communicator):
         self._io.on("command", self._forward_command)
         self._io.on("run_tests", self._forward_run_tests)
         self._io.on("state_requested", self._forward_state_request)
+        self._io.on("active_document_changed", self._forward_active_document_changed)
 
     ##########################################################################################
     # properties
+
+    @property
+    def active_document_changed(self):
+        """
+        The signal that is emitted when notification of an active document
+        change arrives via RPC.
+        """
+        return self._emitter.active_document_changed
 
     @property
     def logging_received(self):
@@ -181,6 +193,17 @@ class AdobeBridge(Communicator):
 
     ##########################################################################################
     # internal methods
+
+    def _forward_active_document_changed(self, response):
+        """
+        Forwards the notification that the host application's active document
+        has changed.
+
+        :param response: The data received with the message. This
+                         is disregarded.
+        """
+        self.logger.debug("Emitting active_document_changed signal.")
+        self.active_document_changed.emit()
 
     def _forward_command(self, response):
         """

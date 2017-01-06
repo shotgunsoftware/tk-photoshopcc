@@ -28,6 +28,15 @@ sg_socket_io.emit = function(message_type, payload) {
     }
 };
 
+sg_socket_io.rpc_active_document_changed = function() {
+    /*
+    Emits a message that informs any listeners of a change in active
+    document within the host application.
+    */
+    sg_logging.debug("Emitting 'active_document_changed' message via socket.io.");
+    sg_socket_io.emit("active_document_changed");
+};
+
 sg_socket_io.rpc_log = function(level, message) {
     /*
     Emits a "logging" message from the currently open socket.io
@@ -45,9 +54,10 @@ sg_socket_io.rpc_log = function(level, message) {
 };
 
 sg_socket_io.rpc_state_requested = function() {
-    // Emits a "state_requested" message from the currently open socket.io
-    // server.
-    sg_logging.debug("Emitting 'rpc_state_requested' message via socket.io.");
+    /*
+    Emits a "state_requested" message from the currently open socket.io server.
+    */
+    sg_logging.debug("Emitting 'state_requested' message via socket.io.");
     sg_socket_io.emit("state_requested");
 };
 
@@ -62,7 +72,7 @@ sg_socket_io.rpc_command = function(uid) {
                 by the remote client. 
 
     */
-    sg_logging.debug("Emitting 'rpc_command' message via socket.io.");
+    sg_logging.debug("Emitting 'command' message via socket.io.");
     sg_socket_io.emit("command", uid);
 };
 

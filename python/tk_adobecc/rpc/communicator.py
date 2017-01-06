@@ -528,4 +528,5 @@ class Communicator(object):
             if isinstance(instance, ProxyWrapper):
                 return instance
             else:
-                raise 
+                raise
+
