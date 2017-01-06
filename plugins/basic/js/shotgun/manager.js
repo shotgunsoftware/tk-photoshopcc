@@ -33,9 +33,6 @@ sg_manager.Manager = new function() {
     // adobe interface
     const _cs_interface = new CSInterface();
 
-    // the name of the python process extension
-    const _panel_extension_name = "com.shotgunsoftware.basic.adobecc.panel";
-
     // remember if/why python was disconnected
     var __python_disconnected = false;
     var __python_disconnected_error = undefined;
@@ -68,23 +65,46 @@ sg_manager.Manager = new function() {
             // come in.
             _setup_event_listeners();
 
-            sg_logging.error("MANAGER: test error");
-            sg_logging.warn("MANAGER: test warning");
-            sg_logging.info("MANAGER: test info");
-            sg_logging.debug("MANAGER: test debug");
+            const manager_ext_id = sg_constants.extension_info["manager"]["id"];
+            const panel_ext_id = sg_constants.extension_info["panel"]["id"];
 
             // start up the panel in the adobe product first. we can display
             // messages and information to the user while functions below are
             // running
             sg_logging.debug("Launching the panel extension...");
-            _cs_interface.requestOpenExtension(_panel_extension_name);
+            _cs_interface.requestOpenExtension(panel_ext_id);
 
             // Look for an open port to use for the server. Once a port has been
             // found, this method will directly call the supplied callback
             // method to start up the server and then bootstrap python.
             _get_open_port(_on_server_port_found);
 
-            // TODO: setup promise here for found port?
+            // log info about the loaded extensions
+            const extensions = _cs_interface.getExtensions(
+                [panel_ext_id, manager_ext_id]);
+
+            if (extensions.length > 0) {
+                sg_logging.debug("Loaded extensions:");
+                sg_logging.debug("--------------------------------------");
+                extensions.forEach(function(ext) {
+                    sg_logging.debug("    name: " + ext.name);
+                    sg_logging.debug("      id: " + ext.id);
+                    sg_logging.debug("mainPath: " + ext.mainPath);
+                    sg_logging.debug("basePath: " + ext.basePath);
+                    sg_logging.debug("--------------------------------------");
+                });
+            }
+
+            // log the os information
+            sg_logging.debug("OS information: " + _cs_interface.getOSInformation());
+
+            // log the cep api version:
+            const api_version = _cs_interface.getCurrentApiVersion();
+            sg_logging.debug("CEP API Version: " +
+                api_version.major + "." +
+                api_version.minor + "." +
+                api_version.micro
+            );
 
         } catch (error) {
             const message = "There was an unexpected error during startup of " +
@@ -161,7 +181,6 @@ sg_manager.Manager = new function() {
             host_capabilities.SUPPORT_HTML_EXTENSIONS;
     };
 
-    // TODO: add a progress callback
     const _bootstrap_python = function(port) {
         // Bootstrap the toolkit python process.
         //
@@ -170,7 +189,7 @@ sg_manager.Manager = new function() {
 
         const app_id = _cs_interface.hostEnvironment.appId;
         const child_process = require("child_process");
-        const path = require('path');
+        const path = require("path");
         const engine_name = sg_constants.product_info[app_id].tk_engine_name;
 
         // the path to this extension
@@ -200,8 +219,6 @@ sg_manager.Manager = new function() {
 
         sg_logging.debug("Bootstrapping: " + plugin_bootstrap_py);
 
-        // TODO: proper python executable discovery
-
         // launch a separate process to bootstrap python with toolkit running...
         // > cd $ext_dir
         // > python /path/to/ext/bootstrap.py
@@ -218,7 +235,13 @@ sg_manager.Manager = new function() {
         sg_logging.debug("Current working directory: " + plugin_python_path);
         sg_logging.debug("Executing command: ");
         sg_logging.debug("  " +
-            [python_exe_path, plugin_bootstrap_py, port, engine_name].join(" ")
+            [
+                python_exe_path,
+                plugin_bootstrap_py,
+                port,
+                engine_name,
+                app_id,
+            ].join(" ")
         );
 
         try {
@@ -230,7 +253,7 @@ sg_manager.Manager = new function() {
                     plugin_bootstrap_py,
                     port,
                     engine_name,
-                    app_id
+                    app_id,
                 ],
                 {
                     // start the process from this dir
@@ -249,12 +272,12 @@ sg_manager.Manager = new function() {
 
         // log stdout from python process
         self.python_process.stdout.on("data", function (data) {
-            sg_logging.log(data.toString());
+            sg_logging.python(data.toString());
         });
 
         // log stderr from python process
         self.python_process.stderr.on("data", function (data) {
-            sg_logging.log(data.toString());
+            sg_logging.python(data.toString());
         });
 
         // handle python process disconnection
@@ -415,11 +438,7 @@ sg_manager.Manager = new function() {
         sg_logging.rpc = sg_socket_io;
 
         // bootstrap the python process.
-        _bootstrap_python(
-            port
-            // TODO: send a progress callback here
-        );
-
+        _bootstrap_python(port);
     };
 
     const _reload = function(event) {

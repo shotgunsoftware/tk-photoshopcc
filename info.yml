@@ -13,17 +13,25 @@
 # expected fields in the configuration file for this engine
 configuration:
 
+    shelf_favorites:
+        type: list
+        description:
+          Controls the registered commands that show up in the favorites shelf
+          in the Shotgun panel. This is a list where each item is a dictionary
+          with keys 'app_instance' and 'name'. The 'app_instance' key connects
+          this entry to a particular app instance defined in the environment
+          configuration file. The 'name' is a command name to make a favorite.
+        allows_empty: True
+        default_value: []
+        values:
+            type: dict
+            items:
+                name: { type: str }
+                app_instance: { type: str }
+
     debug_logging:
         type: bool
         description: Controls whether debug messages should be emitted to the logger
-        default_value: false
-
-    dialogs_always_on_top:
-        type: bool
-        description: "If True, set the Qt window flag to ensure the toolkit
-                      dialogs stay above all other windows (including non-adobe
-                      windows). If this is not set, then the dialogs may be
-                      hidden when the Adobe product window has focus."
         default_value: false
 
 # the Shotgun fields that this engine needs in order to operate correctly

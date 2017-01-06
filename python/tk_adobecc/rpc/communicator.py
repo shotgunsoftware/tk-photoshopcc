@@ -443,6 +443,21 @@ class Communicator(object):
         self.log_network_debug("Results arrived for UID %s" % uid)
         return results
 
+    def _wait_for_response(self, uid):
+        """
+        Waits for the results of an RPC call.
+
+        :param int uid: The unique id of the RPC call to wait for.
+
+        :returns: The raw returned results data.
+        """
+        while uid not in self._RESULTS:
+            self._io.wait(self._WAIT_INTERVAL)
+
+        results = self._RESULTS[uid]
+        del self._RESULTS[uid]
+        return results
+
     ##########################################################################################
     # private methods
 

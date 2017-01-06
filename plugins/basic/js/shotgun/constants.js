@@ -12,6 +12,18 @@
 
 var sg_constants = sg_constants || {};
 
+// information identifying each of the sg extensions running
+sg_constants.extension_info = {
+
+    manager: {
+        id: "com.shotgunsoftware.basic.adobecc.manager"
+    },
+
+    panel: {
+        id: "com.shotgunsoftware.basic.adobecc.panel"
+    }
+};
+
 // debug console urls. the ports should correspond to the ports defined in
 // the extension's .debug file for the supported CC applications.
 sg_constants.product_info = {
@@ -37,14 +49,14 @@ sg_constants.product_info = {
     // After Effects
 
     AEFT: {
-        tk_engine_name: "tk-photoshop",
+        tk_engine_name: "tk-aftereffects",
         debug_url: "http://localhost:45218"
     },
 
     // Premiere Pro
 
     PPRO: {
-        tk_engine_name: "tk-photoshop",
+        tk_engine_name: "tk-premiere",
         debug_url: "http://localhost:45219"
     }
 
@@ -59,6 +71,7 @@ sg_constants.panel_div_ids = {
     warning: "sg_status_warning",
     header: "sg_panel_header",
     contents: "sg_panel_contents",
+    command_help: "sg_panel_command_help",
     footer: "sg_panel_footer",
     progress: "sg_progress",
     progress_bar: "sg_progress_bar",

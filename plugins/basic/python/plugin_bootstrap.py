@@ -49,11 +49,6 @@ def get_sgtk_logger(sgtk):
 
     :returns: A logger and log handler.
     """
-    # initializes the file where logging output will go
-    sgtk.LogManager().initialize_base_file_handler(engine_name)
-
-    # allows for debugging to be turned on by the plugin build process
-    sgtk.LogManager().global_debug = manifest.debug_logging
 
     # add a custom handler to the root logger so that all toolkit log messages
     # are forwarded back to python via the communicator
@@ -66,9 +61,15 @@ def get_sgtk_logger(sgtk):
     else:
         bootstrap_log_handler.setLevel(logging.INFO)
 
-    # now get a logger use during bootstrap
-    sgtk_logger = sgtk.LogManager.get_logger("extension_bootstrap")
+    # now get a logger to use during bootstrap
+    sgtk_logger = sgtk.LogManager.get_logger("%s.%s" % (engine_name, "bootstrap"))
     sgtk.LogManager().initialize_custom_handler(bootstrap_log_handler)
+
+    # allows for debugging to be turned on by the plugin build process
+    sgtk.LogManager().global_debug = manifest.debug_logging
+
+    # initializes the file where logging output will go
+    sgtk.LogManager().initialize_base_file_handler(engine_name)
 
     return sgtk_logger, bootstrap_log_handler
 
@@ -132,6 +133,19 @@ def bootstrap(root_path, port, engine_name, app_id):
 
     # some operations can't be done until a qapplication exists.
     engine.post_qt_init()
+
+    # log metrics for the app name and version
+    engine.log_user_attribute_metric(
+        "%s Version" % engine.adobe.app.name,
+        engine.adobe.app.version
+    )
+
+    # debug logging for the app name/version as well
+    engine.logger.debug("Adobe CC Product: %s" % engine.adobe.app.name)
+    engine.logger.debug("Adobe CC Version: %s" % engine.adobe.app.version)
+
+    # log the build date of the plugin itself
+    engine.logger.debug("Shotgun plugin build date: %s" % manifest.BUILD_DATE)
 
     # once the event loop starts, the bootstrap process is complete and
     # everything should be connected. this is a blocking call, so nothing else

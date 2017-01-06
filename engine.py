@@ -87,11 +87,6 @@ class AdobeEngine(sgtk.platform.Engine):
         self.logger.debug("%s: Initializing..." % (self,))
         self.__qt_dialogs = []
 
-        self.logger.error("PYTHON: test error")
-        self.logger.warning("PYTHON: test warning")
-        self.logger.info("PYTHON: test info")
-        self.logger.debug("PYTHON: test debug")
-
         self.adobe.logging_received.connect(self._handle_logging)
         self.adobe.command_received.connect(self._handle_command)
         self.adobe.run_tests_request_received.connect(self._run_tests)
@@ -100,6 +95,34 @@ class AdobeEngine(sgtk.platform.Engine):
         self.__qt_dialogs = []
 
     def post_app_init(self):
+
+        # ---- register common engine commands
+
+        # register the "Jump to Shotgun" command
+        sg_icon = os.path.join(self.disk_location, "resources", "shotgun_logo.png")
+        self.register_command(
+            "Jump to Shotgun",
+            self._jump_to_sg,
+            {
+                "description": "Open the current Shotgun context in your web browser.",
+                "type": "context_menu",
+                "short_name": "jump_to_sg",
+                "icon": sg_icon,
+            }
+        )
+
+        # register the "Jump to File System" command
+        fs_icon = os.path.join(self.disk_location, "resources", "shotgun_folder.png")
+        self.register_command(
+            "Jump to File System",
+            self._jump_to_fs,
+            {
+                "description": "Open the current Shotgun context in your file browser.",
+                "type": "context_menu",
+                "short_name": "jump_to_fs",
+                "icon": fs_icon,
+            }
+        )
 
         # list the registered commands for debugging purposes
         self.logger.debug("Registered Commands:")
@@ -194,7 +217,7 @@ class AdobeEngine(sgtk.platform.Engine):
 
         # we don't use the handler's format method here because the adobe side
         # expects a certain format.
-        msg_str = "%s: [%s] %s" % (record.levelname, record.name, record.message)
+        msg_str = "\n%s: [%s] %s\n" % (record.levelname, record.name, record.message)
 
         sys.stdout.write(msg_str)
         sys.stdout.flush()
@@ -353,8 +376,6 @@ class AdobeEngine(sgtk.platform.Engine):
         from sgtk.platform.qt import QtGui
         return QtGui.QApplication.activeWindow()
 
-    # TODO: see tk-photoshop for handling windows-specific window parenting/display
-
     def show_dialog(self, title, bundle, widget_class, *args, **kwargs):
         """
         Shows a non-modal dialog window in a way suitable for this engine.
@@ -390,16 +411,6 @@ class AdobeEngine(sgtk.platform.Engine):
         # an event after the dialog has been deleted.
         # Keeping track of all dialogs will ensure this doesn't happen
         self.__qt_dialogs.append(dialog)
-
-        # if the dialogs are configured to always be on top, set the proper
-        # hint on the dialog.
-        if self.get_setting("dialogs_always_on_top", True):
-            from sgtk.platform.qt import QtCore
-            dialog.setWindowFlags(
-                dialog.windowFlags() |
-                QtCore.Qt.CustomizeWindowHint |
-                QtCore.Qt.WindowStaysOnTopHint
-            )
 
         # show the dialog:
         dialog.show()
@@ -438,16 +449,6 @@ class AdobeEngine(sgtk.platform.Engine):
         # an event after the dialog has been deleted.
         # Keeping track of all dialogs will ensure this doesn't happen
         self.__qt_dialogs.append(dialog)
-
-        # if the dialogs are configured to always be on top, set the proper
-        # hint on the dialog.
-        if self.get_setting("dialogs_always_on_top", True):
-            from sgtk.platform.qt import QtCore
-            dialog.setWindowFlags(
-                dialog.windowFlags() |
-                QtCore.Qt.CustomizeWindowHint |
-                QtCore.Qt.WindowStaysOnTopHint
-            )
 
         # make sure the window raised so it doesn't
         # appear behind the main Photoshop window
@@ -511,7 +512,78 @@ class AdobeEngine(sgtk.platform.Engine):
 
     def __send_state(self):
 
-        # TODO: thumbnail path for current context
+        # --- process the menu favorites setting
+
+        fav_lookup = {}
+        fav_index = 0
+
+        # create a lookup of the combined app instance name with the display name.
+        # that should be unique and provide an easy lookup to match against.
+        # we'll remember the order processed in order to sort our favorites list
+        # once all the registered commands are processed
+        for fav_command in self.get_setting("shelf_favorites"):
+            app_instance_name = fav_command["app_instance"]
+            display_name = fav_command["name"]
+            fav_id = app_instance_name + display_name
+            fav_lookup[fav_id] = fav_index
+            fav_index += 1
+
+        # keep a list of each type of command since they'll be displayed
+        # differently on the adobe side.
+        favorites = []
+        context_menu_cmds = []
+        commands = []
+
+        # iterate over all the registered commands and gather the necessary info
+        # to display them in adobe
+        for (command_name, command_info) in self.commands.iteritems():
+            properties = command_info.get("properties", {})
+
+            # ---- determine the app's instance name
+
+            app_instance = properties.get("app", None)
+            app_name = None
+
+            # check this command's app against the engine's apps.
+            if app_instance:
+                for (app_instance_name, app_instance_obj) in self.apps.items():
+                    if app_instance_obj == app_instance:
+                        app_name = app_instance_name
+
+            cmd_type = properties.get("type", "default")
+
+            # create the command dict to hand over to adobe
+            command = dict(
+                uid=properties.get("uid"),
+                display_name=command_name,
+                icon_path=properties.get("icon"),
+                description=properties.get("description"),
+                type=properties.get("type", "default"),
+            )
+
+            # build the lookup string to see if this app is a favorite
+            fav_name = str(app_name) + command_name
+
+            if cmd_type == "context_menu":
+                context_menu_cmds.append(command)
+            elif fav_name in fav_lookup:
+                # add the fav index to the command so that we can sort after
+                # all favorites are identified.
+                command["fav_index"] = fav_lookup[fav_name]
+                favorites.append(command)
+            else:
+                commands.append(command)
+
+        # sort the favorites based on their index
+        favorites = sorted(favorites, key=lambda d: d["fav_index"])
+
+        # sort the other commands alphabetically by display name
+        commands = sorted(commands, key=lambda d: d["display_name"])
+
+        # sort the context menu commands alphabetically by display name
+        context_menu_cmds = sorted(context_menu_cmds, key=lambda d: d["display_name"])
+
+        # ---- process the context for display
 
         context = self.context
         context_fields = [
@@ -521,9 +593,11 @@ class AdobeEngine(sgtk.platform.Engine):
                 "url": self.sgtk.shotgun_url,
             }
         ]
+
+        # TODO: thumbnail path for current context
         thumbnail_entity = None
 
-        for entity in [context.project, context.entity, context.step, context.task]:
+        for entity in [context.project, context.entity, context.task]:
 
             if not entity:
                 continue
@@ -537,24 +611,15 @@ class AdobeEngine(sgtk.platform.Engine):
             })
             thumbnail_entity = entity
 
+        # ---- populate the state structure to hand over to adobe
+
         state = {
             "context_fields": context_fields,
-            "commands": [],
+            "favorites": favorites,
+            "commands": commands,
+            "context_menu_cmds": context_menu_cmds,
         }
 
-        for (command_name, command_info) in self.commands.iteritems():
-            properties = command_info.get("properties", {})
-
-            command = dict(
-                uid=properties.get("uid"),
-                display_name=command_name,
-                icon_path=properties.get("icon"),
-                description=properties.get("description"),
-            )
-
-            state["commands"].append(command)
-
-        # TODO: send to javascript
         self.logger.debug("Sending state: %s" % str(state))
         self.adobe.send_state(state)
 
@@ -644,3 +709,39 @@ class AdobeEngine(sgtk.platform.Engine):
 
         return self._win32_proxy_win
 
+    def _jump_to_sg(self):
+        """
+        Jump to shotgun, launch web browser
+        """
+
+        from sgtk.platform.qt import QtGui, QtCore
+        url = self.context.shotgun_url
+        QtGui.QDesktopServices.openUrl(QtCore.QUrl(url))
+
+
+    def _jump_to_fs(self):
+        """
+        Jump from context to FS
+        """
+
+        # launch one window for each location on disk
+        paths = self.context.filesystem_locations
+        self.logger.debug("FS paths: %s" % (str(paths),))
+        for disk_location in paths:
+
+            # get the setting
+            system = sys.platform
+
+            # run the app
+            if system == "linux2":
+                cmd = 'xdg-open "%s"' % disk_location
+            elif system == "darwin":
+                cmd = 'open "%s"' % disk_location
+            elif system == "win32":
+                cmd = 'cmd.exe /C start "Folder" "%s"' % disk_location
+            else:
+                raise Exception("Platform '%s' is not supported." % system)
+
+            exit_code = os.system(cmd)
+            if exit_code != 0:
+                self.logger.error("Failed to launch '%s'!" % cmd)

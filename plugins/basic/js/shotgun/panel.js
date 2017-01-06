@@ -27,6 +27,16 @@ sg_panel.Panel = new function() {
     // adobe interface
     const _cs_interface = new CSInterface();
 
+    var _show_tooltip_timeout_id = undefined;
+    var _hide_tooltip_timeout_id = undefined;
+
+    var _cur_mouse_pos = {
+        x: undefined,
+        y: undefined
+    };
+
+    var _context_menu_lookup = {};
+
     // ---- public methods
 
     this.clear = function() {
@@ -35,16 +45,132 @@ sg_panel.Panel = new function() {
         // Since we don't really want to stay in this state, the panel shows
         // a message to the user saying that the panel is loading.
 
+        _set_bg_color("#222222");
+
         _show_header(false);
         _set_contents(
-            "<br><br>" +
-            "<center><img src='../images/sg_logo_loading.png'></center>"
-        );
+            "<img id='loading_img' src='../images/sg_logo_loading.png'>");
 
         _show_info(true);
         _set_info(
             "Loading Shotgun Integration..."
         );
+    };
+
+    this.show_command_help = function(title, help, favorite) {
+
+        if (_hide_tooltip_timeout_id !== undefined) {
+            clearTimeout(_hide_tooltip_timeout_id);
+        }
+
+        _show_tooltip_timeout_id = setTimeout(
+            function(){_on_show_command_help_timeout(help)}, 1500);
+
+        if (favorite) {
+            const fav_header_div = document.getElementById("sg_panel_favorites_header");
+            fav_header_div.innerHTML = title;
+        }
+    };
+
+    const _on_show_command_help_timeout = function(help) {
+
+        if (!help || help === "null") {
+            help = "Could not find a description for this command. " +
+                   "Please check with the author of the app to see about " +
+                   "making a description available."
+        }
+
+        // mouse pos. always align left to right from mouse position.
+        // if help div will go past right and/or bottom border, adjust accordingly.
+
+        const mouse_x = _cur_mouse_pos.x;
+        const mouse_y = _cur_mouse_pos.y;
+
+        const command_div = document.elementFromPoint(mouse_x, mouse_y);
+
+        const offset = 8;
+        const margin = 8;
+
+
+        const help_div_id = sg_constants.panel_div_ids["command_help"];
+        const help_div = document.getElementById(help_div_id);
+
+        // reset to the top left to allow it to grow as needed when contest set
+        help_div.style.left = "0px";
+        help_div.style.top = "0px";
+
+        _set_command_help(help);
+
+        const help_div_rect = help_div.getBoundingClientRect();
+
+        const help_width = help_div_rect.width;
+        const help_height = help_div_rect.height;
+
+        const far_right = mouse_x + offset + margin + help_width;
+        const far_bottom = mouse_y + offset + margin + help_height;
+
+        const win_width = window.innerWidth;
+        const win_height = window.innerHeight;
+
+        const beyond_right = far_right - win_width + margin;
+        const beyond_bottom = far_bottom - win_height + margin;
+
+        var adjust_left = 0;
+        var adjust_top = 0;
+
+        if (beyond_right > 0) {
+            adjust_left = -1 * beyond_right;
+        }
+
+        if (beyond_bottom > 0) {
+            adjust_top = -1 * beyond_bottom;
+        }
+
+        const new_left = mouse_x + offset + adjust_left + window.scrollX;
+        const new_top = mouse_y + offset + adjust_top + window.scrollY;
+
+        help_div.style.left = new_left + "px";
+        help_div.style.top = new_top + "px";
+
+        const new_help_div_rect = help_div.getBoundingClientRect();
+
+        if (_point_in_rect(_cur_mouse_pos, new_help_div_rect)) {
+            // the mouse is now inside the help div. need to adjust more
+
+            var additional_offset_y = 0;
+
+            if (beyond_bottom > 0) {
+                // we already adjusted up, keep going. we know we need to get
+                // at least `offset` pixels past the mouse. then it's just the
+                // difference
+                additional_offset_y = -1 * (offset + new_help_div_rect.bottom - mouse_y);
+            }
+
+            help_div.style.top = new_top + additional_offset_y + "px";
+        }
+
+        _show_command_help(true);
+
+        _hide_tooltip_timeout_id = setTimeout(
+            function(){ self.hide_command_help()}, 5000);
+    };
+
+    const _point_in_rect = function(point, rect) {
+
+        return ((point.x >= rect.left) && (point.x <= rect.right) &&
+                (point.y >= rect.top)  && (point.y <= rect.bottom));
+    };
+
+    this.hide_command_help = function() {
+        if (_show_tooltip_timeout_id !== undefined) {
+            clearTimeout(_show_tooltip_timeout_id);
+        }
+        _show_command_help(false);
+
+        const fav_header_div = document.getElementById("sg_panel_favorites_header");
+        if (fav_header_div) {
+            fav_header_div.innerHTML = "Run a Command";
+        }
     };
 
     this.email_support = function(subject, body) {
@@ -74,15 +200,16 @@ sg_panel.Panel = new function() {
 
             // build the flyout menu. always do this first so we can have access
             // to the debug console no matter what happens during bootstrap.
-            _build_flyout_menu();
+            _build_flyout_menu([]);
+
+            // Listen for the Flyout menu clicks
+            _cs_interface.addEventListener(
+                "com.adobe.csxs.events.flyoutMenuClicked",
+                _on_flyout_menu_clicked
+            );
 
             // setup event listeners first so we can react to various events
             _setup_event_listeners();
-
-            sg_logging.error("PANEL: test error");
-            sg_logging.warn("PANEL: test warning");
-            sg_logging.info("PANEL: test info");
-            sg_logging.debug("PANEL: test debug");
 
             // If the current Adobe application is photoshop, turn on persistence.
             // This isn't required, but provides a better user experience by not
@@ -101,6 +228,9 @@ sg_panel.Panel = new function() {
             // TODO: use setTimeout to display an error
             sg_panel.REQUEST_STATE.emit();
 
+            // track the mouse
+            document.onmousemove = _on_mouse_move;
+
         } catch(error) {
             sg_logging.error("Manager startup error: " + error.stack);
             alert("Manager startup error: " + error.stack);
@@ -112,8 +242,6 @@ sg_panel.Panel = new function() {
     this.on_unload = function() {
         // code to run when the extension panel is unloaded
         sg_logging.debug("Panel unloaded.");
-
-        // TODO: do we need to remove event listeners? do they persist?
     };
 
     this.open_external_url = function(url) {
@@ -176,7 +304,9 @@ sg_panel.Panel = new function() {
                         "<img src='../images/sg_logo.png' height='64'>" +
                     "</td>" +
                     "<td>" +
-                        fields_table +
+                        "<strong>" +
+                            fields_table +
+                        "</strong>" +
                     "</td>" +
                 "</tr>" +
             "</table>";
@@ -184,53 +314,113 @@ sg_panel.Panel = new function() {
         _set_header(header_html);
         _show_header(true);
 
-        var commands_html = "";
-        const commands = state["commands"];
+        // Favorite commands
 
-        commands.forEach(function(command) {
-            if (command.hasOwnProperty("uid") &&
-                command.hasOwnProperty("display_name") &&
-                command.hasOwnProperty("icon_path")) {
+        const favorites = state["favorites"];
+        var favorites_html = "";
 
-                const command_id = command["uid"];
-                const display_name = command["display_name"];
-                const icon_path = command["icon_path"];
-                const description = command["description"];
+        if (favorites.length > 0) {
 
-                var description_html = "";
-                if (description) {
-                    description_html = "<br><div class=sg_command_description>" + description + "</div>";
+            favorites_html = "<div id='sg_panel_favorites'>" +
+                "<div id='sg_panel_favorites_header'>Run a Command</div>";
+
+            // loop over favorites here
+            favorites.forEach(function(favorite) {
+                if (favorite.hasOwnProperty("uid") &&
+                    favorite.hasOwnProperty("display_name") &&
+                    favorite.hasOwnProperty("icon_path")) {
+
+                    const command_id = favorite["uid"];
+                    const display_name = favorite["display_name"];
+                    const icon_path = favorite["icon_path"];
+                    const description = favorite["description"];
+
+                    favorites_html +=
+                        "<a href='#' "  +
+                            "onClick='sg_panel.Panel.trigger_command(\"" + command_id + "\", \"" + display_name + "\")'" +
+                        ">" +
+                            "<div class='sg_command_button' " +
+                                "onmouseover='sg_panel.Panel.show_command_help(\"" + display_name + "\", \"" +description + "\", true)' " +
+                                "onmouseout='sg_panel.Panel.hide_command_help()' " +
+                            ">" +
+                                "<center>" +
+                                    "<img class='sg_panel_command_img' src='" + icon_path + "'>" +
+                                "</center>" +
+                            "</div>" +
+                        "</a>";
                 }
+                // TODO: if command is missing something, log it.
+            });
 
-                commands_html +=
-                    "<a href='#' class='sg_command_link' onClick='sg_panel.Panel.trigger_command(\"" + command_id + "\", \"" + display_name + "\")'>" +
-                        "<div id='sg_command_button'>" +
-                            "<table>" +
-                                "<tr>" +
-                                    // icon
-                                    "<td id='sg_command_button_icon'>" +
-                                       "<img src='" + icon_path + "' width='48'> " +
-                                    "</td>" +
-                                    // text
-                                    "<td id='sg_command_button_text'>" +
-                                       display_name +
-                                       description_html +
-                                    "</td>" +
-                                "</tr>" +
-                          "</table>" +
-                        "</div>" +
-                    "</a>" +
-                    "<hr class='sg_hr'>";
-            }
-            // TODO: if command is missing something, log it.
-        });
+            favorites_html += "</div>";
+        }
 
-        _set_contents(commands_html);
+        // Now process the non-favorite commands
+
+        const commands = state["commands"];
+        var commands_html = "";
+
+        if (commands.length > 0) {
+
+            commands_html = "<div id='sg_panel_commands'>";
+
+            commands.forEach(function(command) {
+                if (command.hasOwnProperty("uid") &&
+                    command.hasOwnProperty("display_name") &&
+                    command.hasOwnProperty("icon_path")) {
+
+                    const command_id = command["uid"];
+                    const display_name = command["display_name"];
+                    const icon_path = command["icon_path"];
+                    const description = command["description"];
+
+                    commands_html +=
+                        "<div class='sg_panel_command' " +
+                            "onmouseover='sg_panel.Panel.show_command_help(\"\", \"" +description + "\", false)' " +
+                        "onmouseout='sg_panel.Panel.hide_command_help()' " +
+                        ">" +
+                        "<table style='width:100%;'>" +
+                            "<colgroup>" +
+                                "<col width='0%' />" +
+                                "<col width='100%' />" +
+                            "</colgroup>" +
+                            "<tr>" +
+                                "<td align='left' width='30px' style='vertical-align:middle;'>" +
+                                    "<a href='#' class='sg_command_link' "  +
+                                        "onClick='sg_panel.Panel.trigger_command(\"" + command_id + "\", \"" + display_name + "\")'" +
+                                    ">" +
+                                    "<img class='sg_panel_command_img' src='" + icon_path + "'>" +
+                                    "</a>" +
+                                "</td>" +
+                                "<td align='left' style='padding-left:10px; vertical-align:middle; white-space:nowrap;'>" +
+                                    "<a href='#' class='sg_command_link' "  +
+                                        "onClick='sg_panel.Panel.trigger_command(\"" + command_id + "\", \"" + display_name + "\")'" +
+                                    ">" +
+                                        display_name +
+                                    "</a>" +
+                                "</td>" +
+                            "</tr>" +
+                        "</table>" +
+                    "</div>";
+                }
+            });
+
+            commands_html += "</div>";
+        }
+
+        _set_bg_color("#4D4D4D");
+
+        _set_contents(favorites_html + commands_html);
         _show_contents(true);
 
         // make sure the progress bar and info is hidden
         _show_progress(false);
         _show_info(false);
+
+        // now build the context menu with the context menu commands
+        const context_menu_cmds = state["context_menu_cmds"];
+        _build_flyout_menu(context_menu_cmds);
+
     };
 
     this.show_console = function(show) {
@@ -255,7 +445,7 @@ sg_panel.Panel = new function() {
 
         // show the progress message temporarily
         _set_info("Launching: " + command_display);
-        setTimeout(_clear_info, 3000);
+        setTimeout(_clear_info, 2000);
 
         // trigger the command
         sg_panel.REGISTERED_COMMAND_TRIGGERED.emit(command_id);
@@ -263,21 +453,38 @@ sg_panel.Panel = new function() {
 
     // ---- private methods
 
-    const _build_flyout_menu = function() {
+    const _build_flyout_menu = function(context_menu_cmds) {
         // Builds the flyout menu with the debug/reload options.
 
+        // clear the context menu lookup
+        _context_menu_lookup = {};
+
         // the xml that defines the flyout menu
-        var flyout_xml =
-            '<Menu> \
-                <MenuItem Id="sg_about" \
-                          Label="About..." \
-                          Enabled="true" \
-                          Checked="false"/> \
+        var flyout_xml = "<Menu>";
+
+        context_menu_cmds.forEach(function(command) {
+            if (command.hasOwnProperty("uid") &&
+                command.hasOwnProperty("display_name") &&
+                command.hasOwnProperty("icon_path")) {
+
+                const command_id = command["uid"];
+                const display_name = command["display_name"];
+
+                _context_menu_lookup[command_id] = display_name;
+
+                flyout_xml +=
+                    '<MenuItem Id="' + command_id + '" \
+                               Label="'+ display_name + '" \
+                               Enabled="true" \
+                               Checked="false"/>';
+            }
+        });
+
+        flyout_xml += '<MenuItem Label="---" /> \
                 <MenuItem Id="sg_console" \
                           Label="Console" \
                           Enabled="true" \
                           Checked="false"/> \
-                <MenuItem Label="---" /> \
                 <MenuItem Id="sg_dev_debug" \
                           Label="Chrome Console..." \
                           Enabled="true" \
@@ -285,7 +492,7 @@ sg_panel.Panel = new function() {
                 <MenuItem Id="sg_dev_reload" \
                           Label="Reload" \
                           Enabled="true" \
-                          Checked="false"/>'
+                          Checked="false"/>';
 
         if (process.env["SHOTGUN_ADOBECC_TESTS_ROOT"]) {
             flyout_xml += '   <MenuItem Id="sg_dev_tests" \
@@ -297,12 +504,6 @@ sg_panel.Panel = new function() {
 
         // build the menu
         _cs_interface.setPanelFlyoutMenu(flyout_xml);
-
-        // Listen for the Flyout menu clicks
-        _cs_interface.addEventListener(
-            "com.adobe.csxs.events.flyoutMenuClicked",
-            _on_flyout_menu_clicked
-        );
     };
 
     const _make_persistent = function(persistent) {
@@ -323,7 +524,10 @@ sg_panel.Panel = new function() {
     const _on_flyout_menu_clicked = function(event) {
         // Handles flyout menu clicks
 
-        switch (event.data.menuId) {
+        const cmd_id = event.data.menuId;
+        const cmd_name = event.data.menuName;
+
+        switch (cmd_id) {
 
             // NOTE: Looks like you can't use `const` in the switch cases.
             // The panel won't even load if you do. Perhaps some type of failed
@@ -344,16 +548,6 @@ sg_panel.Panel = new function() {
                 break;
 
             // about the extension
-            case "sg_about":
-                // TODO: show a Qt about dialog here.
-                // Send information about the current CC product to python and
-                // launch the about dialog from there. That will prevent us from
-                // having to navigate away from the current panel and its contents.
-                // Alternatively, display an overlay in the panel.
-                alert("ABOUT dialog goes here.");
-                break;
-
-            // about the extension
             case "sg_console":
                 self.show_console(true);
                 break;
@@ -365,12 +559,22 @@ sg_panel.Panel = new function() {
                 break;
 
             default:
-                sg_logging.warn("Unhandled menu event '" + event.data.menuName + "' clicked.");
+
+                // see if the command id matches one of the context menu ids
+                if (cmd_id in _context_menu_lookup) {
+                    self.trigger_command(cmd_id, cmd_name);
+
+                // can't determine what this is
+                } else {
+                    sg_logging.warn(
+                        "Unhandled menu event '" + cmd_name + "' clicked.");
+                }
         }
     };
 
     const _on_critical_error = function(event) {
 
+        _set_bg_color("#222222");
         _clear_messages();
 
         const message = event.data.message;
@@ -430,8 +634,16 @@ sg_panel.Panel = new function() {
         );
     };
 
+    const _on_mouse_move = function(event) {
+        _cur_mouse_pos = {
+            x: event.clientX,
+            y: event.clientY
+        };
+    };
+
     const _on_pyside_unavailable = function(event) {
 
+        _set_bg_color("#222222");
         _clear_messages();
 
         sg_logging.error("Critical: PySide is unavailable");
@@ -514,87 +726,143 @@ sg_panel.Panel = new function() {
         console[level](msg);
     };
 
-    const _override_console_logging = function (){
+    const _override_console_logging = function () {
 
         var console = window.console;
         if (!console) return;
 
-        const intercept = function(method) {
+        // keep a reference to the original console methods we want to intercept
+        const original_methods = {
+            debug: console.debug,
+            info: console.info,
+            error: console.error,
+            warn: console.warn,
+            log: console.log,
+            python: console.log
+        };
 
-            var original = console[method];
-            console[method] = function(){
-                var message = Array.prototype.slice.apply(arguments).join(" ");
-                _forward_to_panel_console(method, message);
-                original.apply(console, arguments);
+        const console_intercept = function(log_level) {
+            // this function overrides the supplied log_level console method.
+
+            console[log_level] = function () {
+                // overriding log_level console method.
+
+                // the original arguments
+                var message = Array.prototype.slice.apply(arguments).join("\n");
+
+                // keep track of where the log message came from. we display
+                // python messages slightly different than js messages.
+                var log_source = "js";
+                if (log_level === "python") {
+                    // This log message came from python. See if we can
+                    // determine the real log level from the beginning
+                    // of the message. This allows the messages to
+                    // display properly in both the chrome debug console
+                    // and our own console in the panel. NOTE: if the
+                    // formatting of the python logs changes, this may
+                    // not work.
+                    log_source = "py";
+                }
+
+                // since messages can come across in bundles, if this portion is
+                // not the same log level as the first one in the bundle, we
+                // need to pass it over to the proper log method.
+                const messages = message.split("\n");
+
+                // if we're in a bundle of log messages, remember the previous
+                // log level to use as a default for subsequent lines.
+                var previous_log_level = log_level;
+
+                // loop over the message lines and log them.
+                messages.forEach(function(message) {
+
+                    // next if nothing in the message
+                    if (!message) { return; }
+
+                    // use some hackery to determine the actual log level for
+                    // this line in the message
+                    const actual_log_level = _get_actual_log_level(message,
+                        previous_log_level);
+
+                    if (actual_log_level == "debug") {
+                        message = message.replace("DEBUG: ", "");
+                    } else if (actual_log_level == "warn") {
+                        message = message.replace("WARNING: ", "");
+                    } else if (actual_log_level == "error") {
+                        message = message.replace("ERROR: ", "");
+                    } else if (actual_log_level == "info") {
+                        message = message.replace("INFO: ", "");
+                    }
+
+                    // forward the log message to the panel's console
+                    _forward_to_panel_console(actual_log_level, message, log_source);
+
+                    if (log_source == "py") {
+                        // prefix the message with '[python]:` for chrome console
+                        message = "[python]: " + message;
+                    }
+
+                    // call the original log method to log to the chrome console
+                    original_methods[actual_log_level].apply(console, [message]);
+
+                    // remember the current log level for use in next iteration
+                    previous_log_level = actual_log_level;
+                });
             }
         };
 
-        var methods = ["log", "warn", "error", "debug", "info"];
-        for (var i = 0; i < methods.length; i++) {
-            intercept(methods[i])
-        }
+        // now call the intercept method on each of the console method names
+        var log_levels = ["log", "warn", "error", "debug", "info", "python"];
+        log_levels.forEach(function(log_level) {
+            console_intercept(log_level)
+        });
     };
 
-    const _forward_to_panel_console = function(level, msg) {
-
-        var log_source = "js";
-
-        if (level === "log") {
-            // This log message came from python. See if we can determine
-            // the real log level from the beginning of the message. This allows
-            // the messages to display properly in both the chrome debug console
-            // and our own console in the panel. NOTE: if the formatting of the
-            // python logs changes, this may not work.
-            level = _get_python_log_level(msg, "log");
-            log_source = "py";
-        }
+    const _forward_to_panel_console = function(level, msg, log_source) {
+        // make the message pretty and add it to the panel's console log
 
         // remove trailing newline
         msg = msg.replace(/\n$/, "");
 
-        const lines = msg.split("\n");
-        lines.forEach(function(line) {
+        // figure out which div id to use for style/color
+        var div_id = "sg_log_message";
+        if (level == "debug") {
+            div_id = "sg_log_message_debug"
+        } else if (level == "warn") {
+            div_id = "sg_log_message_warn"
+        } else if (level == "error") {
+            div_id = "sg_log_message_error"
+        }
 
-            var line_level = _get_python_log_level(line, level);
+        // just a little indicator so that we know if the log message came from
+        // (javascript or python) when looking in the panel console.
+        if (log_source == "js") {
+            msg = " > " + msg;
+        } else {
+            msg = ">> " + msg;
+        }
 
-            var div_id = "sg_log_message";
-            if (line_level == "debug") {
-                line = line.replace("DEBUG:", "");
-                div_id = "sg_log_message_debug"
-            } else if (line_level == "warn") {
-                line = line.replace("WARNING:", "");
-                div_id = "sg_log_message_warn"
-            } else if (line_level == "error") {
-                line = line.replace("ERROR:", "");
-                div_id = "sg_log_message_error"
-            } else {
-                line = line.replace("INFO:", "");
-            }
+        // create a <pre> element and insert the msg
+        const node = document.createElement("pre");
+        node.setAttribute("id", div_id);
+        node.appendChild(document.createTextNode(msg));
 
-            if (log_source == "js") {
-                line = " > " + line;
-            } else {
-                line = ">>" + line;
-            }
+        // append the <pre> element to the log div
+        const log = document.getElementById("sg_panel_console_log");
+        log.appendChild(node);
+        log.appendChild(document.createElement("br"));
 
-            // create a <pre> element and insert the line text
-            const node = document.createElement("pre");
-            node.setAttribute("id", div_id);
-            node.appendChild(document.createTextNode(line));
-
-            // append the <pre> element to the log div
-            const log = document.getElementById("sg_panel_console_log");
-            log.appendChild(node);
-            log.appendChild(document.createElement("br"));
-        });
-
+        // scroll to the bottom if an error occurs
         if (["error", "critical"].indexOf(level) >= 0) {
-            // scroll to the bottom if an error occurs
             _scroll_to_log_bottom();
         }
     };
 
-    const _get_python_log_level = function(msg, default_level) {
+    const _get_actual_log_level = function(msg, default_level) {
+        // given a log message, do some inspection to see if we can deduce the
+        // actual log level from the string. if not, fall back to the supplied
+        // default value.
+
         var level = default_level;
 
         if (msg.startsWith("DEBUG:")) {
@@ -608,11 +876,13 @@ sg_panel.Panel = new function() {
         } else if (msg.startsWith("CRITICAL:")) {
             level = "error";
         }
+
         return level
     };
 
-    // scroll to the bottom of the div
     const _scroll_to_log_bottom = function() {
+        // scroll to the bottom of the div
+
         const console_log_div_id = sg_constants.panel_div_ids["console_log"];
         const log = document.getElementById(console_log_div_id);
         log.scrollTop = log.scrollHeight;
@@ -620,6 +890,9 @@ sg_panel.Panel = new function() {
 
     const _select_text = function(div_id) {
         // Select all the text within the provided div
+
+        // TODO: add a button for this in the console
+
         if (document.selection) {
             const range = document.body.createTextRange();
             range.moveToElementText(document.getElementById(div_id));
@@ -680,6 +953,7 @@ sg_panel.Panel = new function() {
     const _set_info = _set_div_html_by_id("info");
     const _set_error = _set_div_html_by_id("error");
     const _set_warning = _set_div_html_by_id("warning");
+    const _set_command_help = _set_div_html_by_id("command_help");
 
     // ---- progress bar methods
 
@@ -719,12 +993,18 @@ sg_panel.Panel = new function() {
     const _show_error = _show_div_by_id("error");
     const _show_warning = _show_div_by_id("warning");
     const _show_progress = _show_div_by_id("progress");
+    const _show_command_help = _show_div_by_id("command_help");
+
+    const _set_bg_color = function(color) {
+        document.body.style.background = color;
+    };
 
     const _clear_messages = function() {
         _show_info(false);
         _show_error(false);
         _show_warning(false);
         _show_progress(false);
+        _show_command_help(false);
     };
 
     const _clear_info = function() {
