@@ -40,7 +40,7 @@
                     <AutoVisible>false</AutoVisible>
                     <StartOn>
                         <!-- Photoshop startup event -->
-                        <Event>applicationActivate</Event>
+                        <Event>com.adobe.csxs.events.AppOnline</Event>
                         <!-- Premiere startup event -->
                         <Event>com.adobe.csxs.events.ApplicationActivate</Event>
                         <!-- TODO: may need the panel to trigger manager startup in other products!-->
