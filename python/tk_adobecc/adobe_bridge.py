@@ -180,17 +180,41 @@ class AdobeBridge(Communicator):
         """
         super(AdobeBridge, self).ping()
 
-    def send_state(self, state):
+    def send_commands(self, commands):
         """
-        Responsible for forwarding the current SG state to javascript.
+        Responsible for forwarding the current engine commands to js.
 
         This method knows about the structure of the json that the js side
         expects. We provide display info and we also
         """
         # encode the python dict as json
-        json_state = json.dumps(state)
-        self.logger.debug("Sending state: %s" % json_state) 
-        self._io.emit("set_state", json_state)
+        json_commands = json.dumps(commands)
+        self.logger.debug("Sending commands: %s" % json_commands)
+        self._io.emit("set_commands", json_commands)
+
+    def send_context_fields(self, context_fields):
+        """
+        Responsible for forwarding the current engine context display fields to js.
+
+        This method knows about the structure of the json that the js side
+        expects. We provide display info and we also
+        """
+        # encode the python dict as json
+        json_context_fields = json.dumps(context_fields)
+        self.logger.debug("Sending context fields: %s" % json_context_fields)
+        self._io.emit("set_context_fields", json_context_fields)
+
+    def send_context_thumbnail(self, context_thumbnail):
+        """
+        Responsible for forwarding the current engine context thumb path to js.
+
+        This method knows about the structure of the json that the js side
+        expects. We provide display info and we also
+        """
+        # encode the python dict as json
+        json_context_thumbnail = json.dumps(context_thumbnail)
+        self.logger.debug("Sending context thumb path: %s" % json_context_thumbnail)
+        self._io.emit("set_context_thumbnail", json_context_thumbnail)
 
     ##########################################################################################
     # internal methods

@@ -363,17 +363,31 @@ sg_socket_io.SocketManager = new function() {
                 remote.receive(message);
             });
 
-            socket.on("set_state", function(json_state) {
-                // The client is setting the state.
-                var state = JSON.parse(json_state);
-                sg_logging.debug("Setting state from client: " + json_state);
+            socket.on("set_commands", function(json_commands) {
+                // The client is setting the commands
+                var commands = JSON.parse(json_commands);
+                sg_logging.debug("Setting commands from client: " + json_commands);
 
                 // TODO: we're emitting a manager event. perhaps we should
                 // have a set of events that come from socket.io? or perhaps
                 // this should call a method on the manager (tried, but doesn't
                 // seem to work!)? but this shouldn't really know about the
                 // manager. anyway, this works, so revisit as time permits.
-                sg_manager.UPDATE_STATE.emit(state);
+                sg_manager.UPDATE_COMMANDS.emit(commands);
+            });
+
+            socket.on("set_context_fields", function(json_context_fields) {
+                // The client is setting the context fields.
+                var context_fields = JSON.parse(json_context_fields);
+                sg_logging.debug("Setting context fields from client: " + json_context_fields);
+                sg_manager.UPDATE_CONTEXT_FIELDS.emit(context_fields);
+            });
+
+            socket.on("set_context_thumbnail", function(json_context_thumbnail) {
+                // The client is setting the context thumbnail path.
+                var context_thumbnail = JSON.parse(json_context_thumbnail);
+                sg_logging.debug("Setting context thumb path from client: " + json_context_thumbnail);
+                sg_manager.UPDATE_CONTEXT_THUMBNAIL.emit(context_thumbnail);
             });
 
             remote.setTransmitter(function(message, next) {

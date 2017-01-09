@@ -68,15 +68,18 @@ class AdobeEngine(sgtk.platform.Engine):
     # engine initialization
 
     def pre_app_init(self):
+
         self.__tk_adobecc = self.import_module("tk_adobecc")
 
-        # TODO: We need to pass across id,name,displayname and have a
-        # property for each. Like this: AEFT,aftereffects,After Effects
         self._app_id = self.SHOTGUN_ADOBE_APPID
 
         # Keep track of the context we had when we launched. We might need
         # to set it again once the user starts changing active documents.
         self._launch_context = self.context
+
+        # constant command uid lookups for these special commands
+        self.__jump_to_sg_command_id = self.__get_command_uid()
+        self.__jump_to_fs_command_id = self.__get_command_uid()
 
         # get the adobe instance. it may have been initialized already by a
         # previous instance of the engine. if not, initialize a new one.
@@ -98,49 +101,37 @@ class AdobeEngine(sgtk.platform.Engine):
         self.adobe.run_tests_request_received.connect(self._run_tests)
         self.adobe.state_requested.connect(self.__send_state)
 
+        # ---- data retriever for background task processing
+
+        # workaround for importing shotgun utils
+        sg_data = self.__tk_adobecc.shotgunutils.shotgun_data
+
+        # set up data retriever
+        from sgtk.platform.qt import QtCore
+        self.__sg_data = sg_data.ShotgunDataRetriever(
+            QtCore.QCoreApplication.instance())
+        self.__sg_data.work_completed.connect( self.__on_worker_signal)
+        self.__sg_data.work_failure.connect( self.__on_worker_failure)
+
+        # context request uids
+        self.__context_find_uid = None
+        self.__context_thumb_uid = None
+        self.__find_step_colors_uid = None
+
+        # keep track of all step colors
+        self.__step_colors = {}
+
+        # and start its thread!
+        self.__sg_data.start()
+
         self.__qt_dialogs = []
 
-    def post_app_init(self):
 
-        # ---- register common engine commands
+    def destroy_engine(self):
 
-        # register the "Jump to Shotgun" command
-        sg_icon = os.path.join(self.disk_location, "resources", "shotgun_logo.png")
-        self.register_command(
-            "Jump to Shotgun",
-            self._jump_to_sg,
-            {
-                "description": "Open the current Shotgun context in your web browser.",
-                "type": "context_menu",
-                "short_name": "jump_to_sg",
-                "icon": sg_icon,
-            }
-        )
-
-        # register the "Jump to File System" command
-        fs_icon = os.path.join(self.disk_location, "resources", "shotgun_folder.png")
-        self.register_command(
-            "Jump to File System",
-            self._jump_to_fs,
-            {
-                "description": "Open the current Shotgun context in your file browser.",
-                "type": "context_menu",
-                "short_name": "jump_to_fs",
-                "icon": fs_icon,
-            }
-        )
-
-        # list the registered commands for debugging purposes
-        self.logger.debug("Registered Commands:")
-        for (command_name, value) in self.commands.iteritems():
-            self.logger.debug(" %s: %s" % (command_name, value))
-
-        # list the registered panels for debugging purposes
-        self.logger.debug("Registered Panels:")
-        for (panel_name, value) in self.panels.iteritems():
-            self.logger.debug(" %s: %s" % (panel_name, value))
-
-        # TODO: log user attribute metric
+        # gracefully stop our data retriever. This call
+        # will block util the currently processing request has completed.
+        self.__sg_data.stop()
 
     def post_qt_init(self):
         from sgtk.platform.qt import QtCore
@@ -165,11 +156,6 @@ class AdobeEngine(sgtk.platform.Engine):
         # now that qt is setup and the engine is ready to go, forward the
         # current state back to the adobe side.
         self.__send_state()
-
-    def destroy_engine(self):
-        # TODO: log
-        # TODO: destroy the panel
-        pass
 
     def register_command(self, name, callback, properties=None):
         """
@@ -282,11 +268,19 @@ class AdobeEngine(sgtk.platform.Engine):
         """
         from sgtk.platform.qt import QtGui
 
-        for command in self.commands.values():
-            if command.get("properties", dict()).get("uid") == uid:
-                result = command["callback"]()
-                if isinstance(result, QtGui.QWidget):
-                    self.__qt_dialogs.append(result)
+        if uid == self.__jump_to_fs_command_id:
+            # jump to fs special command triggered
+            self._jump_to_fs()
+        elif uid == self.__jump_to_sg_command_id:
+            # jump to sg special command triggered
+            self._jump_to_sg()
+        else:
+            # a registered command was triggered
+            for command in self.commands.values():
+                if command.get("properties", dict()).get("uid") == uid:
+                    result = command["callback"]()
+                    if isinstance(result, QtGui.QWidget):
+                        self.__qt_dialogs.append(result)
 
     def _handle_logging(self, level, message):
         """
@@ -417,7 +411,6 @@ class AdobeEngine(sgtk.platform.Engine):
         utf8 = QtCore.QTextCodec.codecForName("utf-8")
         QtCore.QTextCodec.setCodecForCStrings(utf8)
 
-        # TODO: ensure message boxes show up in front of CC
         return base
 
     def _get_dialog_parent(self):
@@ -441,7 +434,6 @@ class AdobeEngine(sgtk.platform.Engine):
 
         :returns: the created widget_class instance
         """
-        # TODO: ensure dialog is shown above CC
         if not self.has_ui:
             self.logger.error(
                 "Sorry, this environment does not support UI display! Cannot "
@@ -507,47 +499,8 @@ class AdobeEngine(sgtk.platform.Engine):
         dialog.raise_()
         dialog.activateWindow()
 
-        # TODO: we need to test modal app dialogs!
-        # TODO: wf2 file open for example
-        # TODO: make sure it shows up on top!
-        # TODO: if current code doesn't work, try single shot timer to raise after exec_()
-        #       confirmed. single shot timer will fire while dialog is shown.
-
-        status = QtGui.QDialog.Rejected
-        if sys.platform == "win32":
-            win_32_api = self.__tk_adobecc.win_32_api
-
-            saved_state = []
-            try:
-                # find all photoshop windows and save enabled state:
-                ps_process_id = self._win32_get_photoshop_process_id()
-                if ps_process_id != None:
-                    found_hwnds = win_32_api.find_windows(process_id=ps_process_id, stop_if_found=False)
-                    for hwnd in found_hwnds:
-                        enabled = win_32_api.IsWindowEnabled(hwnd)
-                        saved_state.append((hwnd, enabled))
-                        if enabled:
-                            win_32_api.EnableWindow(hwnd, False)
-
-                # show dialog:
-                status = dialog.exec_()
-            except Exception, e:
-                self.logger.error("Error showing modal dialog: %s" % e)
-            finally:
-                # kinda important to ensure we restore other window state:
-                for hwnd, state in saved_state:
-                    if win_32_api.IsWindowEnabled(hwnd) != state:
-                        win_32_api.EnableWindow(hwnd, state)
-        else:
-            # show dialog:
-            status = dialog.exec_()
-
+        status = dialog.exec_()
         return status, widget
-
-    ##########################################################################################
-    # logging
-
-    # TODO: logging
 
     ##########################################################################################
     # internal methods
@@ -563,6 +516,29 @@ class AdobeEngine(sgtk.platform.Engine):
             self.sgtk.shotgun_url, entity["type"], entity["id"])
 
     def __send_state(self):
+
+        # ---- process the context for display
+
+        # clear existing context requests to prevent unnecessary processing
+        self.__context_find_uid = None
+        self.__context_thumb_uid = None
+        self.__sg_data.clear()
+
+        context = self.context
+        thumbnail_entity = None
+
+        # determine the best entity for displaying the thumbnail
+        for entity in [context.task, context.entity, context.project]:
+            if not entity:
+                continue
+            thumbnail_entity = entity
+            break
+
+        if thumbnail_entity:
+            self.__request_context_fields(thumbnail_entity)
+        else:
+            # TODO: clear header, display something!
+            pass
 
         # --- process the menu favorites setting
 
@@ -626,6 +602,30 @@ class AdobeEngine(sgtk.platform.Engine):
             else:
                 commands.append(command)
 
+        # ---- include the "jump to" commands that are common to all engines
+        sg_icon = os.path.join(self.disk_location, "resources", "shotgun_logo.png")
+        context_menu_cmds.append(
+            dict(
+                uid=self.__jump_to_sg_command_id,
+                display_name="Jump to Shotgun",
+                icon_path=sg_icon,
+                description="Open the current Shotgun context in your web browser.",
+                type="context_menu",
+            )
+        )
+
+        # register the "Jump to File System" command
+        fs_icon = os.path.join(self.disk_location, "resources", "shotgun_folder.png")
+        context_menu_cmds.append(
+            dict(
+                uid=self.__jump_to_fs_command_id,
+                display_name="Jump to File System",
+                icon_path=fs_icon,
+                description="Open the current Shotgun context in your file browser.",
+                type="context_menu",
+            )
+        )
+
         # sort the favorites based on their index
         favorites = sorted(favorites, key=lambda d: d["fav_index"])
 
@@ -635,131 +635,16 @@ class AdobeEngine(sgtk.platform.Engine):
         # sort the context menu commands alphabetically by display name
         context_menu_cmds = sorted(context_menu_cmds, key=lambda d: d["display_name"])
 
-        # ---- process the context for display
-
-        context = self.context
-        context_fields = [
-            {
-                "type": "Site",
-                "display": str(context),
-                "url": self.sgtk.shotgun_url,
-            }
-        ]
-
-        # TODO: thumbnail path for current context
-        thumbnail_entity = None
-
-        for entity in [context.project, context.entity, context.task]:
-
-            if not entity:
-                continue
-
-            entity_type = entity["type"]
-            entity_name = entity["name"]
-            context_fields.append({
-                "type": entity_type,
-                "display": entity_name,
-                "url": self.__get_sg_url(entity),
-            })
-            thumbnail_entity = entity
-
         # ---- populate the state structure to hand over to adobe
 
-        state = {
-            "context_fields": context_fields,
+        all_commands = {
             "favorites": favorites,
             "commands": commands,
             "context_menu_cmds": context_menu_cmds,
         }
 
-        self.logger.debug("Sending state: %s" % str(state))
-        self.adobe.send_state(state)
-
-    def _win32_get_photoshop_process_id(self):
-        """
-        Windows specific method to find the process id of Photoshop.  This
-        assumes that it is the parent process of this python process
-        """
-        if hasattr(self, "_win32_photoshop_process_id"):
-            return self._win32_photoshop_process_id
-
-        self._win32_photoshop_process_id = None
-
-        this_pid = os.getpid()
-
-        win_32_api = self.__tk_adobecc.win_32_api
-        self._win32_photoshop_process_id = win_32_api.find_parent_process_id(this_pid)
-
-        return self._win32_photoshop_process_id
-
-    def _win32_get_photoshop_main_hwnd(self):
-        """
-        Windows specific method to find the main Photoshop window
-        handle (HWND)
-        """
-        if hasattr(self, "_win32_photoshop_main_hwnd"):
-            return self._win32_photoshop_main_hwnd
-
-        self._win32_photoshop_main_hwnd = None
-
-        # find photoshop process id:
-        ps_process_id = self._win32_get_photoshop_process_id()
-
-        if ps_process_id != None:
-            # get main application window for photoshop process:
-            win_32_api = self.__tk_adobecc.win_32_api
-            found_hwnds = win_32_api.find_windows(
-                process_id=ps_process_id,
-                class_name="Photoshop",
-                stop_if_found=False,
-            )
-
-            if len(found_hwnds) == 1:
-                self._win32_photoshop_main_hwnd = found_hwnds[0]
-
-        return self._win32_photoshop_main_hwnd
-
-    def _win32_get_proxy_window(self):
-        """
-        Windows specific method to get the proxy window that will 'own' all Toolkit dialogs.  This
-        will be parented to the main photoshop application.  Creates the proxy window
-        if it doesn't already exist.
-        """
-        if hasattr(self, "_win32_proxy_win"):
-            return self._win32_proxy_win
-
-        self._win32_proxy_win = None
-
-        # get the main Photoshop window:
-        ps_hwnd = self._win32_get_photoshop_main_hwnd()
-
-        if ps_hwnd != None:
-            from sgtk.platform.qt import QtGui
-            win_32_api = self.__tk_adobecc.win_32_api
-
-            # create the proxy QWidget:
-            self._win32_proxy_win = QtGui.QWidget()
-            self._win32_proxy_win.setWindowTitle('sgtk dialog owner proxy')
-
-            proxy_win_hwnd = win_32_api.qwidget_winid_to_hwnd(
-                self._win32_proxy_win.winId(),
-            )
-
-            # set no parent notify:
-            win_ex_style = win_32_api.GetWindowLong(
-                proxy_win_hwnd,
-                win_32_api.GWL_EXSTYLE,
-            )
-            win_32_api.SetWindowLong(
-                proxy_win_hwnd,
-                win_32_api.GWL_EXSTYLE,
-                win_ex_style | win_32_api.WS_EX_NOPARENTNOTIFY,
-            )
-
-            # parent to photoshop application window:
-            win_32_api.SetParent(proxy_win_hwnd, ps_hwnd)
-
-        return self._win32_proxy_win
+        self.logger.debug("Sending commands: %s" % str(all_commands))
+        self.adobe.send_commands(all_commands)
 
     def _jump_to_sg(self):
         """
@@ -797,3 +682,166 @@ class AdobeEngine(sgtk.platform.Engine):
             exit_code = os.system(cmd)
             if exit_code != 0:
                 self.logger.error("Failed to launch '%s'!" % cmd)
+
+    ##########################################################################################
+    # context data methods
+
+    def __request_context_fields(self, entity):
+        """
+        Request fields to show in the context header for the given entity.
+
+        Always includes the image url to display a thumbnail.
+        """
+
+        fields = ["id", "type", "code", "image"]
+
+        if entity["type"] == "Task":
+            fields.extend(["sg_status_list", "due_date", "step", "content"])
+        elif entity["type"] == "Project":
+            fields.extend(["color", "sg_status_list", "end_date"])
+
+        entity_type = entity["type"]
+        entity_id = entity["id"]
+
+        # query all step colors
+        if not self.__find_step_colors_uid and not self.__step_colors:
+            self.__find_step_colors_uid = self.__sg_data.execute_find(
+                "Step", [], ["color", "cached_display_name"])
+
+        self.__context_find_uid = self.__sg_data.execute_find_one(
+            entity_type, [["id", "is", entity_id]], fields)
+
+    def __on_worker_failure(self, uid, msg):
+        """
+        Asynchronous callback - the worker thread errored.
+        """
+
+        if uid == self.__context_find_uid:
+            self.logger.error("Failed to query context fields!")
+        elif uid == self.__context_thumb_uid:
+            self.logger.error("Failed to query context thumbnail!")
+        elif uid == self.__find_step_colors_uid:
+            self.logger.error("Failed to query step colors: %s" % (msg,))
+
+    def __on_worker_signal(self, uid, request_type, data):
+        """
+        Signaled whenever the worker completes something.
+        """
+
+        if uid == self.__find_step_colors_uid:
+
+            for color_data in data["sg"]:
+                color_str = "rgb(%s)" % color_data["color"]
+                display_name = color_data["cached_display_name"]
+                self.__step_colors[display_name] = color_str
+
+            self.__find_step_colors_uid = None
+
+        elif uid == self.__context_find_uid:
+
+            # clear the find id since we are now processing it
+            self.__context_find_uid = None
+
+            thumb_entity = data["sg"]
+
+            # should have an image url now. submit a request to download the
+            # entity's thumbnail.
+            self.__context_thumb_uid = self.__sg_data.request_thumbnail(
+                thumb_entity["image"],
+                thumb_entity["type"],
+                thumb_entity["id"],
+                "image",
+                load_image=False,
+            )
+
+            context = self.context
+            context_fields = []
+
+            # got the fields. forward them back to js to display.
+            for entity in [context.project, context.entity, context.task]:
+
+                if not entity:
+                    continue
+
+                if entity["id"] == thumb_entity["id"]:
+                    # use the dict with more info
+                    entity = thumb_entity
+
+                self.logger.debug("ENTITY: " + str(entity))
+
+                color = entity.get("color")
+                step = None
+
+                if entity["type"] == "Task":
+                    display_name = entity["content"]
+                    step = entity["step"]["name"]
+                    if step in self.__step_colors:
+                        color = self.__step_colors[step]
+                else:
+                    # use an appropriate field for displaying the entity
+                    if "name" in entity:
+                        display_name = entity["name"]
+                    elif "code" in entity:
+                        display_name = entity["code"]
+                    else:
+                        continue
+
+                context_fields.append({
+                    "type": entity["type"],
+                    "display": display_name,
+                    "url": self.__get_sg_url(entity),
+                    "color": color,
+                    "step": step
+                })
+
+            # site fields if nothing populated yet
+            if not context_fields:
+                context_fields = [
+                    {
+                        "type": "Site",
+                        "display": str(context),
+                        "url": self.sgtk.shotgun_url,
+                    }
+                ]
+
+            # try to attach status and due date fields if possible
+            if thumb_entity["type"] in ["Task", "Project"]:
+
+                # TODO: get the actual status display name via sg globals
+                # TODO: status color
+                # use same pattern as steps to pre-query statuses
+
+                # status
+                if "sg_status_list" in thumb_entity:
+
+                    context_fields.append({
+                        "type": "Status",
+                        "display": thumb_entity["sg_status_list"],
+                        "url": self.__get_sg_url(thumb_entity),
+                    })
+
+                # due date
+                date_field = "due_date" \
+                    if thumb_entity["type"] == "Task" else "end_date"
+
+                if date_field in thumb_entity:
+                    context_fields.append({
+                        "type": "Due",
+                        "display": thumb_entity[date_field],
+                        "url": self.__get_sg_url(thumb_entity),
+                    })
+
+            self.logger.debug("Sending context fields: %s" % str(context_fields))
+            self.adobe.send_context_fields(context_fields)
+
+        elif uid == self.__context_thumb_uid:
+
+            # thumbnail download. inspect the data and forward the path back
+            # to js
+
+            # clear the thumb id since we already processed it
+            self.__context_thumb_uid = None
+
+            self.logger.debug("Sending context thumbnail: %s" % str(data))
+            self.adobe.send_context_thumbnail(data)
+

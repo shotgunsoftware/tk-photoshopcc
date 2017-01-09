@@ -150,11 +150,19 @@ sg_manager.Manager = new function() {
         self.shutdown();
     };
 
-    this.set_state = function(state) {
-        // Sets the manager state.
+    this.set_commands = function(commands) {
+        // emits the current commands update for listeners to respond to
+        sg_manager.UPDATE_COMMANDS.emit(commands);
+    };
 
-        // emits the state update for listeners to respond to
-        sg_manager.UPDATE_STATE.emit(state);
+    this.set_context_fields = function(context_fields) {
+        // emits the current context fields update for listeners to respond to
+        sg_manager.UPDATE_CONTEXT_FIELDS.emit(context_fields);
+    };
+
+    this.set_context_thumbnail = function(context_thumbnail) {
+        // emits the current context thumbnail update for listeners to respond to
+        sg_manager.UPDATE_CONTEXT_THUMBNAIL.emit(context_thumbnail);
     };
 
     this.shutdown = function() {
@@ -271,12 +279,14 @@ sg_manager.Manager = new function() {
         // use the system installed python
         var python_exe_path = "python";
 
-        if (process.env["SHOTGUN_ADOBE_PYTHON"]) {
+        if (process.env.SHOTGUN_ADOBE_PYTHON) {
             // use the python specified in the environment if it exists
+            sg_logging.info("Using python executable set in environment variable 'SHOTGUN_ADOBE_PYTHON'.");
             python_exe_path = process.env.SHOTGUN_ADOBE_PYTHON;
         }
 
         sg_logging.debug("Spawning child process... ");
+        sg_logging.debug("Python executable: " + python_exe_path);
         sg_logging.debug("Current working directory: " + plugin_python_path);
         sg_logging.debug("Executing command: ");
         sg_logging.debug("  " +
@@ -285,7 +295,7 @@ sg_manager.Manager = new function() {
                 plugin_bootstrap_py,
                 port,
                 engine_name,
-                app_id,
+                app_id
             ].join(" ")
         );
 
@@ -298,7 +308,7 @@ sg_manager.Manager = new function() {
                     plugin_bootstrap_py,
                     port,
                     engine_name,
-                    app_id,
+                    app_id
                 ],
                 {
                     // start the process from this dir

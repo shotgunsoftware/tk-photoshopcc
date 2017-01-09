@@ -14,7 +14,13 @@
 var sg_manager = sg_manager || {};
 
 // typically as an async response to a REQUEST_STATE event from the panel
-sg_event.create_event(sg_manager, "UPDATE_STATE");
+sg_event.create_event(sg_manager, "UPDATE_COMMANDS");
+
+// typically as an async response to a REQUEST_STATE event from the panel
+sg_event.create_event(sg_manager, "UPDATE_CONTEXT_FIELDS");
+
+// typically as an async response to a REQUEST_STATE event from the panel
+sg_event.create_event(sg_manager, "UPDATE_CONTEXT_THUMBNAIL");
 
 // emits critical errors whereby the manager is not or can not function
 // properly. the emitted event will contain a dictionary of the following form:

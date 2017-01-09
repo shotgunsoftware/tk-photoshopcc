@@ -268,61 +268,92 @@ sg_panel.Panel = new function() {
         _cs_interface.closeExtension();
     };
 
-    this.set_state = function(state) {
 
-        // TODO: show actual header info
-        // TODO: handle case where no icon is provided
-        // TODO: document state object. make an object out of it?
+    // TODO: store current html for contents/header so that each update can
+    // set/update if need be
 
         // It's possible that a timeout was triggered when requesting the
         // state and that now, only after, we're receiving it. If that's
         // the situation then we'll have an error message to clear since
         // all is now well.
-        _clear_messages();
+        //_clear_messages();
 
-        var fields_table = "<table width='100%'>";
+    this.set_context_thumbnail = function(context_thumbnail) {
 
-        state["context_fields"].forEach(function(field_info) {
+        const thumb_path = context_thumbnail["thumb_path"];
+
+        var thumb_html = "<img id='context_thumbnail' src='" + thumb_path + "'>";
+
+        _set_div_html("context_thumbnail_data", thumb_html);
+    };
+
+    this.set_context_fields = function(context_fields) {
+
+        var fields_table = "<table>";
+
+        context_fields.forEach(function(field_info) {
 
             const field = field_info["type"];
-            const value = field_info["display"];
+            var value = field_info["display"];
             const url = field_info["url"];
+            const color = field_info["color"];
 
-            fields_table +=
-                "<tr>" +
-                    "<td class='sg_field_name'>" +
+            // TODO: show color
+
+            if (value !== null) {
+
+                value = "<strong>" + value + "</strong>";
+
+                if (field_info.step) {
+                    var color_div = "";
+                    if (field_info.color) {
+                        color_div = "<div style='width:12px; " +
+                                                "height:12px; " +
+                                                "background-color:" + field_info.color + "; " +
+                                                "display:inline-block" +
+                                    "'>" +
+                                    "</div>";
+                    }
+                    value += "&nbsp;&nbsp;" + color_div + " <span style='color:#777777'>" + field_info.step + "</span>";
+                }
+
+                fields_table +=
+                    "<tr>" +
+                      "<td class='sg_field_name'>" +
                         field + ":&nbsp;" +
-                    "</td>" +
-                    "<td class='sg_field_value'>" +
+                      "</td>" +
+                      "<td class='sg_field_value'>" +
                         "<a href='#' class='sg_field_value_link' " +
-                            "onclick='sg_panel.Panel.open_external_url(\"" + url + "\")'>" +
+                          "onclick='sg_panel.Panel.open_external_url(\"" + url + "\")'>" +
                             value +
                         "</a>" +
-                    "</td>" +
-                "</tr>";
+                      "</td>" +
+                    "</tr>";
+            }
         });
 
         fields_table += "</table>";
 
-        var header_html = "<table class='sg_context_header'>" +
-                "<tr>" +
-                    "<td align='right'>" +
-                        "<img src='../images/sg_logo.png' height='64'>" +
-                    "</td>" +
-                    "<td>" +
-                        "<strong>" +
-                            fields_table +
-                        "</strong>" +
-                    "</td>" +
-                "</tr>" +
-            "</table>";
+        var header_html = "<table class='sg_context_header' cellpadding='7px'>" +
+                             "<tr>" +
+                              "<td id='context_thumbnail_data'>" +
+                              "</td>" +
+                              "<td align='left'>" +
+                                  fields_table +
+                              "</td>" +
+                            "</tr>" +
+                          "</table>";
 
         _set_header(header_html);
         _show_header(true);
 
+    };
+
+    this.set_commands = function(all_commands) {
+
         // Favorite commands
 
-        const favorites = state["favorites"];
+        const favorites = all_commands["favorites"];
         var favorites_html = "";
 
         if (favorites.length > 0) {
@@ -363,7 +394,7 @@ sg_panel.Panel = new function() {
 
         // Now process the non-favorite commands
 
-        const commands = state["commands"];
+        const commands = all_commands["commands"];
         var commands_html = "";
 
         if (commands.length > 0) {
@@ -424,7 +455,7 @@ sg_panel.Panel = new function() {
         _show_info(false);
 
         // now build the context menu with the context menu commands
-        const context_menu_cmds = state["context_menu_cmds"];
+        const context_menu_cmds = all_commands["context_menu_cmds"];
         _build_flyout_menu(context_menu_cmds);
 
     };
@@ -923,10 +954,24 @@ sg_panel.Panel = new function() {
         // Handle pyside not being installed
         sg_manager.PYSIDE_NOT_AVAILABLE.connect(_on_pyside_unavailable);
 
-        // Updates the panel with the current state from python
-        sg_manager.UPDATE_STATE.connect(
+        // Updates the panel with the current commands from python
+        sg_manager.UPDATE_COMMANDS.connect(
             function(event) {
-                self.set_state(event.data);
+                self.set_commands(event.data);
+            }
+        );
+
+        // Updates the panel with the current context fields from python
+        sg_manager.UPDATE_CONTEXT_FIELDS.connect(
+            function(event) {
+                self.set_context_fields(event.data);
+            }
+        );
+
+        // Updates the panel with the current context thumb path from python
+        sg_manager.UPDATE_CONTEXT_THUMBNAIL.connect(
+            function(event) {
+                self.set_context_thumbnail(event.data);
             }
         );
 
@@ -1045,5 +1090,4 @@ sg_panel.Panel = new function() {
     };
 };
 
-// TODO: state should provide header info
 // TODO: mouse over icon should highlight text
