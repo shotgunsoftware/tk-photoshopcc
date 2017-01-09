@@ -11,6 +11,7 @@
 import sys
 import os
 import threading
+import functools
 
 import sgtk
 
@@ -49,6 +50,7 @@ class AdobeEngine(sgtk.platform.Engine):
     _COMMAND_UID_COUNTER = 0
     _LOCK = threading.Lock()
     _FAILED_PINGS = 0
+    _DIALOG_PARENT = None
 
     ##########################################################################################
     # context changing
@@ -373,8 +375,17 @@ class AdobeEngine(sgtk.platform.Engine):
         Get the QWidget parent for all dialogs created through
         show_dialog & show_modal.
         """
-        from sgtk.platform.qt import QtGui
-        return QtGui.QApplication.activeWindow()
+        from sgtk.platform.qt import QtGui, QtCore
+
+        if not self._DIALOG_PARENT:
+            self._DIALOG_PARENT = QtGui.QWidget(
+                parent=QtGui.QApplication.activeWindow(),
+            )
+            self._DIALOG_PARENT.setWindowFlags(
+                self._DIALOG_PARENT.windowFlags() | QtCore.Qt.WindowStaysOnTopHint,
+            )
+
+        return self._DIALOG_PARENT
 
     def show_dialog(self, title, bundle, widget_class, *args, **kwargs):
         """
@@ -396,6 +407,8 @@ class AdobeEngine(sgtk.platform.Engine):
                 "show the requested window '%s'." % title
             )
             return None
+
+        from tank.platform.qt import QtGui, QtCore
 
         # create the dialog:
         dialog, widget = self._create_dialog_with_widget(
@@ -427,10 +440,13 @@ class AdobeEngine(sgtk.platform.Engine):
         Shows a modal dialog window in a way suitable for this engine. The engine will attempt to
         integrate it as seamlessly as possible into the host application. This call is blocking
         until the user closes the dialog.
+
         :param title: The title of the window
         :param bundle: The app, engine or framework object that is associated with this window
         :param widget_class: The class of the UI to be constructed. This must derive from QWidget.
+
         Additional parameters specified will be passed through to the widget_class constructor.
+
         :returns: (a standard QT dialog status return code, the created widget_class instance)
         """
         if not self.has_ui:
@@ -438,10 +454,16 @@ class AdobeEngine(sgtk.platform.Engine):
                            "the requested window '%s'." % title)
             return
 
-        from tank.platform.qt import QtGui
+        from tank.platform.qt import QtGui, QtCore
 
         # create the dialog:
-        dialog, widget = self._create_dialog_with_widget(title, bundle, widget_class, *args, **kwargs)
+        dialog, widget = self._create_dialog_with_widget(
+            title,
+            bundle,
+            widget_class,
+            *args,
+            **kwargs
+        )
 
         # Note - the base engine implementation will try to clean up
         # dialogs and widgets after they've been closed.  However this
@@ -450,45 +472,15 @@ class AdobeEngine(sgtk.platform.Engine):
         # Keeping track of all dialogs will ensure this doesn't happen
         self.__qt_dialogs.append(dialog)
 
-        # make sure the window raised so it doesn't
-        # appear behind the main Photoshop window
-        dialog.raise_()
-        dialog.activateWindow()
 
         # TODO: we need to test modal app dialogs!
         # TODO: wf2 file open for example
         # TODO: make sure it shows up on top!
         # TODO: if current code doesn't work, try single shot timer to raise after exec_()
         #       confirmed. single shot timer will fire while dialog is shown.
-
-        status = QtGui.QDialog.Rejected
-        if sys.platform == "win32":
-            win_32_api = self.__tk_adobecc.win_32_api
-
-            saved_state = []
-            try:
-                # find all photoshop windows and save enabled state:
-                ps_process_id = self._win32_get_photoshop_process_id()
-                if ps_process_id != None:
-                    found_hwnds = win_32_api.find_windows(process_id=ps_process_id, stop_if_found=False)
-                    for hwnd in found_hwnds:
-                        enabled = win_32_api.IsWindowEnabled(hwnd)
-                        saved_state.append((hwnd, enabled))
-                        if enabled:
-                            win_32_api.EnableWindow(hwnd, False)
-
-                # show dialog:
-                status = dialog.exec_()
-            except Exception, e:
-                self.logger.error("Error showing modal dialog: %s" % e)
-            finally:
-                # kinda important to ensure we restore other window state:
-                for hwnd, state in saved_state:
-                    if win_32_api.IsWindowEnabled(hwnd) != state:
-                        win_32_api.EnableWindow(hwnd, state)
-        else:
-            # show dialog:
-            status = dialog.exec_()
+        dialog.raise_()
+        dialog.activateWindow()
+        status = dialog.exec_()
 
         return status, widget
 
@@ -622,92 +614,6 @@ class AdobeEngine(sgtk.platform.Engine):
 
         self.logger.debug("Sending state: %s" % str(state))
         self.adobe.send_state(state)
-
-    def _win32_get_photoshop_process_id(self):
-        """
-        Windows specific method to find the process id of Photoshop.  This
-        assumes that it is the parent process of this python process
-        """
-        if hasattr(self, "_win32_photoshop_process_id"):
-            return self._win32_photoshop_process_id
-
-        self._win32_photoshop_process_id = None
-
-        this_pid = os.getpid()
-
-        win_32_api = self.__tk_adobecc.win_32_api
-        self._win32_photoshop_process_id = win_32_api.find_parent_process_id(this_pid)
-
-        return self._win32_photoshop_process_id
-
-    def _win32_get_photoshop_main_hwnd(self):
-        """
-        Windows specific method to find the main Photoshop window
-        handle (HWND)
-        """
-        if hasattr(self, "_win32_photoshop_main_hwnd"):
-            return self._win32_photoshop_main_hwnd
-
-        self._win32_photoshop_main_hwnd = None
-
-        # find photoshop process id:
-        ps_process_id = self._win32_get_photoshop_process_id()
-
-        if ps_process_id != None:
-            # get main application window for photoshop process:
-            win_32_api = self.__tk_adobecc.win_32_api
-            found_hwnds = win_32_api.find_windows(
-                process_id=ps_process_id,
-                class_name="Photoshop",
-                stop_if_found=False,
-            )
-
-            if len(found_hwnds) == 1:
-                self._win32_photoshop_main_hwnd = found_hwnds[0]
-
-        return self._win32_photoshop_main_hwnd
-
-    def _win32_get_proxy_window(self):
-        """
-        Windows specific method to get the proxy window that will 'own' all Toolkit dialogs.  This
-        will be parented to the main photoshop application.  Creates the proxy window
-        if it doesn't already exist.
-        """
-        if hasattr(self, "_win32_proxy_win"):
-            return self._win32_proxy_win
-
-        self._win32_proxy_win = None
-
-        # get the main Photoshop window:
-        ps_hwnd = self._win32_get_photoshop_main_hwnd()
-
-        if ps_hwnd != None:
-            from sgtk.platform.qt import QtGui
-            win_32_api = self.__tk_adobecc.win_32_api
-
-            # create the proxy QWidget:
-            self._win32_proxy_win = QtGui.QWidget()
-            self._win32_proxy_win.setWindowTitle('sgtk dialog owner proxy')
-
-            proxy_win_hwnd = win_32_api.qwidget_winid_to_hwnd(
-                self._win32_proxy_win.winId(),
-            )
-
-            # set no parent notify:
-            win_ex_style = win_32_api.GetWindowLong(
-                proxy_win_hwnd,
-                win_32_api.GWL_EXSTYLE,
-            )
-            win_32_api.SetWindowLong(
-                proxy_win_hwnd,
-                win_32_api.GWL_EXSTYLE,
-                win_ex_style | win_32_api.WS_EX_NOPARENTNOTIFY,
-            )
-
-            # parent to photoshop application window:
-            win_32_api.SetParent(proxy_win_hwnd, ps_hwnd)
-
-        return self._win32_proxy_win
 
     def _jump_to_sg(self):
         """
