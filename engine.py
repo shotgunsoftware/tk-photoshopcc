@@ -11,7 +11,6 @@
 import sys
 import os
 import threading
-import functools
 
 import sgtk
 
