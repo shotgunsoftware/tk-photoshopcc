@@ -144,6 +144,11 @@ div.sg_error {
     height: 26px;
 }
 
+.sg_panel_command_other_img {
+    width: 26px;
+    height: 26px;
+}
+
 .sg_panel_command_img:hover {
     -webkit-filter: grayscale(0);
 }

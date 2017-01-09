@@ -216,6 +216,10 @@ class AdobeBridge(Communicator):
         self.logger.debug("Sending context thumb path: %s" % json_context_thumbnail)
         self._io.emit("set_context_thumbnail", json_context_thumbnail)
 
+    def context_about_to_change(self):
+        self.logger.debug("Sending context about to change message.")
+        self._io.emit("context_about_to_change")
+
     ##########################################################################################
     # internal methods
 

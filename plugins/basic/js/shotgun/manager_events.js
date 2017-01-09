@@ -22,6 +22,9 @@ sg_event.create_event(sg_manager, "UPDATE_CONTEXT_FIELDS");
 // typically as an async response to a REQUEST_STATE event from the panel
 sg_event.create_event(sg_manager, "UPDATE_CONTEXT_THUMBNAIL");
 
+// sent just before a context change from python
+sg_event.create_event(sg_manager, "CONTEXT_ABOUT_TO_CHANGE");
+
 // emits critical errors whereby the manager is not or can not function
 // properly. the emitted event will contain a dictionary of the following form:
 //

@@ -62,6 +62,7 @@ class AdobeEngine(sgtk.platform.Engine):
         :param old_context: The previous context.
         :param new_context: The current context.
         """
+
         self.__send_state()
 
     ##########################################################################################
@@ -117,9 +118,13 @@ class AdobeEngine(sgtk.platform.Engine):
         self.__context_find_uid = None
         self.__context_thumb_uid = None
         self.__find_step_colors_uid = None
+        self.__find_status_info_uid = None
 
         # keep track of all step colors
         self.__step_colors = {}
+
+        # keep track of all status names and
+        self.__status_info = {}
 
         # and start its thread!
         self.__sg_data.start()
@@ -309,10 +314,10 @@ class AdobeEngine(sgtk.platform.Engine):
         # If we don't know what the tests root directory path is
         # via the environment, then we shouldn't be here.
         try:
-            tests_root = os.environ["SHOTGUN_ADOBECC_TESTS_ROOT"]
+            tests_root = os.environ["SHOTGUN_ADOBE_TESTS_ROOT"]
         except KeyError:
             self.logger.error(
-                "The SHOTGUN_ADOBECC_TESTS_ROOT environment variable "
+                "The SHOTGUN_ADOBE_TESTS_ROOT environment variable "
                 "must be set to the root directory of the tests to be "
                 "run. Not running tests!"
             )
@@ -326,7 +331,7 @@ class AdobeEngine(sgtk.platform.Engine):
             if not os.path.exists(test_module):
                 self.logger.error(
                     "Unable to find run_tests.py in the directory "
-                    "specified by the SHOTGUN_ADOBECC_TESTS_ROOT "
+                    "specified by the SHOTGUN_ADOBE_TESTS_ROOT "
                     "environment variable. Not running tests!"
                 )
                 return
@@ -517,6 +522,8 @@ class AdobeEngine(sgtk.platform.Engine):
 
     def __send_state(self):
 
+        self.adobe.context_about_to_change()
+
         # ---- process the context for display
 
         # clear existing context requests to prevent unnecessary processing
@@ -537,8 +544,14 @@ class AdobeEngine(sgtk.platform.Engine):
         if thumbnail_entity:
             self.__request_context_fields(thumbnail_entity)
         else:
-            # TODO: clear header, display something!
-            pass
+            context_fields = [
+                {
+                    "type": "Site",
+                    "display": str(context),
+                    "url": self.sgtk.shotgun_url,
+                }
+            ]
+            self.adobe.send_context_fields(context_fields)
 
         # --- process the menu favorites setting
 
@@ -693,7 +706,7 @@ class AdobeEngine(sgtk.platform.Engine):
         Always includes the image url to display a thumbnail.
         """
 
-        fields = ["id", "type", "code", "image"]
+        fields = ["id", "type", "code", "name", "image"]
 
         if entity["type"] == "Task":
             fields.extend(["sg_status_list", "due_date", "step", "content"])
@@ -708,6 +721,12 @@ class AdobeEngine(sgtk.platform.Engine):
             self.__find_step_colors_uid = self.__sg_data.execute_find(
                 "Step", [], ["color", "cached_display_name"])
 
+        if not self.__find_status_info_uid and not self.__status_info:
+            status_fields = ["bg_color", "code", "name"]
+            self.__find_status_info_uid = self.__sg_data.execute_find(
+                "Status", [], status_fields
+            )
+
         self.__context_find_uid = self.__sg_data.execute_find_one(
             entity_type, [["id", "is", entity_id]], fields)
 
@@ -717,11 +736,13 @@ class AdobeEngine(sgtk.platform.Engine):
         """
 
         if uid == self.__context_find_uid:
-            self.logger.error("Failed to query context fields!")
+            self.logger.error("Failed to query context fields: %s" % (msg,))
         elif uid == self.__context_thumb_uid:
-            self.logger.error("Failed to query context thumbnail!")
+            self.logger.error("Failed to query context thumbnail: %s" % (msg,))
         elif uid == self.__find_step_colors_uid:
             self.logger.error("Failed to query step colors: %s" % (msg,))
+        elif uid == self.__find_status_info_uid:
+            self.logger.error("Failed to query status info: %s" % (msg,))
 
     def __on_worker_signal(self, uid, request_type, data):
         """
@@ -736,6 +757,20 @@ class AdobeEngine(sgtk.platform.Engine):
                 self.__step_colors[display_name] = color_str
 
             self.__find_step_colors_uid = None
+
+        elif uid == self.__find_status_info_uid:
+
+            for status_info in data["sg"]:
+                status_code = status_info["code"]
+                status_color = status_info["bg_color"]
+                if status_color:
+                    status_color = "rgb(%s)" % (status_color,)
+                self.__status_info[status_code] = dict(
+                    color=status_color,
+                    name=status_info["name"],
+                )
+
+            self.__find_status_info_uid = None
 
         elif uid == self.__context_find_uid:
 
@@ -770,6 +805,8 @@ class AdobeEngine(sgtk.platform.Engine):
                 self.logger.debug("ENTITY: " + str(entity))
 
                 color = entity.get("color")
+                if color:
+                    color = "rgb(%s)" % (color,)
                 step = None
 
                 if entity["type"] == "Task":
@@ -794,16 +831,6 @@ class AdobeEngine(sgtk.platform.Engine):
                     "step": step
                 })
 
-            # site fields if nothing populated yet
-            if not context_fields:
-                context_fields = [
-                    {
-                        "type": "Site",
-                        "display": str(context),
-                        "url": self.sgtk.shotgun_url,
-                    }
-                ]
-
             # try to attach status and due date fields if possible
             if thumb_entity["type"] in ["Task", "Project"]:
 
@@ -814,11 +841,20 @@ class AdobeEngine(sgtk.platform.Engine):
                 # status
                 if "sg_status_list" in thumb_entity:
 
-                    context_fields.append({
-                        "type": "Status",
-                        "display": thumb_entity["sg_status_list"],
-                        "url": self.__get_sg_url(thumb_entity),
-                    })
+                    thumb_status = thumb_entity["sg_status_list"]
+
+                    if thumb_status in self.__status_info:
+
+                        status_info = self.__status_info[thumb_status]
+                        status_display = status_info["name"]
+                        status_color = status_info["color"]
+
+                        context_fields.append({
+                            "type": "Status",
+                            "display": status_display,
+                            "url": self.__get_sg_url(thumb_entity),
+                            "color": status_color,
+                        })
 
                 # due date
                 date_field = "due_date" \

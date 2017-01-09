@@ -386,8 +386,14 @@ sg_socket_io.SocketManager = new function() {
             socket.on("set_context_thumbnail", function(json_context_thumbnail) {
                 // The client is setting the context thumbnail path.
                 var context_thumbnail = JSON.parse(json_context_thumbnail);
-                sg_logging.debug("Setting context thumb path from client: " + json_context_thumbnail);
+                sg_logging.debug("Setting context thumbnail from client: " + json_context_thumbnail);
                 sg_manager.UPDATE_CONTEXT_THUMBNAIL.emit(context_thumbnail);
+            });
+
+            socket.on("context_about_to_change", function() {
+                // The context is bout to change
+                sg_logging.debug("Sending context about to change from client.");
+                sg_manager.CONTEXT_ABOUT_TO_CHANGE.emit();
             });
 
             remote.setTransmitter(function(message, next) {

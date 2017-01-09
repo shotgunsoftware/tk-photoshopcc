@@ -37,14 +37,21 @@ sg_panel.Panel = new function() {
 
     var _context_menu_lookup = {};
 
+    var _context_thumbnail_data = undefined;
+
     // ---- public methods
 
     this.clear = function() {
-        // Clears the panel's contents and resets it to its default state.
-        //
-        // Since we don't really want to stay in this state, the panel shows
-        // a message to the user saying that the panel is loading.
 
+        _context_thumbnail_data = undefined;
+
+    };
+
+    this.set_panel_loading_state = function() {
+
+        this.clear();
+
+        // Clears the panel's contents and resets it to the loading state.
         _set_bg_color("#222222");
 
         _show_header(false);
@@ -55,6 +62,33 @@ sg_panel.Panel = new function() {
         _set_info(
             "Loading Shotgun Integration..."
         );
+    };
+
+    this.set_context_loading_state = function() {
+
+        this.clear();
+
+        _set_bg_color("#4D4D4D");
+
+        var header_html = "<table class='sg_context_header' cellpadding='7px'>" +
+                            "<tr>" +
+                              "<td id='context_thumbnail_data'>" +
+                                "<img src='../images/sg_logo.png' height='64px'>" +
+                              "</td>" +
+                              "<td align='left'>" +
+                                "<strong>Loading context...</strong>" +
+                              "</td>" +
+                            "</tr>" +
+                          "</table>";
+
+        _set_header(header_html);
+        _show_header(true);
+
+        var contents_html = "Loading commands...";
+
+        _set_contents(contents_html);
+        _show_contents(true);
+        _clear_messages();
     };
 
     this.show_command_help = function(title, help, favorite) {
@@ -193,8 +227,8 @@ sg_panel.Panel = new function() {
 
         try {
 
-            // ensure the panel is in its default state.
-            self.clear();
+            // ensure the panel is in its loading state.
+            self.set_panel_loading_state();
 
             _override_console_logging();
 
@@ -278,9 +312,11 @@ sg_panel.Panel = new function() {
         // all is now well.
         //_clear_messages();
 
-    this.set_context_thumbnail = function(context_thumbnail) {
+    this.set_context_thumbnail = function(context_thumbnail_data) {
 
-        const thumb_path = context_thumbnail["thumb_path"];
+        _context_thumbnail_data = context_thumbnail_data;
+
+        const thumb_path = context_thumbnail_data["thumb_path"];
 
         var thumb_html = "<img id='context_thumbnail' src='" + thumb_path + "'>";
 
@@ -302,20 +338,33 @@ sg_panel.Panel = new function() {
 
             if (value !== null) {
 
-                value = "<strong>" + value + "</strong>";
+                var color_div = "";
 
                 if (field_info.step) {
-                    var color_div = "";
+                    color_div = "";
                     if (field_info.color) {
-                        color_div = "<div style='width:12px; " +
-                                                "height:12px; " +
+                        color_div = "<div style='width:10px; " +
+                                                "height:10px; " +
                                                 "background-color:" + field_info.color + "; " +
-                                                "display:inline-block" +
+                                                "display:inline-block; " +
+                                                "border: 1px solid #373737; " +
                                     "'>" +
                                     "</div>";
                     }
-                    value += "&nbsp;&nbsp;" + color_div + " <span style='color:#777777'>" + field_info.step + "</span>";
+                    value = color_div + "&nbsp;&nbsp;<strong>" + value + "</strong> <span style='color:#777777'>" + field_info.step + "</span>";
+                } else if (field_info.color) {
+                    color_div = "<div style='width:10px; " +
+                                                "height:10px; " +
+                                                "background-color:" + field_info.color + "; " +
+                                                "display:inline-block; " +
+                                                "border: 1px solid #373737; " +
+                                    "'>" +
+                                    "</div>";
+                    value = color_div + "&nbsp;&nbsp;<strong>" + value + "</strong>";
+                } else {
+                    value = "<strong>" + value + "</strong>";
                 }
+
 
                 fields_table +=
                     "<tr>" +
@@ -334,19 +383,25 @@ sg_panel.Panel = new function() {
 
         fields_table += "</table>";
 
+        var context_thumb = "<img src='../images/sg_logo.png' height='64px'>";
+        if (_context_thumbnail_data !== undefined) {
+            const thumb_path = _context_thumbnail_data["thumb_path"];
+            context_thumb = "<img id='context_thumbnail' src='" + thumb_path + "'>";
+        }
+
         var header_html = "<table class='sg_context_header' cellpadding='7px'>" +
                              "<tr>" +
                               "<td id='context_thumbnail_data'>" +
+                                context_thumb +
                               "</td>" +
                               "<td align='left'>" +
-                                  fields_table +
+                                fields_table +
                               "</td>" +
                             "</tr>" +
                           "</table>";
 
         _set_header(header_html);
         _show_header(true);
-
     };
 
     this.set_commands = function(all_commands) {
@@ -423,14 +478,14 @@ sg_panel.Panel = new function() {
                             "</colgroup>" +
                             "<tr>" +
                                 "<td align='left' width='30px' style='vertical-align:middle;'>" +
-                                    "<a href='#' class='sg_command_link' "  +
+                                    "<a href='#' "  +
                                         "onClick='sg_panel.Panel.trigger_command(\"" + command_id + "\", \"" + display_name + "\")'" +
                                     ">" +
-                                    "<img class='sg_panel_command_img' src='" + icon_path + "'>" +
+                                    "<img class='sg_panel_command_other_img' src='" + icon_path + "'>" +
                                     "</a>" +
                                 "</td>" +
                                 "<td align='left' style='padding-left:10px; vertical-align:middle; white-space:nowrap;'>" +
-                                    "<a href='#' class='sg_command_link' "  +
+                                    "<a href='#' "  +
                                         "onClick='sg_panel.Panel.trigger_command(\"" + command_id + "\", \"" + display_name + "\")'" +
                                     ">" +
                                         display_name +
@@ -444,8 +499,6 @@ sg_panel.Panel = new function() {
 
             commands_html += "</div>";
         }
-
-        _set_bg_color("#4D4D4D");
 
         _set_contents(favorites_html + commands_html);
         _show_contents(true);
@@ -535,7 +588,7 @@ sg_panel.Panel = new function() {
                           Enabled="true" \
                           Checked="false"/>';
 
-        if ( process.env.SHOTGUN_ADOBECC_TESTS_ROOT ) {
+        if (process.env["SHOTGUN_ADOBE_TESTS_ROOT"]) {
             flyout_xml += '   <MenuItem Id="sg_dev_tests" \
                                         Label="Run Tests" \
                                         Enabled="true" \
@@ -972,6 +1025,13 @@ sg_panel.Panel = new function() {
         sg_manager.UPDATE_CONTEXT_THUMBNAIL.connect(
             function(event) {
                 self.set_context_thumbnail(event.data);
+            }
+        );
+
+        // Clears the current context
+        sg_manager.CONTEXT_ABOUT_TO_CHANGE.connect(
+            function(event) {
+                self.set_context_loading_state();
             }
         );
 

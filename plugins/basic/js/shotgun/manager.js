@@ -165,6 +165,11 @@ sg_manager.Manager = new function() {
         sg_manager.UPDATE_CONTEXT_THUMBNAIL.emit(context_thumbnail);
     };
 
+    this.context_about_to_change = function() {
+        // emits the context about to change signal for listeners to respond to
+        sg_manager.CONTEXT_ABOUT_TO_CHANGE.emit();
+    };
+
     this.shutdown = function() {
         // Ensure all the manager's components are shutdown properly
         //
