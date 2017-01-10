@@ -49,6 +49,7 @@ class AdobeEngine(sgtk.platform.Engine):
     _COMMAND_UID_COUNTER = 0
     _LOCK = threading.Lock()
     _FAILED_PINGS = 0
+    _CONTEXT_CACHE = dict()
 
     ##########################################################################################
     # context changing
@@ -73,6 +74,10 @@ class AdobeEngine(sgtk.platform.Engine):
         # property for each. Like this: AEFT,aftereffects,After Effects
         self._app_id = self.SHOTGUN_ADOBE_APPID
 
+        # Keep track of the context we had when we launched. We might need
+        # to set it again once the user starts changing active documents.
+        self._launch_context = self.context
+
         # get the adobe instance. it may have been initialized already by a
         # previous instance of the engine. if not, initialize a new one.
         self._adobe = self.__tk_adobecc.AdobeBridge.get_or_create(
@@ -89,6 +94,7 @@ class AdobeEngine(sgtk.platform.Engine):
 
         self.adobe.logging_received.connect(self._handle_logging)
         self.adobe.command_received.connect(self._handle_command)
+        self.adobe.active_document_changed.connect(self._handle_active_document_change)
         self.adobe.run_tests_request_received.connect(self._run_tests)
         self.adobe.state_requested.connect(self.__send_state)
 
@@ -221,6 +227,52 @@ class AdobeEngine(sgtk.platform.Engine):
 
         sys.stdout.write(msg_str)
         sys.stdout.flush()
+
+    def _handle_active_document_change(self, active_document_path):
+        """
+        Gets the active document from the host application, determines which
+        context it belongs to, and changes to that context.
+
+        :param str active_document_path: The path to the new active document.
+        """
+        if active_document_path:
+            self.log_debug("New active document is %s" % active_document_path)
+        else:
+            self.log_debug(
+                "New active document check failed. This is likely due to the "
+                "new active document being in an unsaved state. Setting "
+                "launch context."
+            )
+            sgtk.platform.change_context(self._launch_context)
+            return
+
+        if active_document_path in self._CONTEXT_CACHE:
+            context = self._CONTEXT_CACHE[active_document_path]
+        else:
+            try:
+                context = sgtk.sgtk_from_path(active_document_path).context_from_path(
+                    active_document_path,
+                    previous_context=self.context,
+                )
+            except Exception:
+                # TODO: We need to set the panel to a disabled state the way
+                # we do the Shotgun menu in Nuke Studio.
+                self.log_debug(
+                    "Unable to determine context from path. Not changing context."
+                )
+                return
+
+            if not context.project:
+                self.log_debug(
+                    "New context doesn't have a Project entity. Not changing "
+                    "context."
+                )
+                return
+
+            self._CONTEXT_CACHE[active_document_path] = context
+
+        if context != self.context:
+            sgtk.platform.change_context(context)
 
     def _handle_command(self, uid):
         """

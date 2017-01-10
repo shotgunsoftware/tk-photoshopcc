@@ -13,7 +13,6 @@
 // namespace
 var sg_manager = sg_manager || {};
 
-
 sg_manager.Manager = new function() {
     // A singleton "class" to manage the Shotgun integration layers
     //   * python bootstrap
@@ -27,6 +26,9 @@ sg_manager.Manager = new function() {
 
     // ---- private
 
+    // Half-second interval.
+    const active_document_interval = 500;
+
     // keep a handle on the instance.
     const self = this;
 
@@ -39,6 +41,9 @@ sg_manager.Manager = new function() {
 
     // remember if pyside was unavailable
     var __pyside_unavailable = false;
+
+    // keep track of the active document
+    var __active_document = undefined;
 
     // ---- public methods
 
@@ -181,6 +186,40 @@ sg_manager.Manager = new function() {
             host_capabilities.SUPPORT_HTML_EXTENSIONS;
     };
 
+    const _active_document_check = function() {
+        _cs_interface.evalScript(
+            // NOTE: Hopefully this is the same across all Adobe CC
+            // products. If it isn't, then we'll likely want to make
+            // a manager method that abstracts it away and returns
+            // the active document after checking which DCC we're in.
+            "app.activeDocument.fullName.fsName",
+            function(result) {
+                // If the above command fails, then it's because the
+                // active document is an unsaved file.
+                if ( result == "EvalScript error." ) {
+                    // If we previously had a path stored and we're in
+                    // this undefined state, then we've switched from a
+                    // saved document to one that isn't and we still
+                    // need to alert clients.
+                    if ( __active_document != undefined ) {
+                        sg_logging.debug("Active document changed to undefined");
+                        __active_document = undefined;
+                        sg_socket_io.rpc_active_document_changed("");
+                    }
+                }
+                else {
+                    // If it's changed, then alert clients.
+                    if ( __active_document != result ) {
+                        sg_logging.debug("Active document changed to " + result);
+                        __active_document = result;
+                        sg_socket_io.rpc_active_document_changed(result);
+                    }
+                }
+            }
+        );
+    };
+
+    // TODO: add a progress callback
     const _bootstrap_python = function(port) {
         // Bootstrap the toolkit python process.
         //
@@ -499,6 +538,8 @@ sg_manager.Manager = new function() {
             }
         );
 
+        // Keep an eye on the active document.
+        setInterval(_active_document_check, active_document_interval);
     };
 
     const _emit_python_critical_error = function(error) {
