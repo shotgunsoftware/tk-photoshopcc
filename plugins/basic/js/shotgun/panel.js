@@ -484,17 +484,21 @@ sg_panel.Panel = new function() {
                 <MenuItem Id="sg_console" \
                           Label="Console" \
                           Enabled="true" \
-                          Checked="false"/> \
-                <MenuItem Id="sg_dev_debug" \
-                          Label="Chrome Console..." \
-                          Enabled="true" \
-                          Checked="false"/> \
-                <MenuItem Id="sg_dev_reload" \
-                          Label="Reload" \
+                          Checked="false"/>';
+
+        if ( process.env.SHOTGUN_ADOBE_NETWORK_DEBUG || process.env.SHOTGUN_ADOBECC_TESTS_ROOT ) {
+            flyout_xml += '<MenuItem Id="sg_dev_debug" \
+                              Label="Chrome Console..." \
+                              Enabled="true" \
+                              Checked="false"/>';
+        }
+
+        flyout_xml += '<MenuItem Id="sg_dev_reload" \
+                          Label="Reload Shotgun Extension" \
                           Enabled="true" \
                           Checked="false"/>';
 
-        if (process.env["SHOTGUN_ADOBECC_TESTS_ROOT"]) {
+        if ( process.env.SHOTGUN_ADOBECC_TESTS_ROOT ) {
             flyout_xml += '   <MenuItem Id="sg_dev_tests" \
                                         Label="Run Tests" \
                                         Enabled="true" \
