@@ -274,6 +274,12 @@ sg_panel.Panel = new function() {
         // TODO: handle case where no icon is provided
         // TODO: document state object. make an object out of it?
 
+        // It's possible that a timeout was triggered when requesting the
+        // state and that now, only after, we're receiving it. If that's
+        // the situation then we'll have an error message to clear since
+        // all is now well.
+        _clear_messages();
+
         var fields_table = "<table width='100%'>";
 
         state["context_fields"].forEach(function(field_info) {
