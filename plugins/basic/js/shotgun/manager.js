@@ -273,7 +273,7 @@ sg_manager.Manager = new function() {
 
         if (process.env["SHOTGUN_ADOBE_PYTHON"]) {
             // use the python specified in the environment if it exists
-            python_exe_path = process.env.SHOTGUN_ADOBECC_PYTHON;
+            python_exe_path = process.env.SHOTGUN_ADOBE_PYTHON;
         }
 
         sg_logging.debug("Spawning child process... ");
