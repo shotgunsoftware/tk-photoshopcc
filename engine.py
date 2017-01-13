@@ -63,6 +63,20 @@ class AdobeEngine(sgtk.platform.Engine):
         :param new_context: The current context.
         """
 
+        self.__schema_loaded = False
+
+        if new_context.project:
+            project_id = new_context.project["id"]
+        else:
+            project_id = None
+
+        def _on_schema_loaded():
+            self.__schema_loaded = True
+
+        self.__shotgun_globals.run_on_schema_loaded(
+            _on_schema_loaded, project_id=project_id)
+
+        # send the new context state
         self.__send_state()
 
     ##########################################################################################
@@ -105,11 +119,12 @@ class AdobeEngine(sgtk.platform.Engine):
         # ---- data retriever for background task processing
 
         # workaround for importing shotgun utils
-        sg_data = self.__tk_adobecc.shotgunutils.shotgun_data
+        self.__shotgun_data = self.__tk_adobecc.shotgunutils.shotgun_data
+        self.__shotgun_globals = self.__tk_adobecc.shotgunutils.shotgun_globals
 
         # set up data retriever
         from sgtk.platform.qt import QtCore
-        self.__sg_data = sg_data.ShotgunDataRetriever(
+        self.__sg_data = self.__shotgun_data.ShotgunDataRetriever(
             QtCore.QCoreApplication.instance())
         self.__sg_data.work_completed.connect( self.__on_worker_signal)
         self.__sg_data.work_failure.connect( self.__on_worker_failure)
@@ -117,20 +132,14 @@ class AdobeEngine(sgtk.platform.Engine):
         # context request uids
         self.__context_find_uid = None
         self.__context_thumb_uid = None
-        self.__find_step_colors_uid = None
-        self.__find_status_info_uid = None
 
-        # keep track of all step colors
-        self.__step_colors = {}
-
-        # keep track of all status names and
-        self.__status_info = {}
+        # keep track if globals initialized
+        self.__schema_loaded = False
 
         # and start its thread!
         self.__sg_data.start()
 
         self.__qt_dialogs = []
-
 
     def destroy_engine(self):
 
@@ -515,11 +524,6 @@ class AdobeEngine(sgtk.platform.Engine):
             self._COMMAND_UID_COUNTER += 1
             return self._COMMAND_UID_COUNTER
 
-    def __get_sg_url(self, entity):
-
-        return "%s/detail/%s/%d" % (
-            self.sgtk.shotgun_url, entity["type"], entity["id"])
-
     def __send_state(self):
 
         self.adobe.context_about_to_change()
@@ -531,27 +535,9 @@ class AdobeEngine(sgtk.platform.Engine):
         self.__context_thumb_uid = None
         self.__sg_data.clear()
 
-        context = self.context
-        thumbnail_entity = None
+        context_entity = self.get_context_entity()
 
-        # determine the best entity for displaying the thumbnail
-        for entity in [context.task, context.entity, context.project]:
-            if not entity:
-                continue
-            thumbnail_entity = entity
-            break
-
-        if thumbnail_entity:
-            self.__request_context_fields(thumbnail_entity)
-        else:
-            context_fields = [
-                {
-                    "type": "Site",
-                    "display": str(context),
-                    "url": self.sgtk.shotgun_url,
-                }
-            ]
-            self.adobe.send_context_fields(context_fields)
+        self.__request_context_display(context_entity)
 
         # --- process the menu favorites setting
 
@@ -699,33 +685,38 @@ class AdobeEngine(sgtk.platform.Engine):
     ##########################################################################################
     # context data methods
 
-    def __request_context_fields(self, entity):
+    def __request_context_display(self, entity):
         """
         Request fields to show in the context header for the given entity.
 
         Always includes the image url to display a thumbnail.
         """
 
-        fields = ["id", "type", "code", "name", "image"]
+        if not entity:
+            fields_html = self.execute_hook_method(
+                "context_fields_display_hook",
+                "get_context_html",
+                entity=None,
+                sg_globals=self.__shotgun_globals,
+            )
+            self.logger.debug("Sending context display.")
+            self.adobe.send_context_display(fields_html)
+            # TODO: send site thumbnail
+            return
 
-        if entity["type"] == "Task":
-            fields.extend(["sg_status_list", "due_date", "step", "content"])
-        elif entity["type"] == "Project":
-            fields.extend(["color", "sg_status_list", "end_date"])
+        # get the fields to query from the hook
+        fields = self.execute_hook_method(
+            "context_fields_display_hook",
+            "get_entity_fields",
+            entity_type=entity["type"]
+        )
+
+        # always try to query the image for the entity
+        if "image" not in fields:
+            fields.append("image")
 
         entity_type = entity["type"]
         entity_id = entity["id"]
-
-        # query all step colors
-        if not self.__find_step_colors_uid and not self.__step_colors:
-            self.__find_step_colors_uid = self.__sg_data.execute_find(
-                "Step", [], ["color", "cached_display_name"])
-
-        if not self.__find_status_info_uid and not self.__status_info:
-            status_fields = ["bg_color", "code", "name"]
-            self.__find_status_info_uid = self.__sg_data.execute_find(
-                "Status", [], status_fields
-            )
 
         self.__context_find_uid = self.__sg_data.execute_find_one(
             entity_type, [["id", "is", entity_id]], fields)
@@ -739,136 +730,59 @@ class AdobeEngine(sgtk.platform.Engine):
             self.logger.error("Failed to query context fields: %s" % (msg,))
         elif uid == self.__context_thumb_uid:
             self.logger.error("Failed to query context thumbnail: %s" % (msg,))
-        elif uid == self.__find_step_colors_uid:
-            self.logger.error("Failed to query step colors: %s" % (msg,))
-        elif uid == self.__find_status_info_uid:
-            self.logger.error("Failed to query status info: %s" % (msg,))
 
     def __on_worker_signal(self, uid, request_type, data):
         """
         Signaled whenever the worker completes something.
         """
 
-        if uid == self.__find_step_colors_uid:
+        self.logger.debug("WORKER SIGNAL: " + str(data))
 
-            for color_data in data["sg"]:
-                color_str = "rgb(%s)" % color_data["color"]
-                display_name = color_data["cached_display_name"]
-                self.__step_colors[display_name] = color_str
-
-            self.__find_step_colors_uid = None
-
-        elif uid == self.__find_status_info_uid:
-
-            for status_info in data["sg"]:
-                status_code = status_info["code"]
-                status_color = status_info["bg_color"]
-                if status_color:
-                    status_color = "rgb(%s)" % (status_color,)
-                self.__status_info[status_code] = dict(
-                    color=status_color,
-                    name=status_info["name"],
-                )
-
-            self.__find_status_info_uid = None
-
-        elif uid == self.__context_find_uid:
+        if uid == self.__context_find_uid:
 
             # clear the find id since we are now processing it
             self.__context_find_uid = None
 
-            thumb_entity = data["sg"]
+            context_entity = data["sg"]
 
             # should have an image url now. submit a request to download the
             # entity's thumbnail.
-            self.__context_thumb_uid = self.__sg_data.request_thumbnail(
-                thumb_entity["image"],
-                thumb_entity["type"],
-                thumb_entity["id"],
-                "image",
-                load_image=False,
+            if "image" in context_entity and context_entity["image"]:
+                self.__context_thumb_uid = self.__sg_data.request_thumbnail(
+                    context_entity["image"],
+                    context_entity["type"],
+                    context_entity["id"],
+                    "image",
+                    load_image=False,
+                )
+            else:
+                if context_entity["type"] in ["Asset", "Shot", "Task"]:
+                    thumb_path = "../images/default_%s_thumb_dark.png" % (
+                        context_entity["type"])
+                else:
+                    # TODO: switch when entity thumb available
+                    #thumb_path = "../images/default_entity_thumb_dark.png"
+                    thumb_path = "../images/default_Shot_thumb_dark.png"
+
+                data = dict(
+                    thumb_path=thumb_path,
+                    url=self.get_entity_url(context_entity),
+                )
+                self.logger.debug(
+                    "Sending default context thumbnail: %s" % str(data))
+                self.adobe.send_context_thumbnail(data)
+
+
+            # get the fields to query from the hook
+            fields_html = self.execute_hook_method(
+                "context_fields_display_hook",
+                "get_context_html",
+                entity=context_entity,
+                sg_globals=self.__shotgun_globals,
             )
 
-            context = self.context
-            context_fields = []
-
-            # got the fields. forward them back to js to display.
-            for entity in [context.project, context.entity, context.task]:
-
-                if not entity:
-                    continue
-
-                if entity["id"] == thumb_entity["id"]:
-                    # use the dict with more info
-                    entity = thumb_entity
-
-                self.logger.debug("ENTITY: " + str(entity))
-
-                color = entity.get("color")
-                if color:
-                    color = "rgb(%s)" % (color,)
-                step = None
-
-                if entity["type"] == "Task":
-                    display_name = entity["content"]
-                    step = entity["step"]["name"]
-                    if step in self.__step_colors:
-                        color = self.__step_colors[step]
-                else:
-                    # use an appropriate field for displaying the entity
-                    if "name" in entity:
-                        display_name = entity["name"]
-                    elif "code" in entity:
-                        display_name = entity["code"]
-                    else:
-                        continue
-
-                context_fields.append({
-                    "type": entity["type"],
-                    "display": display_name,
-                    "url": self.__get_sg_url(entity),
-                    "color": color,
-                    "step": step
-                })
-
-            # try to attach status and due date fields if possible
-            if thumb_entity["type"] in ["Task", "Project"]:
-
-                # TODO: get the actual status display name via sg globals
-                # TODO: status color
-                # use same pattern as steps to pre-query statuses
-
-                # status
-                if "sg_status_list" in thumb_entity:
-
-                    thumb_status = thumb_entity["sg_status_list"]
-
-                    if thumb_status in self.__status_info:
-
-                        status_info = self.__status_info[thumb_status]
-                        status_display = status_info["name"]
-                        status_color = status_info["color"]
-
-                        context_fields.append({
-                            "type": "Status",
-                            "display": status_display,
-                            "url": self.__get_sg_url(thumb_entity),
-                            "color": status_color,
-                        })
-
-                # due date
-                date_field = "due_date" \
-                    if thumb_entity["type"] == "Task" else "end_date"
-
-                if date_field in thumb_entity:
-                    context_fields.append({
-                        "type": "Due",
-                        "display": thumb_entity[date_field],
-                        "url": self.__get_sg_url(thumb_entity),
-                    })
-
-            self.logger.debug("Sending context fields: %s" % str(context_fields))
-            self.adobe.send_context_fields(context_fields)
+            self.logger.debug("Sending context display.")
+            self.adobe.send_context_display(fields_html)
 
         elif uid == self.__context_thumb_uid:
 
@@ -878,6 +792,47 @@ class AdobeEngine(sgtk.platform.Engine):
             # clear the thumb id since we already processed it
             self.__context_thumb_uid = None
 
+            context_entity = self.get_context_entity()
+
+            # add a url to allow the panel to make the thumbnail clickable
+            data["url"] = self.get_entity_url(context_entity)
+
             self.logger.debug("Sending context thumbnail: %s" % str(data))
             self.adobe.send_context_thumbnail(data)
+
+    def __get_project_id(self):
+
+        if self.context.project:
+            return self.context.project["id"]
+        else:
+            return None
+
+    def get_context_entity(self):
+
+        context = self.context
+
+        # determine the best entity for displaying the thumbnail. just return
+        # the first of task, entity, project that is defined
+        for entity in [context.task, context.entity, context.project]:
+            if not entity:
+                continue
+            return entity
+
+    def get_entity_url(self, entity):
+        return "%s/detail/%s/%d" % (
+            self.sgtk.shotgun_url, entity["type"], entity["id"])
+
+    def get_panel_link(self, url, text):
+
+        return \
+            """
+            <a
+              href='#'
+              class='sg_value_link'
+              onclick='sg_panel.Panel.open_external_url("{url}")'
+            >{text}</a>
+            """.format(
+                url=url,
+                text=text,
+            )
 

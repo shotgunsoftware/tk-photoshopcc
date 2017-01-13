@@ -192,17 +192,17 @@ class AdobeBridge(Communicator):
         self.logger.debug("Sending commands: %s" % json_commands)
         self._io.emit("set_commands", json_commands)
 
-    def send_context_fields(self, context_fields):
+    def send_context_display(self, context_display):
         """
-        Responsible for forwarding the current engine context display fields to js.
+        Responsible for forwarding the current engine context display to js.
 
         This method knows about the structure of the json that the js side
         expects. We provide display info and we also
         """
         # encode the python dict as json
-        json_context_fields = json.dumps(context_fields)
-        self.logger.debug("Sending context fields: %s" % json_context_fields)
-        self._io.emit("set_context_fields", json_context_fields)
+        json_context_display = json.dumps(context_display)
+        self.logger.debug("Sending context display.")
+        self._io.emit("set_context_display", json_context_display)
 
     def send_context_thumbnail(self, context_thumbnail):
         """

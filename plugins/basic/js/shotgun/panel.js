@@ -70,13 +70,14 @@ sg_panel.Panel = new function() {
 
         _set_bg_color("#4D4D4D");
 
-        var header_html = "<table class='sg_context_header' cellpadding='7px'>" +
-                            "<tr>" +
+        // TODO: swap out the default thumb
+        var header_html = "<table class='sg_context_header'>" +
+                            "<tr style='display:flex; align-items:stretch'>" +
                               "<td id='context_thumbnail_data'>" +
-                                "<img src='../images/sg_logo.png' height='64px'>" +
+                                "<img id='context_thumbnail' src='../images/default_Shot_thumb_dark.png'>" +
                               "</td>" +
-                              "<td align='left'>" +
-                                "<strong>Loading context...</strong>" +
+                              "<td id='context_field_data'>" +
+                                "Loading context..." +
                               "</td>" +
                             "</tr>" +
                           "</table>";
@@ -317,85 +318,30 @@ sg_panel.Panel = new function() {
         _context_thumbnail_data = context_thumbnail_data;
 
         const thumb_path = context_thumbnail_data["thumb_path"];
+        const url = context_thumbnail_data["url"];
 
-        var thumb_html = "<img id='context_thumbnail' src='" + thumb_path + "'>";
+        var thumb_html = "<a href='#' onclick='sg_panel.Panel.open_external_url(\"" + url + "\")'>" +
+                            "<img id='context_thumbnail' src='" + thumb_path + "'>" +
+                         "</a>";
 
         _set_div_html("context_thumbnail_data", thumb_html);
     };
 
-    this.set_context_fields = function(context_fields) {
+    this.set_context_display = function(context_display) {
 
-        var fields_table = "<table>";
-
-        context_fields.forEach(function(field_info) {
-
-            const field = field_info["type"];
-            var value = field_info["display"];
-            const url = field_info["url"];
-            const color = field_info["color"];
-
-            // TODO: show color
-
-            if (value !== null) {
-
-                var color_div = "";
-
-                if (field_info.step) {
-                    color_div = "";
-                    if (field_info.color) {
-                        color_div = "<div style='width:10px; " +
-                                                "height:10px; " +
-                                                "background-color:" + field_info.color + "; " +
-                                                "display:inline-block; " +
-                                                "border: 1px solid #373737; " +
-                                    "'>" +
-                                    "</div>";
-                    }
-                    value = color_div + "&nbsp;&nbsp;<strong>" + value + "</strong> <span style='color:#777777'>" + field_info.step + "</span>";
-                } else if (field_info.color) {
-                    color_div = "<div style='width:10px; " +
-                                                "height:10px; " +
-                                                "background-color:" + field_info.color + "; " +
-                                                "display:inline-block; " +
-                                                "border: 1px solid #373737; " +
-                                    "'>" +
-                                    "</div>";
-                    value = color_div + "&nbsp;&nbsp;<strong>" + value + "</strong>";
-                } else {
-                    value = "<strong>" + value + "</strong>";
-                }
-
-
-                fields_table +=
-                    "<tr>" +
-                      "<td class='sg_field_name'>" +
-                        field + ":&nbsp;" +
-                      "</td>" +
-                      "<td class='sg_field_value'>" +
-                        "<a href='#' class='sg_field_value_link' " +
-                          "onclick='sg_panel.Panel.open_external_url(\"" + url + "\")'>" +
-                            value +
-                        "</a>" +
-                      "</td>" +
-                    "</tr>";
-            }
-        });
-
-        fields_table += "</table>";
-
-        var context_thumb = "<img src='../images/sg_logo.png' height='64px'>";
+        var context_thumb = "<img src='../images/default_Shot_thumb@2x.png' height='64px'>";
         if (_context_thumbnail_data !== undefined) {
             const thumb_path = _context_thumbnail_data["thumb_path"];
             context_thumb = "<img id='context_thumbnail' src='" + thumb_path + "'>";
         }
 
-        var header_html = "<table class='sg_context_header' cellpadding='7px'>" +
-                             "<tr>" +
+        var header_html = "<table class='sg_context_header'>" +
+                             "<tr style='display:flex; align-items:stretch'>" +
                               "<td id='context_thumbnail_data'>" +
                                 context_thumb +
                               "</td>" +
-                              "<td align='left'>" +
-                                fields_table +
+                              "<td id='context_field_data'>" +
+                                context_display +
                               "</td>" +
                             "</tr>" +
                           "</table>";
@@ -1015,9 +961,9 @@ sg_panel.Panel = new function() {
         );
 
         // Updates the panel with the current context fields from python
-        sg_manager.UPDATE_CONTEXT_FIELDS.connect(
+        sg_manager.UPDATE_CONTEXT_DISPLAY.connect(
             function(event) {
-                self.set_context_fields(event.data);
+                self.set_context_display(event.data);
             }
         );
 

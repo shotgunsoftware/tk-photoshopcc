@@ -376,11 +376,11 @@ sg_socket_io.SocketManager = new function() {
                 sg_manager.UPDATE_COMMANDS.emit(commands);
             });
 
-            socket.on("set_context_fields", function(json_context_fields) {
-                // The client is setting the context fields.
-                var context_fields = JSON.parse(json_context_fields);
-                sg_logging.debug("Setting context fields from client: " + json_context_fields);
-                sg_manager.UPDATE_CONTEXT_FIELDS.emit(context_fields);
+            socket.on("set_context_display", function(json_context_display) {
+                // The client is setting the context display.
+                var context_display = JSON.parse(json_context_display);
+                sg_logging.debug("Setting context display from client.");
+                sg_manager.UPDATE_CONTEXT_DISPLAY.emit(context_display);
             });
 
             socket.on("set_context_thumbnail", function(json_context_thumbnail) {

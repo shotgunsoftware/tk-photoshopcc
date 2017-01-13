@@ -17,7 +17,7 @@ var sg_manager = sg_manager || {};
 sg_event.create_event(sg_manager, "UPDATE_COMMANDS");
 
 // typically as an async response to a REQUEST_STATE event from the panel
-sg_event.create_event(sg_manager, "UPDATE_CONTEXT_FIELDS");
+sg_event.create_event(sg_manager, "UPDATE_CONTEXT_DISPLAY");
 
 // typically as an async response to a REQUEST_STATE event from the panel
 sg_event.create_event(sg_manager, "UPDATE_CONTEXT_THUMBNAIL");
