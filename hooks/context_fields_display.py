@@ -51,6 +51,8 @@ class ContextFieldsDisplay(HookBaseClass):
             fields = base_fields
             fields.extend([
                 "name",
+                "sg_status",
+                "sg_description"
             ])
 
         elif entity_type == "Asset":
@@ -90,51 +92,64 @@ class ContextFieldsDisplay(HookBaseClass):
         """
         Returns the html used to display the supplied context entity.
 
-        The entity will include all queried fields returned by
-        ``get_entity_fields``.
+        This method is called once the engine has queried values for the fields
+        returned from the ``get_entity_fields`` method. The supplied entity will
+        be populated with the queried values for those fields.
 
-        Note: This typically returns a table of field/value names that will
-        display next to the entity's thumbnail. The thumbnail query, download,
-        and display is handled by the engine.
+        Note: The default implementation returns a table of field/value names
+        that will display next to the entity's thumbnail. The thumbnail query,
+        download, and display is handled by the engine, so the html returned
+        here will be inserted to the right of that thumbnail.
 
         :param entity: Shotgun entity to display context fields for.
         :param sg_globals: A handle on the shotgun globals api provided via
-            the shotgunutils framework.
-        :returns: List of Shotgun fields
+            the shotgunutils framework. This is useful for querying display
+            names for fields, statuses, etc.
+        :returns: An html ``str`` that will be displayed in the panel.
 
         Here are some css classes that can be used to display text in various
         ways::
 
-            `sg_label` and `sg_label_td`:
-                The name of a queried field such as: "Type", "Name", "Shot",
-                "Asset", etc.
+             The name of a queried field such as: "Type", "Name", "Shot",
+             "Asset", or some other text that doesn't hold a value from SG or
+             doesn't need emphasis:
 
-            `sg_value` and `sg_value_td`:
-                The value of a queried field such as: "Character", "Shot01",
-                "Bunny", etc.
+                `sg_label` - grey label color
+                `sg_label_td` - same as `sg_label` but includes alignment and
+                    other style for use in table data cells.
+
+             The value of a queried field such as: "Character", "Shot01",
+             "Bunny", or some other text that holds a value from SG or needs
+             emphasis:
+
+                `sg_value` - brighter text
+                `sg_value_td` - same as `sg_value` but includes alignment and
+                    other style for use in table data cells.
+
+        See the default implementation for usage examples.
         """
 
         if entity is None:
             # site context
             return self._get_site_html()
 
+        # retrieve the html based on the entity type
         entity_type = entity.get("type")
 
-        if entity_type == "Project":
-            html = self._get_project_html(entity, sg_globals)
-        elif entity_type == "Asset":
+        if entity_type == "Asset":
             html = self._get_asset_html(entity, sg_globals)
         elif entity_type == "Shot":
             html = self._get_shot_html(entity, sg_globals)
         elif entity_type == "Task":
             html = self._get_task_html(entity, sg_globals)
         else:
-            # fallback
+            # fallback for other entity types.
             html = self._get_entity_html(entity, sg_globals)
 
         return html
 
     def _get_site_html(self):
+        """Returns html for displaying a site context."""
 
         site_url = self.parent.sgtk.shotgun_url
         site_display = site_url.split("//")[-1]
@@ -150,23 +165,6 @@ class ContextFieldsDisplay(HookBaseClass):
             </table>
             """.format(
                 name=site_link,
-            )
-
-    def _get_project_html(self, entity, sg_globals):
-        """Returns html for displaying a project context."""
-
-        project_link = self._get_entity_sg_link(entity["name"], entity)
-
-        return \
-            """
-            <table>
-              <tr>
-                <td class='sg_label_td'>Project:</td>
-                <td class='sg_value_td'>{name}</td>
-              </tr>
-            </table>
-            """.format(
-                name=project_link
             )
 
     def _get_asset_html(self, entity, sg_globals):
@@ -373,7 +371,7 @@ class ContextFieldsDisplay(HookBaseClass):
                         step_name=step_name,
                     )
 
-        # always include name and status
+        # always include name
         html = \
             """
             <table>
@@ -381,14 +379,37 @@ class ContextFieldsDisplay(HookBaseClass):
                 <td class='sg_label_td'>Task:</td>
                 <td class='sg_value_td'>{name}</td>
               </tr>
+            """.format(name=task_display)
+
+        # entity
+        if entity["entity"]:
+            linked_entity = entity["entity"]
+            if "name" in linked_entity:
+                linked_entity_display = linked_entity["name"]
+            else:
+                linked_entity_display = linked_entity["code"]
+
+            linked_entity_link = self._get_entity_sg_link(
+                linked_entity_display, linked_entity)
+            html += \
+                """
+                  <tr>
+                    <td class='sg_label_td'>{entity_type}:</td>
+                    <td class='sg_value_td'>{name}</td>
+                  </tr>
+                """.format(
+                    entity_type=linked_entity["type"],
+                    name=linked_entity_link,
+                )
+
+        # always show the status
+        html += \
+            """
               <tr>
                 <td class='sg_label_td'>Status:</td>
                 <td class='sg_value_td'>{status}</td>
               </tr>
-            """.format(
-                name=task_display,
-                status=status,
-            )
+            """.format(status=status)
 
         # artist
         if entity["task_assignees"]:
@@ -425,27 +446,6 @@ class ContextFieldsDisplay(HookBaseClass):
                     date=entity["due_date"],
                 )
 
-        # entity
-        if entity["entity"]:
-            linked_entity = entity["entity"]
-            if "name" in linked_entity:
-                linked_entity_display = linked_entity["name"]
-            else:
-                linked_entity_display = linked_entity["code"]
-
-            linked_entity_link = self._get_entity_sg_link(
-                linked_entity_display, linked_entity)
-            html += \
-                """
-                  <tr>
-                    <td class='sg_label_td'>{entity_type}:</td>
-                    <td class='sg_value_td'>{name}</td>
-                  </tr>
-                """.format(
-                    entity_type=linked_entity["type"],
-                    name=linked_entity_link,
-                )
-
         # close up the table
         html += "</table>"
 
@@ -454,32 +454,44 @@ class ContextFieldsDisplay(HookBaseClass):
     def _get_entity_html(self, entity, sg_globals):
         """Returns html for displaying a generic entity context."""
 
-        entity_link = self._get_entity_sg_link(entity["code"], entity)
+        # default to name, fall back to code
+        entity_display = entity.get("name", entity.get("code"))
+        entity_link = self._get_entity_sg_link(entity_display, entity)
+        entity_type = entity["type"]
 
-        status = sg_globals.get_status_display_name(
-            entity["sg_status_list"],
-            project_id=entity.get("project", {}).get("id")
-        )
-
-        entity_type = entity["type]"]
-
-        # always include name, type, and status
+        # always include type/name
         html = \
             """
             <table>
               <tr>
-                <td class='sg_label_td'>{entity_type}:td>
+                <td class='sg_label_td'>{entity_type}:</td>
                 <td class='sg_value_td'>{name}</td>
-              </tr>
-              <tr>
-                <td class='sg_label_td'>Status:</td>
-                <td class='sg_value_td'>{status}</td>
               </tr>
             """.format(
                 entity_type=entity_type,
                 name=entity_link,
-                status=status,
             )
+
+        # show a status if one can be determined
+        status = None
+        if "sg_status_list" in entity:
+            status = sg_globals.get_status_display_name(
+                entity["sg_status_list"],
+                project_id=entity.get("project", {}).get("id")
+            )
+        elif "sg_status" in entity:
+            status = entity["sg_status"]
+
+        if status:
+            html += \
+                """
+                  <tr>
+                    <td class='sg_label_td'>Status:</td>
+                    <td class='sg_value_td'>{status}</td>
+                  </tr>
+                """.format(
+                    status=status,
+                )
 
         # tags if there are any
         if entity["tag_list"]:
@@ -495,16 +507,20 @@ class ContextFieldsDisplay(HookBaseClass):
                 )
 
         # description if there is one
-        if entity["description"]:
+        desc = None
+        if "description" in entity:
+            desc = entity["description"]
+        elif "sg_description" in entity:
+            desc = entity["sg_description"]
+
+        if desc:
             html += \
                 """
                 <tr>
                   <td class='sg_label_td'>Desc:</td>
                   <td class='sg_value_td'>{desc}</td>
                 </tr>
-                """.format(
-                    desc=entity["description"]
-                )
+                """.format(desc=desc)
 
         # close up the table
         html += "</table>"

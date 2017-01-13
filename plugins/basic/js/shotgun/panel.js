@@ -27,31 +27,38 @@ sg_panel.Panel = new function() {
     // adobe interface
     const _cs_interface = new CSInterface();
 
+    // keep track of timeout ids for showing and hiding tooltips. these will be
+    // used over and over during session.
     var _show_tooltip_timeout_id = undefined;
     var _hide_tooltip_timeout_id = undefined;
 
+    // we keep track fo mouse position to make tooltips easier to manage
     var _cur_mouse_pos = {
         x: undefined,
         y: undefined
     };
 
+    // when context menu items are triggered this will be our lookup to know
+    // what we need to do
     var _context_menu_lookup = {};
 
+    // tells us whether the thumbnail data has already been retrieved for the
+    // current context.
     var _context_thumbnail_data = undefined;
 
     // ---- public methods
 
     this.clear = function() {
+        // clears any state for the current context.
 
         _context_thumbnail_data = undefined;
-
     };
 
     this.set_panel_loading_state = function() {
+        // Clears the panel's contents and resets it to the loading state.
 
         this.clear();
 
-        // Clears the panel's contents and resets it to the loading state.
         _set_bg_color("#222222");
 
         _show_header(false);
@@ -65,6 +72,7 @@ sg_panel.Panel = new function() {
     };
 
     this.set_context_loading_state = function() {
+        // clears the current context and displays it as loading a new one.
 
         this.clear();
 
@@ -93,115 +101,37 @@ sg_panel.Panel = new function() {
     };
 
     this.show_command_help = function(title, help, favorite) {
+        // Need to display a tooltip with the supplied info
 
+        // clear any existing tooltip hide timeout so that it doesn't disappear
+        // prematurely
         if (_hide_tooltip_timeout_id !== undefined) {
             clearTimeout(_hide_tooltip_timeout_id);
         }
 
+        // slight delay to mimic typical tooltip display
         _show_tooltip_timeout_id = setTimeout(
             function(){_on_show_command_help_timeout(help)}, 1500);
 
+        // update the text in the favorite header with this command's title
         if (favorite) {
             const fav_header_div = document.getElementById("sg_panel_favorites_header");
             fav_header_div.innerHTML = title;
         }
     };
 
-    const _on_show_command_help_timeout = function(help) {
-
-        if (!help || help === "null") {
-            help = "Could not find a description for this command. " +
-                   "Please check with the author of the app to see about " +
-                   "making a description available."
-        }
-
-        // mouse pos. always align left to right from mouse position.
-        // if help div will go past right and/or bottom border, adjust accordingly.
-
-        const mouse_x = _cur_mouse_pos.x;
-        const mouse_y = _cur_mouse_pos.y;
-
-        const command_div = document.elementFromPoint(mouse_x, mouse_y);
-
-        const offset = 8;
-        const margin = 8;
-
-
-        const help_div_id = sg_constants.panel_div_ids["command_help"];
-        const help_div = document.getElementById(help_div_id);
-
-        // reset to the top left to allow it to grow as needed when contest set
-        help_div.style.left = "0px";
-        help_div.style.top = "0px";
-
-        _set_command_help(help);
-
-        const help_div_rect = help_div.getBoundingClientRect();
-
-        const help_width = help_div_rect.width;
-        const help_height = help_div_rect.height;
-
-        const far_right = mouse_x + offset + margin + help_width;
-        const far_bottom = mouse_y + offset + margin + help_height;
-
-        const win_width = window.innerWidth;
-        const win_height = window.innerHeight;
-
-        const beyond_right = far_right - win_width + margin;
-        const beyond_bottom = far_bottom - win_height + margin;
-
-        var adjust_left = 0;
-        var adjust_top = 0;
-
-        if (beyond_right > 0) {
-            adjust_left = -1 * beyond_right;
-        }
-
-        if (beyond_bottom > 0) {
-            adjust_top = -1 * beyond_bottom;
-        }
-
-        const new_left = mouse_x + offset + adjust_left + window.scrollX;
-        const new_top = mouse_y + offset + adjust_top + window.scrollY;
-
-        help_div.style.left = new_left + "px";
-        help_div.style.top = new_top + "px";
-
-        const new_help_div_rect = help_div.getBoundingClientRect();
-
-        if (_point_in_rect(_cur_mouse_pos, new_help_div_rect)) {
-            // the mouse is now inside the help div. need to adjust more
-
-            var additional_offset_y = 0;
-
-            if (beyond_bottom > 0) {
-                // we already adjusted up, keep going. we know we need to get
-                // at least `offset` pixels past the mouse. then it's just the
-                // difference
-                additional_offset_y = -1 * (offset + new_help_div_rect.bottom - mouse_y);
-            }
-
-            help_div.style.top = new_top + additional_offset_y + "px";
-        }
-
-        _show_command_help(true);
-
-        _hide_tooltip_timeout_id = setTimeout(
-            function(){ self.hide_command_help()}, 5000);
-    };
-
-    const _point_in_rect = function(point, rect) {
-
-        return ((point.x >= rect.left) && (point.x <= rect.right) &&
-                (point.y >= rect.top)  && (point.y <= rect.bottom));
-    };
-
     this.hide_command_help = function() {
+        // need to hide the tooltip
+
+        // clear any existing timeouts for showing the tooltip.
         if (_show_tooltip_timeout_id !== undefined) {
             clearTimeout(_show_tooltip_timeout_id);
         }
+
+        // turn off the command help div
         _show_command_help(false);
 
+        // reset the favorite header text
         const fav_header_div = document.getElementById("sg_panel_favorites_header");
         if (fav_header_div) {
             fav_header_div.innerHTML = "Run a Command";
@@ -209,6 +139,8 @@ sg_panel.Panel = new function() {
     };
 
     this.email_support = function(subject, body) {
+        // Open an email in default email client.
+        // TODO: do we still want to do this?
 
         const mailto_url = "mailto:support@shotgunsoftware.com?" +
                            "subject=" + subject +
@@ -314,7 +246,10 @@ sg_panel.Panel = new function() {
         //_clear_messages();
 
     this.set_context_thumbnail = function(context_thumbnail_data) {
+        // given thumbnail from python, display it in the header
 
+        // keep the thumbnail data around in case this runs before the context
+        // fields display is returned
         _context_thumbnail_data = context_thumbnail_data;
 
         const thumb_path = context_thumbnail_data["thumb_path"];
@@ -328,8 +263,12 @@ sg_panel.Panel = new function() {
     };
 
     this.set_context_display = function(context_display) {
+        // given context display from python, display it in the header.
 
-        var context_thumb = "<img src='../images/default_Shot_thumb@2x.png' height='64px'>";
+        // TODO: different default image here?
+        var context_thumb = "<img src='../images/default_Shot_thumb_dark.png' height='64px'>";
+
+        // if we already have the thumbnail data, display that instead of the default
         if (_context_thumbnail_data !== undefined) {
             const thumb_path = _context_thumbnail_data["thumb_path"];
             context_thumb = "<img id='context_thumbnail' src='" + thumb_path + "'>";
@@ -351,6 +290,7 @@ sg_panel.Panel = new function() {
     };
 
     this.set_commands = function(all_commands) {
+        // Display the registered commands for the current context
 
         // Favorite commands
 
@@ -613,6 +553,7 @@ sg_panel.Panel = new function() {
     };
 
     const _on_critical_error = function(event) {
+        // Display critical error in the panel
 
         _set_bg_color("#222222");
         _clear_messages();
@@ -675,6 +616,7 @@ sg_panel.Panel = new function() {
     };
 
     const _on_mouse_move = function(event) {
+        // store the mouse position always
         _cur_mouse_pos = {
             x: event.clientX,
             y: event.clientY
@@ -682,6 +624,7 @@ sg_panel.Panel = new function() {
     };
 
     const _on_pyside_unavailable = function(event) {
+        // Display pyside unavailable error in the panel
 
         _set_bg_color("#222222");
         _clear_messages();
@@ -733,6 +676,7 @@ sg_panel.Panel = new function() {
 
     const _on_logged_message = function(event) {
         // Handles incoming log messages
+
         var level = event.data.level;
         var msg = event.data.message;
 
@@ -742,15 +686,20 @@ sg_panel.Panel = new function() {
         // maintained between js process and the spawned python process.
         // So we intercept messages formatted to relay progress.
         if (msg.includes("PLUGIN_BOOTSTRAP_PROGRESS")) {
+
             // It is possible that the message contains multiple
             // progress messages packaged together. Identify all of them
             // and update the progress bar.
             var regex_str = "\\|PLUGIN_BOOTSTRAP_PROGRESS,(\\d+(\\.\\d+)?),([^|]+)\\|";
+
             const multi_regex = new RegExp(regex_str, "gm");
+
             var matches = msg.match(multi_regex);
+
             if (!matches) {
                 return;
             }
+
             matches.forEach(function (match) {
                 const single_regex = new RegExp(regex_str, "m");
                 const msg_parts = match.match(single_regex);
@@ -767,6 +716,7 @@ sg_panel.Panel = new function() {
     };
 
     const _override_console_logging = function () {
+        // this method takes over the default js logging console
 
         var console = window.console;
         if (!console) return;
@@ -928,6 +878,99 @@ sg_panel.Panel = new function() {
         log.scrollTop = log.scrollHeight;
     };
 
+    const _on_show_command_help_timeout = function(help) {
+        // delay happened, still need to show the command
+
+        // if no help, display a default message
+        if (!help || help === "null") {
+            help = "Could not find a description for this command. " +
+                   "Please check with the author of the app to see about " +
+                   "making a description available."
+        }
+
+        // mouse pos. always align left to right from mouse position.
+        // if help div will go past right and/or bottom border, adjust accordingly.
+
+        const mouse_x = _cur_mouse_pos.x;
+        const mouse_y = _cur_mouse_pos.y;
+
+        const command_div = document.elementFromPoint(mouse_x, mouse_y);
+
+        const offset = 8;
+        const margin = 8;
+
+        // ---- calculate where to display the help message
+
+        const help_div_id = sg_constants.panel_div_ids["command_help"];
+        const help_div = document.getElementById(help_div_id);
+
+        // reset to the top left to allow it to grow as needed when contest set
+        help_div.style.left = "0px";
+        help_div.style.top = "0px";
+
+        _set_command_help(help);
+
+        const help_div_rect = help_div.getBoundingClientRect();
+
+        const help_width = help_div_rect.width;
+        const help_height = help_div_rect.height;
+
+        const far_right = mouse_x + offset + margin + help_width;
+        const far_bottom = mouse_y + offset + margin + help_height;
+
+        const win_width = window.innerWidth;
+        const win_height = window.innerHeight;
+
+        const beyond_right = far_right - win_width + margin;
+        const beyond_bottom = far_bottom - win_height + margin;
+
+        var adjust_left = 0;
+        var adjust_top = 0;
+
+        if (beyond_right > 0) {
+            adjust_left = -1 * beyond_right;
+        }
+
+        if (beyond_bottom > 0) {
+            adjust_top = -1 * beyond_bottom;
+        }
+
+        const new_left = mouse_x + offset + adjust_left + window.scrollX;
+        const new_top = mouse_y + offset + adjust_top + window.scrollY;
+
+        help_div.style.left = new_left + "px";
+        help_div.style.top = new_top + "px";
+
+        const new_help_div_rect = help_div.getBoundingClientRect();
+
+        if (_point_in_rect(_cur_mouse_pos, new_help_div_rect)) {
+            // the mouse is now inside the help div. need to adjust more
+
+            var additional_offset_y = 0;
+
+            if (beyond_bottom > 0) {
+                // we already adjusted up, keep going. we know we need to get
+                // at least `offset` pixels past the mouse. then it's just the
+                // difference
+                additional_offset_y = -1 * (offset + new_help_div_rect.bottom - mouse_y);
+            }
+
+            help_div.style.top = new_top + additional_offset_y + "px";
+        }
+
+        _show_command_help(true);
+
+        _hide_tooltip_timeout_id = setTimeout(
+            function(){ self.hide_command_help()}, 5000);
+    };
+
+    const _point_in_rect = function(point, rect) {
+        // returns a boolean indicating if the point is in the rect
+
+        return ((point.x >= rect.left) && (point.x <= rect.right) &&
+                (point.y >= rect.top)  && (point.y <= rect.bottom));
+    };
+
     const _select_text = function(div_id) {
         // Select all the text within the provided div
 
@@ -1028,8 +1071,6 @@ sg_panel.Panel = new function() {
         _set_info(message);
     };
 
-    // show/hide divs
-
     const _show_div = function(div_id, show_or_hide) {
         // Show or hide a div
         var display = "none";  // hide
@@ -1057,10 +1098,12 @@ sg_panel.Panel = new function() {
     const _show_command_help = _show_div_by_id("command_help");
 
     const _set_bg_color = function(color) {
+        // sets bg to supplied color
         document.body.style.background = color;
     };
 
     const _clear_messages = function() {
+        // hide all transient divs
         _show_info(false);
         _show_error(false);
         _show_warning(false);
@@ -1069,11 +1112,13 @@ sg_panel.Panel = new function() {
     };
 
     const _clear_info = function() {
+        // clears the info related divs
         _show_info(false);
         _show_progress(false);
     };
 
     const _format_email_error_message = function(error) {
+        // format an email message to help client get started
 
         const message = error.message;
         const stack = error.stack;
@@ -1096,4 +1141,3 @@ sg_panel.Panel = new function() {
     };
 };
 
-// TODO: mouse over icon should highlight text

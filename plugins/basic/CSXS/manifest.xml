@@ -74,8 +74,8 @@
                     <Menu>Shotgun</Menu>
                     <Geometry>
                         <Size>
-                            <Height>300</Height>
-                            <Width>300</Width>
+                            <Height>350</Height>
+                            <Width>400</Width>
                         </Size>
                     </Geometry>
                     <Icons>
