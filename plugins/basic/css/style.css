@@ -56,6 +56,10 @@ a:link.sg_value_link {
     color: #D7D7D7;
 }
 
+a:link.sg_value_link:hover {
+    color: #FFFFFF;
+}
+
 /* indicator for external links in context header */
 a:link.sg_value_link:after {
     content: url(../images/external_link.png);

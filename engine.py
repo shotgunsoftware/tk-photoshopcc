@@ -784,8 +784,7 @@ class AdobeEngine(sgtk.platform.Engine):
 
             # go ahead and forward the site thumbnail back to js
             data = dict(
-                # TODO: site thumbnail?
-                thumb_path="../images/default_Shot_thumb_dark.png",
+                thumb_path="../images/default_Site_thumb_dark.png",
                 url=self.sgtk.shotgun_url,
             )
             self.logger.debug(
@@ -849,13 +848,12 @@ class AdobeEngine(sgtk.platform.Engine):
                 )
             # no image, use a default image based on the entity type
             else:
-                if context_entity["type"] in ["Asset", "Shot", "Task"]:
+                if context_entity["type"] in ["Asset", "Project", "Shot", "Task"]:
                     thumb_path = "../images/default_%s_thumb_dark.png" % (
                         context_entity["type"])
+                    data["thumb_path"] = thumb_path
                 else:
-                    # TODO: switch when entity thumb available
-                    #thumb_path = "../images/default_entity_thumb_dark.png"
-                    thumb_path = "../images/default_Shot_thumb_dark.png"
+                    thumb_path = "../images/default_Entity_thumb_dark.png"
 
                 data = dict(
                     thumb_path=thumb_path,

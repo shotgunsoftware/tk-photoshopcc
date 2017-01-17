@@ -78,11 +78,10 @@ sg_panel.Panel = new function() {
 
         _set_bg_color("#4D4D4D");
 
-        // TODO: swap out the default thumb
         var header_html = "<table class='sg_context_header'>" +
                             "<tr style='display:flex; align-items:stretch'>" +
                               "<td id='context_thumbnail_data'>" +
-                                "<img id='context_thumbnail' src='../images/default_Shot_thumb_dark.png'>" +
+                                "<img id='context_thumbnail' src='../images/default_Site_thumb_dark.png'>" +
                               "</td>" +
                               "<td id='context_field_data'>" +
                                 "Loading context..." +
@@ -265,8 +264,7 @@ sg_panel.Panel = new function() {
     this.set_context_display = function(context_display) {
         // given context display from python, display it in the header.
 
-        // TODO: different default image here?
-        var context_thumb = "<img src='../images/default_Shot_thumb_dark.png' height='64px'>";
+        var context_thumb = "<img src='../images/default_Entity_thumb_dark.png' height='64px'>";
 
         // if we already have the thumbnail data, display that instead of the default
         if (_context_thumbnail_data !== undefined) {
