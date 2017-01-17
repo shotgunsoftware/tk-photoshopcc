@@ -363,17 +363,37 @@ sg_socket_io.SocketManager = new function() {
                 remote.receive(message);
             });
 
-            socket.on("set_state", function(json_state) {
-                // The client is setting the state.
-                var state = JSON.parse(json_state);
-                sg_logging.debug("Setting state from client: " + json_state);
+            socket.on("set_commands", function(json_commands) {
+                // The client is setting the commands
+                var commands = JSON.parse(json_commands);
+                sg_logging.debug("Setting commands from client: " + json_commands);
 
                 // TODO: we're emitting a manager event. perhaps we should
                 // have a set of events that come from socket.io? or perhaps
                 // this should call a method on the manager (tried, but doesn't
                 // seem to work!)? but this shouldn't really know about the
                 // manager. anyway, this works, so revisit as time permits.
-                sg_manager.UPDATE_STATE.emit(state);
+                sg_manager.UPDATE_COMMANDS.emit(commands);
+            });
+
+            socket.on("set_context_display", function(json_context_display) {
+                // The client is setting the context display.
+                var context_display = JSON.parse(json_context_display);
+                sg_logging.debug("Setting context display from client.");
+                sg_manager.UPDATE_CONTEXT_DISPLAY.emit(context_display);
+            });
+
+            socket.on("set_context_thumbnail", function(json_context_thumbnail) {
+                // The client is setting the context thumbnail path.
+                var context_thumbnail = JSON.parse(json_context_thumbnail);
+                sg_logging.debug("Setting context thumbnail from client: " + json_context_thumbnail);
+                sg_manager.UPDATE_CONTEXT_THUMBNAIL.emit(context_thumbnail);
+            });
+
+            socket.on("context_about_to_change", function() {
+                // The context is bout to change
+                sg_logging.debug("Sending context about to change from client.");
+                sg_manager.CONTEXT_ABOUT_TO_CHANGE.emit();
             });
 
             remote.setTransmitter(function(message, next) {

@@ -180,17 +180,45 @@ class AdobeBridge(Communicator):
         """
         super(AdobeBridge, self).ping()
 
-    def send_state(self, state):
+    def send_commands(self, commands):
         """
-        Responsible for forwarding the current SG state to javascript.
+        Responsible for forwarding the current engine commands to js.
 
         This method knows about the structure of the json that the js side
         expects. We provide display info and we also
         """
         # encode the python dict as json
-        json_state = json.dumps(state)
-        self.logger.debug("Sending state: %s" % json_state) 
-        self._io.emit("set_state", json_state)
+        json_commands = json.dumps(commands)
+        self.logger.debug("Sending commands: %s" % json_commands)
+        self._io.emit("set_commands", json_commands)
+
+    def send_context_display(self, context_display):
+        """
+        Responsible for forwarding the current engine context display to js.
+
+        This method knows about the structure of the json that the js side
+        expects. We provide display info and we also
+        """
+        # encode the python dict as json
+        json_context_display = json.dumps(context_display)
+        self.logger.debug("Sending context display.")
+        self._io.emit("set_context_display", json_context_display)
+
+    def send_context_thumbnail(self, context_thumbnail):
+        """
+        Responsible for forwarding the current engine context thumb path to js.
+
+        This method knows about the structure of the json that the js side
+        expects. We provide display info and we also
+        """
+        # encode the python dict as json
+        json_context_thumbnail = json.dumps(context_thumbnail)
+        self.logger.debug("Sending context thumb path: %s" % json_context_thumbnail)
+        self._io.emit("set_context_thumbnail", json_context_thumbnail)
+
+    def context_about_to_change(self):
+        self.logger.debug("Sending context about to change message.")
+        self._io.emit("context_about_to_change")
 
     ##########################################################################################
     # internal methods

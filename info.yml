@@ -29,6 +29,13 @@ configuration:
                 name: { type: str }
                 app_instance: { type: str }
 
+    context_fields_display_hook:
+        type: hook
+        default_value: "{self}/context_fields_display.py"
+        description:
+          Hook which controls how context fields are queried and displayed in
+          the context header.
+
     debug_logging:
         type: bool
         description: Controls whether debug messages should be emitted to the logger
@@ -45,3 +52,5 @@ description: "Shotgun Integration for Adobe CC"
 requires_shotgun_version:
 requires_core_version: "v0.18.18"
 
+frameworks:
+  - {"name": "tk-framework-shotgunutils", "version": "v4.x.x"}

@@ -10,6 +10,7 @@ Pipeline Toolkit Source Code License. All rights not expressly granted therein
 are reserved by Shotgun Software Inc.
 */
 
+/* fonts... bundled Open Sans fonts which are the SG approved fonts */
 @font-face {
     font-family: "Open Sans";
     src: url("../fonts/OpenSans/OpenSans-Regular.ttf");
@@ -26,6 +27,7 @@ are reserved by Shotgun Software Inc.
     font-style: italic;
 }
 
+/* high level defs */
 body {
     color: #D7D7D7;
     font-family: "Open Sans",Verdana,sans-serif;
@@ -35,6 +37,7 @@ body {
     background-color: #222222;
 }
 
+/* no underlining links */
 a {
     text-decoration: none;
 }
@@ -48,20 +51,63 @@ a:link.sg_small_link {
     font-size: 10px;
 }
 
-a:link.sg_field_value_link {
+/* links typically found in context header. not SG blue */
+a:link.sg_value_link {
     color: #D7D7D7;
 }
 
+a:link.sg_value_link:hover {
+    color: #FFFFFF;
+}
+
+/* indicator for external links in context header */
+a:link.sg_value_link:after {
+    content: url(../images/external_link.png);
+    margin-left: 4px;
+}
+
+/* white on hover */
 a:hover {
     color: #FFFFFF;
 }
 
+/* shift links slightly when clicking */
 a:active {
     position: relative;
     top: 1px;
     left: 1px
 }
 
+/* container for the context field info */
+#context_field_data {
+    padding-left: 8px;
+    padding-top: 0px;
+    text-align: left;
+    vertical-align: top;
+    width: 100%;
+    flex: 1;
+    display: inline-block;
+}
+
+/* table for field info */
+#context_field_table {
+    vertical-align: top;
+}
+
+/* thumbnail td container */
+#context_thumbnail_data {
+    display: table-cell;
+    text-align: left;
+    vertical-align: top;
+}
+
+/* the thumbnail itself */
+#context_thumbnail {
+    max-width: 178px;
+    max-height: 100px;
+}
+
+/* the first image that shows up when panel is loading */
 #loading_img {
    position: absolute;
    top: 50%;
@@ -72,6 +118,7 @@ a:active {
    margin-left: -135px;
 }
 
+/* error display */
 div.sg_error {
     width: 90%;
     height: 100px;
@@ -85,6 +132,7 @@ div.sg_error {
     text-align: left;
 }
 
+/* scrollbar styling */
 ::-webkit-scrollbar {
     width: 8px;
     height: 8px;
@@ -108,8 +156,9 @@ div.sg_error {
 #sg_panel_contents {
 }
 
+/* the container for the favorite commands */
 #sg_panel_favorites {
-    background-color: #4D4D4D;
+    background-color: #525152;
     text-align: left;
     flex-wrap: wrap;
     padding-left: 14px;
@@ -125,8 +174,14 @@ div.sg_error {
     padding-left: 6px;
 }
 
+/* grayscale images in favorites until hovered */
 .sg_panel_command_img {
     -webkit-filter: grayscale(1);
+    width: 26px;
+    height: 26px;
+}
+
+.sg_panel_command_other_img {
     width: 26px;
     height: 26px;
 }
@@ -135,6 +190,7 @@ div.sg_error {
     -webkit-filter: grayscale(0);
 }
 
+/* regular command button */
 .sg_command_button {
     display: inline-block;
     border-radius: 3px;
@@ -153,11 +209,13 @@ div.sg_error {
     vertical-align: middle;
 }
 
+/* container for the commands */
 #sg_panel_commands {
     margin: 0px;
-    background-color: #4D4D4D;
+    background-color: #525152;
 }
 
+/* a single command div */
 .sg_panel_command {
     border-bottom: 1px solid #373737;
     height: 34px;
@@ -185,6 +243,7 @@ div.sg_error {
     color: white;
 }
 
+/* mouseover tooltip styling */
 #sg_panel_command_help {
     max-width: 186px;
     display: inline;
@@ -206,6 +265,7 @@ div.sg_error {
    width:100%;
 }
 
+/* the blue status popup section */
 #sg_status_info {
     text-align: center;
     height: 22px;
@@ -214,21 +274,47 @@ div.sg_error {
     background-color: rgba(24, 167, 227, .75);
 }
 
+/* the main context header section */
 .sg_context_header {
     width: 100%;
-    padding: 8px;
+    padding-left: 18px;
+    padding-right: 8px;
+    padding-top: 8px;
+    padding-bottom: 8px;
     border-bottom: 2px solid #373737;
     background-color: #424242;
+
 }
 
-.sg_field_name {
-    text-align: right;
-    color: #5C5C5C;
+/* general styling for labels (less emphasis) */
+.sg_label {
+    color: #777777;
 }
 
-.sg_field_value {
-    text-align: left;
+/* general styling for values (more emphasis) */
+.sg_value {
     color: #D7D7D7;
+}
+
+/* context field label td styling */
+.sg_label_td {
+    display: table-cell;
+    vertical-align: top;
+    text-align: right;
+    color: #777777;
+}
+
+/* context field value td styling */
+.sg_value_td {
+    display: table-cell;
+    text-align: left;
+    vertical-align: top;
+    color: #D7D7D7;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2; /* number of lines to show */
 }
 
 .sg_container {
@@ -274,6 +360,7 @@ div.sg_error {
     background-color: rgba(24, 167, 227, .75);
 }
 
+/* console styling */
 #sg_panel_console {
     position: fixed;
     bottom: 0px;
