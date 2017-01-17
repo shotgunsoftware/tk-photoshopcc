@@ -35,12 +35,6 @@ sg_manager.Manager = new function() {
     // adobe interface
     const _cs_interface = new CSInterface();
 
-    // state request timeout duration in milliseconds
-    const __state_request_timeout = 10000;
-
-    // keeps track of when we're waiting for a state
-    var __awaiting_state = false;
-
     // remember if/why python was disconnected
     var __python_disconnected = false;
     var __python_disconnected_error = undefined;
@@ -544,14 +538,6 @@ sg_manager.Manager = new function() {
             }
         );
 
-        // Keeps track of when we receive a state
-        sg_manager.UPDATE_STATE.connect(
-            function(state) {
-                sg_logging.debug("No longer awaiting state.");
-                __awaiting_state = false;
-            }
-        );
-
         sg_panel.REQUEST_STATE.connect(
             function() {
                 sg_logging.debug("State requested.");
@@ -562,20 +548,8 @@ sg_manager.Manager = new function() {
                         _emit_python_critical_error(__python_disconnected_error);
                     }
                 } else {
-                    __awaiting_state = true;
                     sg_logging.debug("Awaiting new state from Python...");
                     sg_socket_io.rpc_state_requested();
-                    setTimeout(
-                        function() {
-                            if ( __awaiting_state ) {
-                                _emit_python_critical_error({
-                                    message: "Timed out waiting for Shotgun state from Python!",
-                                    stack: undefined
-                                })
-                            }
-                        },
-                        __state_request_timeout
-                    );
                 }
             }
         );

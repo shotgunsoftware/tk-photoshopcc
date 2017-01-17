@@ -186,14 +186,6 @@ sg_panel.Panel = new function() {
                 _make_persistent(true);
             }
 
-            // request new state from the manager. if the python process hasn't
-            // started up yet, this may not result in a response. however, the
-            // python process should send the initial state after loading
-            // initially anyway.
-            // TODO: handle case where manager or python don't respond
-            // TODO: use setTimeout to display an error
-            sg_panel.REQUEST_STATE.emit();
-
             // track the mouse
             document.onmousemove = _on_mouse_move;
 
@@ -247,6 +239,8 @@ sg_panel.Panel = new function() {
     this.set_context_thumbnail = function(context_thumbnail_data) {
         // given thumbnail from python, display it in the header
 
+        sg_logging.debug("Setting thumbnail.");
+
         // keep the thumbnail data around in case this runs before the context
         // fields display is returned
         _context_thumbnail_data = context_thumbnail_data;
@@ -264,7 +258,9 @@ sg_panel.Panel = new function() {
     this.set_context_display = function(context_display) {
         // given context display from python, display it in the header.
 
-        var context_thumb = "<img src='../images/default_Entity_thumb_dark.png' height='64px'>";
+        sg_logging.debug("Setting context.");
+
+        var context_thumb = "<img id='context_thumbnail' src='../images/default_Site_thumb_dark.png'>";
 
         // if we already have the thumbnail data, display that instead of the default
         if (_context_thumbnail_data !== undefined) {
@@ -289,6 +285,8 @@ sg_panel.Panel = new function() {
 
     this.set_commands = function(all_commands) {
         // Display the registered commands for the current context
+
+        sg_logging.debug("Setting commands.");
 
         // Favorite commands
 
@@ -460,7 +458,7 @@ sg_panel.Panel = new function() {
                           Enabled="true" \
                           Checked="false"/>';
 
-        if ( process.env.SHOTGUN_ADOBE_NETWORK_DEBUG || process.env.SHOTGUN_ADOBECC_TESTS_ROOT ) {
+        if ( process.env.SHOTGUN_ADOBE_NETWORK_DEBUG || process.env.SHOTGUN_ADOBE_TESTS_ROOT ) {
             flyout_xml += '<MenuItem Id="sg_dev_debug" \
                               Label="Chrome Console..." \
                               Enabled="true" \
@@ -472,7 +470,7 @@ sg_panel.Panel = new function() {
                           Enabled="true" \
                           Checked="false"/>';
 
-        if (process.env["SHOTGUN_ADOBE_TESTS_ROOT"]) {
+        if (process.env.SHOTGUN_ADOBE_TESTS_ROOT) {
             flyout_xml += '   <MenuItem Id="sg_dev_tests" \
                                         Label="Run Tests" \
                                         Enabled="true" \
@@ -550,15 +548,11 @@ sg_panel.Panel = new function() {
         }
     };
 
-    const _on_critical_error = function(event) {
+    const _on_critical_error = function(message, stack) {
         // Display critical error in the panel
 
         _set_bg_color("#222222");
         _clear_messages();
-
-        const message = event.data.message;
-
-        const stack = event.data.stack;
 
         sg_logging.error("Critical: " + message);
 
@@ -578,7 +572,7 @@ sg_panel.Panel = new function() {
             "</center><br>";
 
         const subject = encodeURIComponent("Adobe Integration Error");
-        const body = _format_email_error_message(event.data);
+        const body = _format_email_error_message(message, stack);
 
         if (typeof stack !== "undefined") {
             contents_html +=
@@ -989,7 +983,13 @@ sg_panel.Panel = new function() {
         // Sets up all the event handling callbacks.
 
         // Handle python process disconnected
-        sg_manager.CRITICAL_ERROR.connect(_on_critical_error);
+        sg_manager.CRITICAL_ERROR.connect(
+            function(event) {
+                const message = event.data.message;
+                const stack = event.data.stack;
+                _on_critical_error(message, stack);
+            }
+        );
 
         // Handle pyside not being installed
         sg_manager.PYSIDE_NOT_AVAILABLE.connect(_on_pyside_unavailable);
@@ -1115,11 +1115,8 @@ sg_panel.Panel = new function() {
         _show_progress(false);
     };
 
-    const _format_email_error_message = function(error) {
+    const _format_email_error_message = function(message, stack) {
         // format an email message to help client get started
-
-        const message = error.message;
-        const stack = error.stack;
 
         return encodeURIComponent(
             "Greetings Shotgun Support Team!\n\n" +
@@ -1137,5 +1134,6 @@ sg_panel.Panel = new function() {
 
         // TODO: include current version info of core, app, CC, etc.
     };
+
 };
 
