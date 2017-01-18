@@ -367,9 +367,6 @@ sg_manager.Manager = new function() {
     const _get_open_port = function(port_found_callback) {
         // Find an open port and send it to the supplied callback
 
-        // TODO: allow specification of an explicit port to use for debugging
-        //    perhaps something that is exposed during the build process?
-
         // https://nodejs.org/api/http.html#http_class_http_server
         const http = require('http');
 
