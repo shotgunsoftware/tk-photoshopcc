@@ -688,7 +688,9 @@ class AdobeEngine(sgtk.platform.Engine):
             "shotgun_logo.png"
         )
 
-        context_menu_cmds.append(
+        jump_commands = []
+
+        jump_commands.append(
             dict(
                 uid=self.__jump_to_sg_command_id,
                 display_name="Jump to Shotgun",
@@ -705,7 +707,7 @@ class AdobeEngine(sgtk.platform.Engine):
             "shotgun_folder.png"
         )
 
-        context_menu_cmds.append(
+        jump_commands.append(
             dict(
                 uid=self.__jump_to_fs_command_id,
                 display_name="Jump to File System",
@@ -721,8 +723,13 @@ class AdobeEngine(sgtk.platform.Engine):
         # sort the other commands alphabetically by display name
         commands = sorted(commands, key=lambda d: d["display_name"])
 
-        # sort the context menu commands alphabetically by display name
-        context_menu_cmds = sorted(context_menu_cmds, key=lambda d: d["display_name"])
+        # sort the context menu commands alphabetically by display name. We
+        # force the Jump to Shotgun and Jump to Filesystem commands onto the
+        # front of the list to match other integrations.
+        context_menu_cmds = jump_commands + sorted(
+            context_menu_cmds,
+            key=lambda d: d["display_name"],
+        )
 
         # ---- populate the state structure to hand over to adobe
 
@@ -740,11 +747,27 @@ class AdobeEngine(sgtk.platform.Engine):
         """
         Sets up the connection timer that handles monitoring of the live
         connection, as well as the triggering of message processing.
+
+        :param bool force: Forces the creation of a new connection timer,
+                           even if one already exists. When this occurs,
+                           if a timer already exists, it will be stopped.
         """
         if self._CHECK_CONNECTION_TIMER is None or force:
-            from sgtk.platform.qt import QtCore
-
             self.log_debug("Creating connection timer...")
+
+            if self._CHECK_CONNECTION_TIMER:
+                self.log_debug(
+                    "Connection timer already exists, so it will be stopped."
+                )
+
+                try:
+                    self._CHECK_CONNECTION_TIMER.stop()
+                except Exception:
+                    # No reason to be alarmed here. Just let it go and it'll
+                    # garbage collected when appropriate.
+                    pass
+
+            from sgtk.platform.qt import QtCore
 
             timer = QtCore.QTimer(
                 parent=QtCore.QCoreApplication.instance(),

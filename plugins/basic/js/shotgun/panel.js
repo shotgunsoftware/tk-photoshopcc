@@ -463,12 +463,11 @@ sg_panel.Panel = new function() {
                               Label="Chrome Console..." \
                               Enabled="true" \
                               Checked="false"/>';
+            flyout_xml += '<MenuItem Id="sg_dev_reload" \
+                              Label="Reload Shotgun Extension" \
+                              Enabled="true" \
+                              Checked="false"/>';
         }
-
-        flyout_xml += '<MenuItem Id="sg_dev_reload" \
-                          Label="Reload Shotgun Extension" \
-                          Enabled="true" \
-                          Checked="false"/>';
 
         if (process.env.SHOTGUN_ADOBE_TESTS_ROOT) {
             flyout_xml += '   <MenuItem Id="sg_dev_tests" \
