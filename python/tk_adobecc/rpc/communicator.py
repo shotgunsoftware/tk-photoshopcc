@@ -19,7 +19,7 @@ import logging
 sys.path.append(os.path.join(os.path.dirname(__file__), "packages"))
 
 import socketIO_client.exceptions
-from socketIO_client import SocketIO, BaseNamespace
+from socketIO_client import SocketIO
 from .proxy import ProxyScope, ProxyWrapper, ClassInstanceProxyWrapper
 
 class Communicator(object):
@@ -35,6 +35,7 @@ class Communicator(object):
     _WAIT_INTERVAL = 0.01
     _RPC_EXECUTE_COMMAND = "execute_command"
     _REGISTRY = dict()
+    _COMMAND_REGISTRY = dict()
 
     def __init__(self, port=8090, host="localhost", disconnect_callback=None, logger=None, network_debug=False):
         """
@@ -90,6 +91,7 @@ class Communicator(object):
             instance.logger.debug("Reusing Communicator by id '%s'" % identifier)
         else:
             instance = cls(*args, **kwargs)
+            instance._identifier = identifier
             cls._REGISTRY[identifier] = instance
             instance.logger.debug("New Communicator of id '%s'" % identifier)
         return instance
@@ -135,6 +137,13 @@ class Communicator(object):
 
     ##########################################################################################
     # RPC
+
+    def disconnect(self):
+        """
+        Disconnects from the socket.io server.
+        """
+        self._io.disconnect()
+        del self._REGISTRY[self._identifier]
 
     def ping(self):
         """
@@ -415,6 +424,7 @@ class Communicator(object):
                 self._RESULTS[uid] = result.get("result")
             except KeyError:
                 self.logger.error("RPC command (UID=%s) failed!" % uid)
+                self.logger.error("Failed command payload: %s" % self._COMMAND_REGISTRY[uid])
                 self.logger.debug("Failure raw response: %s" % response)
                 self.logger.debug("Failure results: %s" % result)
                 raise RuntimeError("RPC command (UID=%s) failed!" % uid)
@@ -511,6 +521,8 @@ class Communicator(object):
             proxy_object=proxy_object,
             params=params,
         )
+
+        self._COMMAND_REGISTRY[payload["id"]] = payload
 
         self._io.emit(self._RPC_EXECUTE_COMMAND, payload)
         results = self._wait_for_response(payload["id"])

@@ -351,13 +351,22 @@ sg_socket_io.SocketManager = new function() {
 
         sg_logging.info("Setting up connection handling...");
 
+        const remote = new jrpc();
+        remote.expose(new RPCInterface());
+
+        remote.setTransmitter(function(message, next) {
+            try {
+                io.emit("return", message);
+                return next(false);
+            } catch (e) {
+                return next(true);
+            }
+        });
+
         // Define the root namespace interface. This will receive all
         // commands for interacting with ExtendScript.
         io.on("connection", function(socket) {
             sg_logging.info("Connection received!");
-
-            var remote = new jrpc();
-            remote.expose(new RPCInterface());
 
             socket.on("execute_command", function(message) {
                 remote.receive(message);
@@ -391,18 +400,9 @@ sg_socket_io.SocketManager = new function() {
             });
 
             socket.on("context_about_to_change", function() {
-                // The context is bout to change
+                // The context is about to change
                 sg_logging.debug("Sending context about to change from client.");
                 sg_manager.CONTEXT_ABOUT_TO_CHANGE.emit();
-            });
-
-            remote.setTransmitter(function(message, next) {
-                try {
-                    io.emit("return", message);
-                    return next(false);
-                } catch (e) {
-                    return next(true);
-                }
             });
         });
     };
