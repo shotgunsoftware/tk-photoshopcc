@@ -61,10 +61,12 @@ a:link.sg_value_link:hover {
 }
 
 /* indicator for external links in context header */
+/*
 a:link.sg_value_link:after {
     content: url(../images/external_link.png);
     margin-left: 4px;
 }
+*/
 
 /* white on hover */
 a:hover {
@@ -370,6 +372,13 @@ div.sg_error {
     display: none;
 }
 
+#sg_panel_console_tag {
+    display: inline;
+    color: #373737;
+    border-right: 1px solid #373737;
+    padding-right: 3px;
+}
+
 #sg_panel_console_header {
     position: fixed;
     top: 0px;
@@ -396,20 +405,24 @@ div.sg_error {
 #sg_log_message {
     color: #D7D7D7;
     display: inline;
+    padding-left: 3px;
 }
 
 #sg_log_message_debug {
     color: #18A7E3;
     display: inline;
+    padding-left: 3px;
 }
 
 #sg_log_message_warn {
     color: rgb(226, 159, 74);
     display: inline;
+    padding-left: 3px;
 }
 
 #sg_log_message_error {
     color: rgb(226, 74, 74);
     display: inline;
+    padding-left: 3px;
 }
 
