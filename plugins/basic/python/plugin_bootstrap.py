@@ -70,6 +70,7 @@ def get_sgtk_logger(sgtk):
 
     # initializes the file where logging output will go
     sgtk.LogManager().initialize_base_file_handler(engine_name)
+    sgtk_logger.debug("Log dir: %s" % (sgtk.LogManager().log_folder))
 
     return sgtk_logger, bootstrap_log_handler
 

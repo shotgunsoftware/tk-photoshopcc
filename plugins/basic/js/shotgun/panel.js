@@ -578,10 +578,10 @@ sg_panel.Panel = new function() {
             contents_html +=
                 "<br>If you encounter this problem consistently or have any " +
                 "other questions, please send the following error and a " +
-                "description of the steps to reproduce the problem to: " +
+                "description of the steps to reproduce the problem to " +
                 "<a href='#' onClick='sg_panel.Panel.email_support(\"" +
                     subject + "\", \"" + body + "\")'>" +
-                    "Shotgun Support" +
+                    "support@shotgunsoftware.com" +
                 "</a>." +
                 "<br><br>" +
                 "<center>" +
@@ -592,10 +592,10 @@ sg_panel.Panel = new function() {
         } else {
             contents_html +=
                 "<br>If you encounter this problem consistently or have any " +
-                "other questions, please send the steps to reproduce to: " +
+                "other questions, please send the steps to reproduce to " +
                 "<a href='#' onClick='sg_panel.Panel.email_support(\"" +
                     subject + "\", \"" + body + "\")'>" +
-                    "Shotgun Support" +
+                    "support@shotgunsoftware.com" +
                 "</a>.";
         }
 
@@ -625,9 +625,14 @@ sg_panel.Panel = new function() {
 
         _show_header(false);
 
+        var python_display = "system <samp>python</samp>";
+        if (process.env.SHOTGUN_ADOBE_PYTHON) {
+            python_display = "<samp>" + process.env.SHOTGUN_ADOBE_PYTHON + "</samp>";
+        }
+
         var contents_html = "<div class='sg_error_message'>" +
             "The Shotgun integration failed to load because <samp>PySide" +
-            "</samp> is not installed." +
+            "</samp> is not installed (Running " + python_display + ")." +
             "</div>";
 
         contents_html +=
@@ -648,14 +653,17 @@ sg_panel.Panel = new function() {
             "*** Please enter your questions here... ***\n\n"
         );
 
+        var app_name = _cs_interface.getHostEnvironment().appName;
+        const app_display_name = sg_constants.product_info[app_name].display_name;
+
         contents_html +=
-            "<br>Once you have <samp>PySide</samp> installed, restart this " +
-            "application to load the Shotgun integration.<br><br> " +
+            "<br>Once you have <samp>PySide</samp> installed, restart " +
+            app_display_name + " to load the Shotgun integration.<br><br> " +
             "If you believe the error is incorrect or you have any further " +
-            "questions, please contact: " +
+            "questions, please contact " +
             "<a href='#' onClick='sg_panel.Panel.email_support(\"" +
             subject + "\", \"" + body + "\")'>" +
-            "Shotgun Support" +
+            "support@shotgunsoftware.com" +
             "</a>.";
 
         contents_html = "<div class='sg_container'>" + contents_html + "</div>";
@@ -816,21 +824,25 @@ sg_panel.Panel = new function() {
             div_id = "sg_log_message_error"
         }
 
-        // just a little indicator so that we know if the log message came from
-        // (javascript or python) when looking in the panel console.
-        if (log_source == "js") {
-            msg = " > " + msg;
-        } else {
-            msg = ">> " + msg;
-        }
+        // append the <pre> element to the log div
+        const log = document.getElementById("sg_panel_console_log");
 
         // create a <pre> element and insert the msg
         const node = document.createElement("pre");
         node.setAttribute("id", div_id);
         node.appendChild(document.createTextNode(msg));
 
-        // append the <pre> element to the log div
-        const log = document.getElementById("sg_panel_console_log");
+        // just a little indicator so that we know if the log message came from
+        // (javascript or python) when looking in the panel console.
+        const tag = document.createElement("pre");
+        tag.setAttribute("id", "sg_panel_console_tag");
+        if (log_source == "js") {
+            tag.appendChild(document.createTextNode("js"))
+        } else {
+            tag.appendChild(document.createTextNode("py"))
+        }
+
+        log.appendChild(tag);
         log.appendChild(node);
         log.appendChild(document.createElement("br"));
 

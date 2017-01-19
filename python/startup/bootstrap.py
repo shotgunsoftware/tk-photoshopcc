@@ -52,18 +52,20 @@ def bootstrap(engine_name, context, app_path, app_args, **kwargs):
 
     # the basic plugin needs to be installed in order to launch the adobe
     # engine. we need to make sure the plugin is installed and up-to-date.
-    logger.debug("Ensuring adobe extension is up-to-date...")
-    try:
-        _ensure_extension_up_to_date(context)
-    except Exception, e:
-        import traceback
-        exc = traceback.format_exc()
-        raise Exception(
-            "There was a problem ensuring the Adobe integration extension was "
-            "up-to-date with your toolkit engine. If this is a recurring issue "
-            "please contact support@shotgunsoftware.com. The specific error "
-            "message encountered was:\n'%s'." % (exc,)
-        )
+    # only do this if the SHOTGUN_ADOBE_DEVELOP environment variable is not set.
+    if "SHOTGUN_ADOBE_DEVELOP" not in os.environ:
+        logger.debug("Ensuring adobe extension is up-to-date...")
+        try:
+            _ensure_extension_up_to_date(context)
+        except Exception, e:
+            import traceback
+            exc = traceback.format_exc()
+            raise Exception(
+                "There was a problem ensuring the Adobe integration extension "
+                "was up-to-date with your toolkit engine. If this is a "
+                "recurring issue please contact support@shotgunsoftware.com. "
+                "The specific error message encountered was:\n'%s'." % (exc,)
+            )
 
     return (app_path, app_args)
 
