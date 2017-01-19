@@ -458,7 +458,7 @@ sg_panel.Panel = new function() {
                           Enabled="true" \
                           Checked="false"/>';
 
-        if ( process.env.SHOTGUN_ADOBE_NETWORK_DEBUG || process.env.SHOTGUN_ADOBE_TESTS_ROOT ) {
+        if ( process.env.SHOTGUN_ADOBE_NETWORK_DEBUG || process.env.SHOTGUN_ADOBE_TESTS_ROOT || process.env.TK_DEBUG ) {
             flyout_xml += '<MenuItem Id="sg_dev_debug" \
                               Label="Chrome Console..." \
                               Enabled="true" \

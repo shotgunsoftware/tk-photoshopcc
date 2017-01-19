@@ -50,6 +50,7 @@ class AdobeEngine(sgtk.platform.Engine):
     _LOCK = threading.Lock()
     _FAILED_PINGS = 0
     _CONTEXT_CACHE = dict()
+    _CHECK_CONNECTION_TIMER = None
 
     ############################################################################
     # context changing
@@ -104,8 +105,11 @@ class AdobeEngine(sgtk.platform.Engine):
         self._app_id = self.SHOTGUN_ADOBE_APPID
 
         # Keep track of the context we had when we launched. We might need
-        # to set it again once the user starts changing active documents.
-        self._launch_context = self.context
+        # to set it again once the user starts changing active documents. We
+        # are pulling the serialized context from the environment here because
+        # we want the LAUNCH context, and not what might have been set prior to
+        # an engine restart.
+        self._launch_context = sgtk.context.deserialize(os.environ["TANK_CONTEXT"])
 
         # constant command uid lookups for these special commands
         self.__jump_to_sg_command_id = self.__get_command_uid()
@@ -164,42 +168,50 @@ class AdobeEngine(sgtk.platform.Engine):
         # keep a list of handles on the launched dialogs
         self.__qt_dialogs = []
 
+    def post_app_init(self):
+        """
+        Runs after all apps have been initialized.
+        """
+        self.__setup_connection_timer()
+
+        # now that qt is setup and the engine is ready to go, forward the
+        # current state back to the adobe side.
+        self.__send_state()
+
     def destroy_engine(self):
         """
         Called when the engine should tear down itself and all its apps.
         """
+        # No longer poll for new messages from this engine.
+        if self._CHECK_CONNECTION_TIMER:
+            self._CHECK_CONNECTION_TIMER.stop()
 
-        # gracefully stop our data retriever. This call
-        # will block util the currently processing request has completed.
+        # We're going to hide and force the garbage collection of any dialogs
+        # that we know about. This will stop memory leaks, and is also prudent
+        # since we're severing the socket.io connection that will allow them
+        # to function properly.
+        for dialog in self.__qt_dialogs:
+            dialog.hide()
+            dialog.setParent(None)
+            dialog.deleteLater()
+
+        # Gracefully stop our data retriever. This call will block until the
+        # currently-processing request has completed.
         self.__sg_data.stop()
+
+        # Disconnect from the server.
+        self.adobe.disconnect()
 
     def post_qt_init(self):
         """
         Called externally once a ``QApplication`` has been created and completes
         the engine setup process.
         """
-
-        from sgtk.platform.qt import QtCore
-
         # since this is running in our own Qt event loop, we'll use the bundled
         # dark look and feel. breaking encapsulation to do so.
         self.logger.debug("Initializing default styling...")
         self._initialize_dark_look_and_feel()
-
-        # setup the check connection timer.
-        self._check_connection_timer = QtCore.QTimer(
-            parent=QtCore.QCoreApplication.instance(),
-        )
-        self._check_connection_timer.timeout.connect(self._check_connection)
-
-        # The class variable is in seconds, so multiply to get milliseconds.
-        self._check_connection_timer.start(
-            self.SHOTGUN_ADOBE_HEARTBEAT_INTERVAL * 1000.0,
-        )
-
-        # now that qt is setup and the engine is ready to go, forward the
-        # current state back to the adobe side.
-        self.__send_state()
+        self.__setup_connection_timer(force=True)
 
     def register_command(self, name, callback, properties=None):
         """
@@ -724,11 +736,34 @@ class AdobeEngine(sgtk.platform.Engine):
         self.logger.debug("Sending commands: %s" % str(all_commands))
         self.adobe.send_commands(all_commands)
 
+    def __setup_connection_timer(self, force=False):
+        """
+        Sets up the connection timer that handles monitoring of the live
+        connection, as well as the triggering of message processing.
+        """
+        if self._CHECK_CONNECTION_TIMER is None or force:
+            from sgtk.platform.qt import QtCore
+
+            self.log_debug("Creating connection timer...")
+
+            timer = QtCore.QTimer(
+                parent=QtCore.QCoreApplication.instance(),
+            )
+
+            timer.timeout.connect(self._check_connection)
+
+            # The class variable is in seconds, so multiply to get milliseconds.
+            timer.start(
+                self.SHOTGUN_ADOBE_HEARTBEAT_INTERVAL * 1000.0,
+            )
+
+            self._CHECK_CONNECTION_TIMER = timer
+            self.log_debug("Connection timer created and started.")
+
     def _jump_to_sg(self):
         """
         Jump to shotgun, launch web browser
         """
-
         from sgtk.platform.qt import QtGui, QtCore
         url = self.context.shotgun_url
         QtGui.QDesktopServices.openUrl(QtCore.QUrl(url))
@@ -738,7 +773,6 @@ class AdobeEngine(sgtk.platform.Engine):
         """
         Jump from context to FS
         """
-
         # launch one window for each location on disk
         paths = self.context.filesystem_locations
         self.logger.debug("FS paths: %s" % (str(paths),))
