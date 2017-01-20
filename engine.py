@@ -12,6 +12,8 @@ import sys
 import os
 import threading
 
+from contextlib import contextmanager
+
 import sgtk
 
 
@@ -51,6 +53,7 @@ class AdobeEngine(sgtk.platform.Engine):
     _FAILED_PINGS = 0
     _CONTEXT_CACHE = dict()
     _CHECK_CONNECTION_TIMER = None
+    _CONTEXT_CHANGES_DISABLED = False
 
     ############################################################################
     # context changing
@@ -103,13 +106,6 @@ class AdobeEngine(sgtk.platform.Engine):
 
         # TODO: do we need this if it's stored at the class level?
         self._app_id = self.SHOTGUN_ADOBE_APPID
-
-        # Keep track of the context we had when we launched. We might need
-        # to set it again once the user starts changing active documents. We
-        # are pulling the serialized context from the environment here because
-        # we want the LAUNCH context, and not what might have been set prior to
-        # an engine restart.
-        self._launch_context = sgtk.context.deserialize(os.environ["TANK_CONTEXT"])
 
         # constant command uid lookups for these special commands
         self.__jump_to_sg_command_id = self.__get_command_uid()
@@ -278,15 +274,24 @@ class AdobeEngine(sgtk.platform.Engine):
 
         :param str active_document_path: The path to the new active document.
         """
+        # This will be True if the context_changes_disabled context manager is
+        # used. We're just in a temporary state of not allowing context changes,
+        # which is useful when an app is doing a lot of Photoshop work that
+        # might be triggering active document changes that we don't want to
+        # result in SGTK context changes.
+        if self._CONTEXT_CHANGES_DISABLED:
+            self.logger.debug(
+                "Engine is in 'no context changes' mode. Not changing context."
+            )
+            return
+
         if active_document_path:
             self.log_debug("New active document is %s" % active_document_path)
         else:
             self.log_debug(
                 "New active document check failed. This is likely due to the "
-                "new active document being in an unsaved state. Setting "
-                "launch context."
+                "new active document being in an unsaved state."
             )
-            sgtk.platform.change_context(self._launch_context)
             return
 
         if active_document_path in self._CONTEXT_CACHE:
@@ -445,6 +450,22 @@ class AdobeEngine(sgtk.platform.Engine):
         Specifies that context changes are allowed by the engine.
         """
         return True
+
+    ############################################################################
+    # context manager
+
+    @contextmanager
+    def context_changes_disabled(self):
+        """
+        A context manager that disables context changes on enter, and enables
+        them on exit. This is useful in apps that might be performing operations
+        that require changes in the active document that don't want to trigger
+        a context change.
+        """
+        self._CONTEXT_CHANGES_DISABLED = True
+        yield
+        self._CONTEXT_CHANGES_DISABLED = False
+    
 
     ############################################################################
     # UI
