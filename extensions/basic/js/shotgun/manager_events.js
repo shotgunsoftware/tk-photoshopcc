@@ -14,7 +14,16 @@
 var sg_manager = sg_manager || {};
 
 // typically as an async response to a REQUEST_STATE event from the panel
-sg_event.create_event(sg_manager, "UPDATE_STATE");
+sg_event.create_event(sg_manager, "UPDATE_COMMANDS");
+
+// typically as an async response to a REQUEST_STATE event from the panel
+sg_event.create_event(sg_manager, "UPDATE_CONTEXT_DISPLAY");
+
+// typically as an async response to a REQUEST_STATE event from the panel
+sg_event.create_event(sg_manager, "UPDATE_CONTEXT_THUMBNAIL");
+
+// sent just before a context change from python
+sg_event.create_event(sg_manager, "CONTEXT_ABOUT_TO_CHANGE");
 
 // emits critical errors whereby the manager is not or can not function
 // properly. the emitted event will contain a dictionary of the following form:
@@ -27,6 +36,10 @@ sg_event.create_event(sg_manager, "UPDATE_STATE");
 // this event is only emitted when something happens that prevents the manager
 // from continuing to function properly.
 sg_event.create_event(sg_manager, "CRITICAL_ERROR");
+
+// this event emitted when the python process cannot bootstrap due to pyside
+// not being installed
+sg_event.create_event(sg_manager, "PYSIDE_NOT_AVAILABLE");
 
 // emitted when the manager is shutting down. allows listeners to act accordingly
 sg_event.create_event(sg_manager, "SHUTTING_DOWN");

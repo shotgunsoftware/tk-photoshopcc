@@ -13,7 +13,6 @@
 // namespace
 var sg_manager = sg_manager || {};
 
-
 sg_manager.Manager = new function() {
     // A singleton "class" to manage the Shotgun integration layers
     //   * python bootstrap
@@ -27,14 +26,24 @@ sg_manager.Manager = new function() {
 
     // ---- private
 
+    // Half-second interval.
+    const active_document_interval = 500;
+
     // keep a handle on the instance.
     const self = this;
 
     // adobe interface
     const _cs_interface = new CSInterface();
 
-    // the name of the python process extension
-    const _panel_extension_name = "com.shotgunsoftware.basic.adobecc.panel";
+    // remember if/why python was disconnected
+    var __python_disconnected = false;
+    var __python_disconnected_error = undefined;
+
+    // remember if pyside was unavailable
+    var __pyside_unavailable = false;
+
+    // keep track of the active document
+    var __active_document = undefined;
 
     // ---- public methods
 
@@ -47,12 +56,13 @@ sg_manager.Manager = new function() {
 
             // ensure this app is supported by our extension
             if (!_app_is_supported()) {
-                sg_logging.warning(
-                    "This CC product does not meet the minimum requirements " +
-                    "to run the Shotgun integration. The Shotgun integration " +
-                    "requires support for HTML panels and the extended panel " +
-                    "menu."
-                );
+                _emit_python_critical_error({
+                    message: "This CC product does not meet the minimum " +
+                        "requirements to run the Shotgun integration. The " +
+                        "Shotgun integration requires support for HTML " +
+                        "panels and the extended panel menu.",
+                    stack: undefined
+                });
                 return;
             }
 
@@ -60,21 +70,50 @@ sg_manager.Manager = new function() {
             // come in.
             _setup_event_listeners();
 
+            const manager_ext_id = sg_constants.extension_info["manager"]["id"];
+            const panel_ext_id = sg_constants.extension_info["panel"]["id"];
+
             // start up the panel in the adobe product first. we can display
             // messages and information to the user while functions below are
             // running
             sg_logging.debug("Launching the panel extension...");
-            _cs_interface.requestOpenExtension(_panel_extension_name);
+            _cs_interface.requestOpenExtension(panel_ext_id);
 
             // Look for an open port to use for the server. Once a port has been
             // found, this method will directly call the supplied callback
             // method to start up the server and then bootstrap python.
             _get_open_port(_on_server_port_found);
 
+            // log info about the loaded extensions
+            const extensions = _cs_interface.getExtensions(
+                [panel_ext_id, manager_ext_id]);
+
+            if (extensions.length > 0) {
+                sg_logging.debug("Loaded extensions:");
+                sg_logging.debug("--------------------------------------");
+                extensions.forEach(function(ext) {
+                    sg_logging.debug("    name: " + ext.name);
+                    sg_logging.debug("      id: " + ext.id);
+                    sg_logging.debug("mainPath: " + ext.mainPath);
+                    sg_logging.debug("basePath: " + ext.basePath);
+                    sg_logging.debug("--------------------------------------");
+                });
+            }
+
+            // log the os information
+            sg_logging.debug("OS information: " + _cs_interface.getOSInformation());
+
+            // log the cep api version:
+            const api_version = _cs_interface.getCurrentApiVersion();
+            sg_logging.debug("CEP API Version: " +
+                api_version.major + "." +
+                api_version.minor + "." +
+                api_version.micro
+            );
+
         } catch (error) {
-            const message = "There was an unexpected error startup of the " +
-                "startup of the Shotgun integration. Please see the " +
-                "attached stack trace.";
+            const message = "There was an unexpected error during startup of " +
+                "the Adobe Shotgun integration.";
 
             // log the error in the event that the panel has started and the
             // user can click the console
@@ -82,7 +121,7 @@ sg_manager.Manager = new function() {
             sg_logging.error(error.stack);
 
             // emit the critical error for any listeners to display
-            sg_manager.CRITICAL_ERROR.emit({
+            _emit_python_critical_error({
                 message: message,
                 stack: error.stack
             });
@@ -105,11 +144,24 @@ sg_manager.Manager = new function() {
         self.shutdown();
     };
 
-    this.set_state = function(state) {
-        // Sets the manager state.
+    this.set_commands = function(commands) {
+        // emits the current commands update for listeners to respond to
+        sg_manager.UPDATE_COMMANDS.emit(commands);
+    };
 
-        // emits the state update for listeners to respond to
-        sg_manager.UPDATE_STATE.emit(state);
+    this.set_context_fields = function(context_fields) {
+        // emits the current context fields update for listeners to respond to
+        sg_manager.UPDATE_CONTEXT_FIELDS.emit(context_fields);
+    };
+
+    this.set_context_thumbnail = function(context_thumbnail) {
+        // emits the current context thumbnail update for listeners to respond to
+        sg_manager.UPDATE_CONTEXT_THUMBNAIL.emit(context_thumbnail);
+    };
+
+    this.context_about_to_change = function() {
+        // emits the context about to change signal for listeners to respond to
+        sg_manager.CONTEXT_ABOUT_TO_CHANGE.emit();
     };
 
     this.shutdown = function() {
@@ -147,6 +199,39 @@ sg_manager.Manager = new function() {
             host_capabilities.SUPPORT_HTML_EXTENSIONS;
     };
 
+    const _active_document_check = function() {
+        _cs_interface.evalScript(
+            // NOTE: Hopefully this is the same across all Adobe CC
+            // products. If it isn't, then we'll likely want to make
+            // a manager method that abstracts it away and returns
+            // the active document after checking which DCC we're in.
+            "app.activeDocument.fullName.fsName",
+            function(result) {
+                // If the above command fails, then it's because the
+                // active document is an unsaved file.
+                if ( result == "EvalScript error." ) {
+                    // If we previously had a path stored and we're in
+                    // this undefined state, then we've switched from a
+                    // saved document to one that isn't and we still
+                    // need to alert clients.
+                    if ( __active_document != undefined ) {
+                        sg_logging.debug("Active document changed to undefined");
+                        __active_document = undefined;
+                        sg_socket_io.rpc_active_document_changed("");
+                    }
+                }
+                else {
+                    // If it's changed, then alert clients.
+                    if ( __active_document != result ) {
+                        sg_logging.debug("Active document changed to " + result);
+                        __active_document = result;
+                        sg_socket_io.rpc_active_document_changed(result);
+                    }
+                }
+            }
+        );
+    };
+
     // TODO: add a progress callback
     const _bootstrap_python = function(port) {
         // Bootstrap the toolkit python process.
@@ -156,7 +241,7 @@ sg_manager.Manager = new function() {
 
         const app_id = _cs_interface.hostEnvironment.appId;
         const child_process = require("child_process");
-        const path = require('path');
+        const path = require("path");
         const engine_name = sg_constants.product_info[app_id].tk_engine_name;
 
         // the path to this extension
@@ -186,19 +271,32 @@ sg_manager.Manager = new function() {
 
         sg_logging.debug("Bootstrapping: " + plugin_bootstrap_py);
 
-        // TODO: proper python executable discovery
-
         // launch a separate process to bootstrap python with toolkit running...
         // > cd $ext_dir
         // > python /path/to/ext/bootstrap.py
-        var python_exe_path = "/Applications/Shotgun.app/Contents/Resources/Python/bin/python";
 
-        if (process.env["SHOTGUN_ADOBECC_PYTHON"]) {
-            python_exe_path = process.env.SHOTGUN_ADOBECC_PYTHON;
+        // use the system installed python
+        var python_exe_path = "python";
+
+        if (process.env.SHOTGUN_ADOBE_PYTHON) {
+            // use the python specified in the environment if it exists
+            sg_logging.info("Using python executable set in environment variable 'SHOTGUN_ADOBE_PYTHON'.");
+            python_exe_path = process.env.SHOTGUN_ADOBE_PYTHON;
         }
 
         sg_logging.debug("Spawning child process... ");
-        sg_logging.debug("Using Python: " + python_exe_path);
+        sg_logging.debug("Python executable: " + python_exe_path);
+        sg_logging.debug("Current working directory: " + plugin_python_path);
+        sg_logging.debug("Executing command: ");
+        sg_logging.debug("  " +
+            [
+                python_exe_path,
+                plugin_bootstrap_py,
+                port,
+                engine_name,
+                app_id
+            ].join(" ")
+        );
 
         try {
             self.python_process = child_process.spawn(
@@ -208,13 +306,14 @@ sg_manager.Manager = new function() {
                     // path to the python bootstrap script
                     plugin_bootstrap_py,
                     port,
-                    engine_name
+                    engine_name,
+                    app_id
                 ],
                 {
                     // start the process from this dir
                     cwd: plugin_python_path,
                     // the environment to use for bootstrapping
-                    env: process.env,
+                    env: process.env
                 }
             );
         }
@@ -225,33 +324,44 @@ sg_manager.Manager = new function() {
 
         sg_logging.debug("Child process spawned! PID: " + self.python_process.pid)
 
-        // XXX begin temporary process communication
-
         // log stdout from python process
         self.python_process.stdout.on("data", function (data) {
-            sg_logging.log(data.toString());
+            sg_logging.python(data.toString());
         });
 
         // log stderr from python process
         self.python_process.stderr.on("data", function (data) {
-            sg_logging.log(data.toString());
+            sg_logging.python(data.toString());
         });
 
-        // XXX end temporary process communication
-
         // handle python process disconnection
-        self.python_process.on(
-            "close",
-            function() {
-                sg_manager.CRITICAL_ERROR.emit({
-                    message: "The Shotgun integration has unexpectedly shut " +
-                             "down. Specifically, the python process that " +
-                             "handles the communication with Shotgun has " +
-                             "been terminated.",
-                    stack: undefined
-                });
-            }
-        );
+        self.python_process.on("close", _handle_python_close);
+    };
+
+    const _handle_python_close = function(code, signal) {
+        // Python should never be shut down by anything other than the manager.
+        // So if we're here, something caused it to exit early. Handle any known
+        // status codes accordingly.
+
+        const error_codes = sg_constants.python_error_codes;
+
+        if (code == error_codes.EXIT_STATUS_NO_PYSIDE) {
+            // Special case, PySide does not appear to be installed.
+            __pyside_unavailable = true;
+            __python_disconnected = true;
+            sg_logging.error("Python exited because PySide is unavailable.");
+            sg_manager.PYSIDE_NOT_AVAILABLE.emit();
+        } else {
+            // Fallback case where we don't know why it shut down.
+            sg_logging.error("Python exited unexpectedly.");
+            _emit_python_critical_error({
+                message: "The Shotgun integration has unexpectedly shut " +
+                "down. Specifically, the python process that " +
+                "handles the communication with Shotgun has " +
+                "been terminated.",
+                stack: undefined
+            });
+        }
     };
 
     const _get_open_port = function(port_found_callback) {
@@ -286,7 +396,7 @@ sg_manager.Manager = new function() {
             // check the current number of tries. if too many, emit a signal
             // indicating that a port could not be found
             if (num_tries > max_tries) {
-                sg_manager.CRITICAL_ERROR.emit({
+                _emit_python_critical_error({
                     message: "Unable to set up the communication server that " +
                              "allows the shotgun integration to work. " +
                              "Specifically, there was a problem identifying " +
@@ -344,7 +454,7 @@ sg_manager.Manager = new function() {
                         try {
                             port_found_callback(port);
                         } catch(error) {
-                            sg_manager.CRITICAL_ERROR.emit({
+                            _emit_python_critical_error({
                                 message: "Unable to set up the communication " +
                                          "server that allows the shotgun " +
                                          "integration to work.",
@@ -363,6 +473,12 @@ sg_manager.Manager = new function() {
             server.listen(0);
         };
 
+        // fake error message to test startup fail. good for debugging.
+        //var error = new Error();
+        //error.message = "This is a fake fail!!! Thrown manually to force an error!";
+        //Error.captureStackTrace(error);
+        //throw error;
+
         // initiate the port finding
         _try_port();
     };
@@ -376,12 +492,7 @@ sg_manager.Manager = new function() {
         sg_logging.rpc = sg_socket_io;
 
         // bootstrap the python process.
-        _bootstrap_python(
-            port
-            // TODO: send a progress callback here
-        );
-
-        // TODO: python process should send context/state once bootstrapped
+        _bootstrap_python(port);
     };
 
     const _reload = function(event) {
@@ -395,13 +506,13 @@ sg_manager.Manager = new function() {
         const extension_id = _cs_interface.getExtensionID();
 
         // close the extension
-        self.on_unload();
         sg_logging.debug(" Closing the python extension.");
         _cs_interface.closeExtension();
 
         // request relaunch
         sg_logging.debug(" Relaunching the manager...");
         _cs_interface.requestOpenExtension(extension_id);
+
     };
 
     const _setup_event_listeners = function() {
@@ -413,48 +524,45 @@ sg_manager.Manager = new function() {
 
         // Handle python process disconnected
         sg_panel.REGISTERED_COMMAND_TRIGGERED.connect(
-            // TODO: do the proper thing here...
-            // TODO: post an event for the client to handle
             function(event) {
-                alert("panel.js: Registered Command Triggered: " + event.data)
+                sg_logging.debug("Registered Command Triggered: " + event.data);
+                sg_socket_io.rpc_command(event.data);
             }
         );
 
-    };
+        // Handle requests for test running.
+        sg_panel.RUN_TESTS.connect(
+            function(event) {
+                sg_logging.debug("Requesting that tk_adobecc run tests...");
+                sg_socket_io.rpc_run_tests();
+            }
+        );
 
-    const _tmp_send_state_info = function(event) {
-
-        // XXX This is temp sim of the state being sent from python
-        const state = {
-            context: {
-                display: "Awesome Asset 01"
-            },
-            commands: [
-                {
-                    id: "command_id_1",
-                    display_name: "Python Console",
-                    icon_path: "../images/tmp/command1.png"
-                },
-                {
-                    id: "command_id_2",
-                    display_name: "Command B",
-                    icon_path: "../images/tmp/command2.png"
-                },
-                {
-                    id: "command_id_3",
-                    display_name: "Command C",
-                    icon_path: "../images/tmp/command3.png"
-                },
-                {
-                    id: "command_id_4",
-                    display_name: "Command D",
-                    icon_path: "../images/tmp/command4.png"
+        sg_panel.REQUEST_STATE.connect(
+            function() {
+                sg_logging.debug("State requested.");
+                if (__python_disconnected) {
+                    if (__pyside_unavailable) {
+                        sg_manager.PYSIDE_NOT_AVAILABLE.emit();
+                    } else {
+                        _emit_python_critical_error(__python_disconnected_error);
+                    }
+                } else {
+                    sg_logging.debug("Awaiting new state from Python...");
+                    sg_socket_io.rpc_state_requested();
                 }
-            ]
-        };
+            }
+        );
 
-        sg_manager.UPDATE_STATE.emit(state);
-        // XXX End temporary simulation
+        // Keep an eye on the active document.
+        setInterval(_active_document_check, active_document_interval);
     };
+
+    const _emit_python_critical_error = function(error) {
+        __python_disconnected = true;
+        __python_disconnected_error = error;
+        sg_manager.CRITICAL_ERROR.emit(error);
+    };
+
 };
 

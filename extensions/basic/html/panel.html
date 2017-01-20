@@ -33,22 +33,53 @@ are reserved by Shotgun Software Inc.
 
   <body>
 
-    <!-- header -->
-    <div id="sg_panel_header">
-    </div>
+    <!-- error -->
+    <div id="sg_status_error" style="display:none;"></div>
 
-    <!-- TODO: style so that the header is sticky at the top? -->
-    <br><br>
+    <!-- warning -->
+    <div id="sg_status_warning" style="display:none;"></div>
+
+    <!-- header -->
+    <div id="sg_panel_header"></div>
 
     <!-- main contents -->
-    <div id="sg_panel_contents">
-    </div>
+    <div id="sg_panel_contents"></div>
 
-    <!-- TODO: style so that the footer is always at the bottom -->
-    <br><br>
+    <!-- command help -->
+    <div id="sg_panel_command_help" style="display:none;"></div>
 
     <!-- footer -->
     <div id="sg_panel_footer">
+
+      <!-- progress bar -->
+      <div id="sg_progress" style="display:none;">
+        <div id="sg_progress_bar">
+        </div>
+      </div>
+      <!-- info -->
+      <div id="sg_status_info" style="display:none;"></div>
+    </div>
+
+    <!-- console -->
+    <div id="sg_panel_console">
+
+      <!-- console header -->
+      <div id="sg_panel_console_header">
+        <table width="100%">
+          <tr>
+            <td>
+              Console:
+            </td>
+            <td align="right">
+              <a class="sg_small_link" href="#" onclick="sg_panel.Panel.show_console(false)">[close]</a>
+            </td>
+          </tr>
+        </table>
+      </div>
+      <!-- console logs -->
+      <div id="sg_panel_console_log">
+      </div>
+
     </div>
 
     <script>
