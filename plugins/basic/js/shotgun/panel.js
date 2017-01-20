@@ -65,7 +65,7 @@ sg_panel.Panel = new function() {
 
         _show_header(false);
         _set_contents(
-            "<img id='loading_img' src='../images/sg_logo.png'>");
+            "<img id='loading_img' src='../images/sg_logo_with_text.png'>");
 
         _show_info(true);
         _set_info(
@@ -89,7 +89,7 @@ sg_panel.Panel = new function() {
         _set_contents(
             "<table id='sg_unknown_context_table'>" +
               "<tr>" +
-                "<td><img src='../images/sg_logo.png' height='128px'></td>" +
+                "<td><img src='../images/sg_logo.png' height='85px'></td>" +
                 "<td style='vertical-align:top'>" +
                   "<table style='display:inline-block;'>" +
                     "<tr>" +
