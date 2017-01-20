@@ -111,13 +111,12 @@ a:active {
 
 /* the first image that shows up when panel is loading */
 #loading_img {
-   position: absolute;
-   top: 50%;
-   left: 50%;
-   width: 270px;
-   height: 193px;
-   margin-top: -96px;
-   margin-left: -135px;
+    position: fixed;
+    margin: auto;
+    left: 0;
+    right: 0;
+    top: 0;
+    bottom: 0;
 }
 
 /* error display */
@@ -426,3 +425,36 @@ div.sg_error {
     padding-left: 3px;
 }
 
+#sg_unknown_context_table {
+    width: 100%;
+    padding: 10px;
+    vertical-align: top;
+}
+
+#sg_unknown_context_thumbnail {
+    display: table-cell;
+    vertical-align: top;
+    text-align: center;
+}
+
+#sg_unknown_context_title {
+    text-align: left;
+    vertical-align: top;
+    color: #D7D7D7;
+    padding-left: 8px;
+    padding-top: 0;
+    width: 100%;
+    flex: 1;
+    display: inline-block;
+}
+
+#sg_unknown_context_details{
+    text-align: left;
+    vertical-align: top;
+    color: #777777;
+    padding-left: 8px;
+    padding-top: 0px;
+    width: 100%;
+    flex: 1;
+    display: inline-block;
+}

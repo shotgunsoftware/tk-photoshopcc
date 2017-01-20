@@ -390,6 +390,12 @@ sg_socket_io.SocketManager = new function() {
                 sg_manager.UPDATE_CONTEXT_THUMBNAIL.emit(context_thumbnail);
             });
 
+            socket.on("set_unknown_context", function() {
+                // The context is unknown
+                sg_logging.debug("Sending unknown context signal from the client.");
+                sg_manager.UNKNOWN_CONTEXT.emit();
+            });
+
             socket.on("context_about_to_change", function() {
                 // The context is bout to change
                 sg_logging.debug("Sending context about to change from client.");
