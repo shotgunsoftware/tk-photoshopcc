@@ -238,6 +238,15 @@ sg_panel.Panel = new function() {
             // TODO: display error in the panel
         }
 
+        // Here we send the "AppOnline" event strictly in the event of a manual
+        // reload/restart of the SG extension. For initial launch of PS, this
+        // will be a no-op since the manager will already be running. For the
+        // reload scenario, this is the jumpstart that the manager requires to
+        // start up.
+        const event_type = "com.adobe.csxs.events.AppOnline";
+        var event = new CSEvent(event_type, "APPLICATION");
+        event.extensionId = _cs_interface.getExtensionID();
+        _cs_interface.dispatchEvent(event);
     };
 
     this.on_unload = function() {
@@ -501,11 +510,16 @@ sg_panel.Panel = new function() {
                           Enabled="true" \
                           Checked="false"/>';
 
-        if ( process.env.SHOTGUN_ADOBE_NETWORK_DEBUG || process.env.SHOTGUN_ADOBE_TESTS_ROOT || process.env.TK_DEBUG ) {
+        if (process.env.SHOTGUN_ADOBE_NETWORK_DEBUG ||
+            process.env.SHOTGUN_ADOBE_TESTS_ROOT ||
+            process.env.TK_DEBUG ||
+            process.env.SHOTGUN_ADOBE_DEVELOP) {
+
             flyout_xml += '<MenuItem Id="sg_dev_debug" \
                               Label="Chrome Console..." \
                               Enabled="true" \
                               Checked="false"/>';
+
             flyout_xml += '<MenuItem Id="sg_dev_reload" \
                               Label="Reload Shotgun Extension" \
                               Enabled="true" \
@@ -535,8 +549,8 @@ sg_panel.Panel = new function() {
         }
 
         var event = new CSEvent(event_type, "APPLICATION");
-         event.extensionId = _cs_interface.getExtensionID();
-         _cs_interface.dispatchEvent(event);
+        event.extensionId = _cs_interface.getExtensionID();
+        _cs_interface.dispatchEvent(event);
     };
 
     const _on_flyout_menu_clicked = function(event) {
