@@ -428,8 +428,13 @@ div.sg_error {
 #sg_unknown_context_table {
     width: 100%;
     padding: 10px;
-    text-align: center;
     vertical-align: top;
+}
+
+#sg_unknown_context_thumbnail {
+    display: table-cell;
+    vertical-align: top;
+    text-align: center;
 }
 
 #sg_unknown_context_title {
@@ -437,6 +442,10 @@ div.sg_error {
     vertical-align: top;
     color: #D7D7D7;
     padding-left: 8px;
+    padding-top: 0;
+    width: 100%;
+    flex: 1;
+    display: inline-block;
 }
 
 #sg_unknown_context_details{
@@ -444,4 +453,8 @@ div.sg_error {
     vertical-align: top;
     color: #777777;
     padding-left: 8px;
+    padding-top: 0px;
+    width: 100%;
+    flex: 1;
+    display: inline-block;
 }
