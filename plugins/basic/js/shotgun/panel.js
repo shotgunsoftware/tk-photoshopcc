@@ -89,11 +89,15 @@ sg_panel.Panel = new function() {
         _set_contents(
             "<table id='sg_unknown_context_table'>" +
               "<tr>" +
-                "<td><img src='../images/sg_logo.png' height='85px'></td>" +
-                "<td style='vertical-align:top'>" +
-                  "<table style='display:inline-block;'>" +
+                "<td style='vertical-align:top;'>" +
+                  "<img src='../images/sg_logo.png' height='85px'>" +
+                "</td>" +
+                "<td style='vertical-align:top;'>" +
+                  "<table>" +
                     "<tr>" +
-                      "<td id='sg_unknown_context_title'><h2>Integration Disabled</h2></td>" +
+                      "<td id='sg_unknown_context_title'>" +
+                        "<strong><big>Integration Disabled</big></strong>" +
+                      "</td>" +
                     "</tr>" +
                     "<tr>" +
                       "<td id='sg_unknown_context_details'>" +
