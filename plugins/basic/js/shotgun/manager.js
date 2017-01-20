@@ -148,26 +148,6 @@ sg_manager.Manager = new function() {
         self.shutdown();
     };
 
-    this.set_commands = function(commands) {
-        // emits the current commands update for listeners to respond to
-        sg_manager.UPDATE_COMMANDS.emit(commands);
-    };
-
-    this.set_context_fields = function(context_fields) {
-        // emits the current context fields update for listeners to respond to
-        sg_manager.UPDATE_CONTEXT_FIELDS.emit(context_fields);
-    };
-
-    this.set_context_thumbnail = function(context_thumbnail) {
-        // emits the current context thumbnail update for listeners to respond to
-        sg_manager.UPDATE_CONTEXT_THUMBNAIL.emit(context_thumbnail);
-    };
-
-    this.context_about_to_change = function() {
-        // emits the context about to change signal for listeners to respond to
-        sg_manager.CONTEXT_ABOUT_TO_CHANGE.emit();
-    };
-
     this.shutdown = function() {
         // Ensure all the manager's components are shutdown properly
         //

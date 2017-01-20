@@ -216,7 +216,17 @@ class AdobeBridge(Communicator):
         self.logger.debug("Sending context thumb path: %s" % json_context_thumbnail)
         self._io.emit("set_context_thumbnail", json_context_thumbnail)
 
+    def send_unknown_context(self):
+        """
+        Sent when a context can not be determined for the current file.
+        """
+        self.logger.debug("Alerting js that there is no context")
+        self._io.emit("set_unknown_context")
+
     def context_about_to_change(self):
+        """
+        Sent just before the context is about to change.
+        """
         self.logger.debug("Sending context about to change message.")
         self._io.emit("context_about_to_change")
 
