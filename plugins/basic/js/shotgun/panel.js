@@ -52,6 +52,8 @@ sg_panel.Panel = new function() {
         // clears any state for the current context.
 
         _context_thumbnail_data = undefined;
+        _build_flyout_menu([]);
+
     };
 
     this.set_panel_loading_state = function() {
@@ -63,12 +65,49 @@ sg_panel.Panel = new function() {
 
         _show_header(false);
         _set_contents(
-            "<img id='loading_img' src='../images/sg_logo_loading.png'>");
+            "<img id='loading_img' src='../images/sg_logo.png'>");
 
         _show_info(true);
         _set_info(
             "Loading Shotgun Integration..."
         );
+    };
+
+    this.set_unknown_context_state = function() {
+        // Clears the panel's contents and displays a message that it is disabled
+
+        this.clear();
+
+        _set_bg_color("#222222");
+
+        _show_header(false);
+        _clear_messages();
+
+        var app_name = _cs_interface.getHostEnvironment().appName;
+        const app_display_name = sg_constants.product_info[app_name].display_name;
+
+        _set_contents(
+            "<table id='sg_unknown_context_table'>" +
+              "<tr>" +
+                "<td><img src='../images/sg_logo.png' height='128px'></td>" +
+                "<td style='vertical-align:top'>" +
+                  "<table style='display:inline-block;'>" +
+                    "<tr>" +
+                      "<td id='sg_unknown_context_title'><h2>Integration Disabled</h2></td>" +
+                    "</tr>" +
+                    "<tr>" +
+                      "<td id='sg_unknown_context_details'>" +
+                        "The currently active file can't be associated with a " +
+                        "Shotgun context. Try switching to another file or " +
+                        "restarting " + app_display_name + "." +
+                      "</td>" +
+                    "</tr>" +
+                  "</table>" +
+                "</td>" +
+              "</tr>" +
+            "</table>"
+        );
+
     };
 
     this.set_context_loading_state = function() {
@@ -413,7 +452,7 @@ sg_panel.Panel = new function() {
 
     this.trigger_command = function(command_id, command_display) {
         // Emits the signal to launch the supplied command id.
-        // Also shows a tmp message in the footer to confirm user click
+        // Also shows a tmp message to confirm user click
 
         // show the progress message temporarily
         _set_info("Launching: " + command_display);
@@ -1024,6 +1063,13 @@ sg_panel.Panel = new function() {
         sg_manager.UPDATE_CONTEXT_THUMBNAIL.connect(
             function(event) {
                 self.set_context_thumbnail(event.data);
+            }
+        );
+
+        // Sets the panel into a state where the context is not known
+        sg_manager.UNKNOWN_CONTEXT.connect(
+            function(event) {
+                self.set_unknown_context_state();
             }
         );
 

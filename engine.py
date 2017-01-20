@@ -267,9 +267,9 @@ class AdobeEngine(sgtk.platform.Engine):
         :param str active_document_path: The path to the new active document.
         """
         if active_document_path:
-            self.log_debug("New active document is %s" % active_document_path)
+            self.logger.debug("New active document is %s" % active_document_path)
         else:
-            self.log_debug(
+            self.logger.debug(
                 "New active document check failed. This is likely due to the "
                 "new active document being in an unsaved state. Setting "
                 "launch context."
@@ -286,15 +286,18 @@ class AdobeEngine(sgtk.platform.Engine):
                     previous_context=self.context,
                 )
             except Exception:
-                # TODO: We need to set the panel to a disabled state the way
-                # we do the Shotgun menu in Nuke Studio.
-                self.log_debug(
+                self.logger.debug(
                     "Unable to determine context from path. Not changing context."
                 )
+                # clear the context finding task ids so that any tasks that
+                # finish won't send data to js.
+                self.__context_find_uid = None
+                self.__context_thumb_uid = None
+                self.adobe.send_unknown_context()
                 return
 
             if not context.project:
-                self.log_debug(
+                self.logger.debug(
                     "New context doesn't have a Project entity. Not changing "
                     "context."
                 )
@@ -303,6 +306,7 @@ class AdobeEngine(sgtk.platform.Engine):
             self._CONTEXT_CACHE[active_document_path] = context
 
         if context != self.context:
+            self.adobe.context_about_to_change()
             sgtk.platform.change_context(context)
 
     def _handle_command(self, uid):
