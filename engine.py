@@ -456,6 +456,12 @@ class AdobeEngine(sgtk.platform.Engine):
 
     @contextmanager
     def context_changes_disabled(self):
+        """
+        A context manager that disables context changes on enter, and enables
+        them on exit. This is useful in apps that might be performing operations
+        that require changes in the active document that don't want to trigger
+        a context change.
+        """
         self._CONTEXT_CHANGES_DISABLED = True
         yield
         self._CONTEXT_CHANGES_DISABLED = False
