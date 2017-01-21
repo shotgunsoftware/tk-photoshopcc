@@ -54,6 +54,7 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
     _CONTEXT_CACHE = dict()
     _CHECK_CONNECTION_TIMER = None
     _CONTEXT_CHANGES_DISABLED = False
+    _DIALOG_PARENT = None
 
     ############################################################################
     # context changing
@@ -500,8 +501,17 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
         Get the QWidget parent for all dialogs created through
         show_dialog & show_modal.
         """
-        from sgtk.platform.qt import QtGui
-        return QtGui.QApplication.activeWindow()
+        from sgtk.platform.qt import QtGui, QtCore
+
+        if not self._DIALOG_PARENT:
+            self._DIALOG_PARENT = QtGui.QWidget(
+                parent=QtGui.QApplication.activeWindow(),
+            )
+            self._DIALOG_PARENT.setWindowFlags(
+                self._DIALOG_PARENT.windowFlags() | QtCore.Qt.WindowStaysOnTopHint,
+            )
+
+        return self._DIALOG_PARENT
 
     def show_dialog(self, title, bundle, widget_class, *args, **kwargs):
         """
@@ -526,6 +536,8 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
                 "show the requested window '%s'." % title
             )
             return None
+
+        from tank.platform.qt import QtGui, QtCore
 
         # create the dialog:
         dialog, widget = self._create_dialog_with_widget(
@@ -574,9 +586,16 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
                 "show the requested window '%s'." % title)
             return
 
+        from tank.platform.qt import QtGui, QtCore
+
         # create the dialog:
         dialog, widget = self._create_dialog_with_widget(
-            title, bundle, widget_class, *args, **kwargs)
+            title,
+            bundle,
+            widget_class,
+            *args,
+            **kwargs
+        )
 
         # Note - the base engine implementation will try to clean up
         # dialogs and widgets after they've been closed.  However this
@@ -585,12 +604,10 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
         # Keeping track of all dialogs will ensure this doesn't happen
         self.__qt_dialogs.append(dialog)
 
-        # make sure the window raised so it doesn't
-        # appear behind the main Photoshop window
         dialog.raise_()
         dialog.activateWindow()
-
         status = dialog.exec_()
+
         return status, widget
 
     ############################################################################
