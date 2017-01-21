@@ -17,7 +17,7 @@ from contextlib import contextmanager
 import sgtk
 
 
-class AdobeEngine(sgtk.platform.Engine):
+class PhotoshopCCEngine(sgtk.platform.Engine):
     """
     An Adobe CC engine for Shotgun Toolkit.
     """
@@ -216,7 +216,7 @@ class AdobeEngine(sgtk.platform.Engine):
         """
         properties = properties or dict()
         properties["uid"] = self.__get_command_uid()
-        return super(AdobeEngine, self).register_command(
+        return super(PhotoshopCCEngine, self).register_command(
             name,
             callback,
             properties,
@@ -370,7 +370,7 @@ class AdobeEngine(sgtk.platform.Engine):
 
     def _run_tests(self):
         """
-        Runs the test suite for the tk-adobecc bundle.
+        Runs the test suite for the tk-photoshopcc bundle.
         """
         # If we don't know what the tests root directory path is
         # via the environment, then we shouldn't be here.

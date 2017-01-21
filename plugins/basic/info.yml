@@ -13,7 +13,7 @@
 
 # ---- Plug-in information recommended values to specify by convention.
 
-name: "tk-adobecc-basic"
+name: "tk-photoshopcc-basic"
 version: "0.0.1"
 
 description: "Plugin to bootstrap the Shotgun Engine for Adobe CC"

@@ -14,9 +14,9 @@ import sgtk
 
 def bootstrap(engine_name, context, app_path, app_args, **kwargs):
     """
-    Prepares the environment for a tk-adobecc bootstrap.
+    Prepares the environment for a tk-photoshopcc bootstrap.
 
-    :param str engine_name: The name of the engine being used -- "tk-adobecc"
+    :param str engine_name: The name of the engine being used -- "tk-photoshopcc"
     :param context: The context to use when bootstrapping.
     :param str app_path: The path to the host application being launched.
     :param str app_args: The arguments to be passed to the host application

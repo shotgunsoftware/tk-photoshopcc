@@ -3,7 +3,7 @@
 This section is designed for developers and covers how to setup, build, and test
 the Adobe CC extension.
 
-The entire extension source lives here in the `tk-adobecc` engine in the
+The entire extension source lives here in the `tk-photoshopcc` engine in the
 `extensions/basic` folder. This includes all of the pieces required by Adobe to
 run as a CEP extension as well as the configuration and logic specific to
 bootstrapping and running Shotgun Toolkit in a python process.
@@ -36,7 +36,7 @@ As per the Adobe docs:
 
 ### Development Repositories
 
-If you're doing development on the `tk-adobecc` engine itself, or an app or
+If you're doing development on the `tk-photoshopcc` engine itself, or an app or
 framework being loaded by the engine, you'll need to clone the config repo so
 that you can make changes to it. The config used by the engine is the
 [tk-config-pluginbasic](https://github.com/shotgunsoftware/tk-config-pluginbasic)
@@ -82,7 +82,7 @@ Here is an example of building the extension:
 
 ```shell
 > cd ~/dev
-> python tk-core/developer/build_plugin.py tk-adobecc/extensions/basic my_extension
+> python tk-core/developer/build_plugin.py tk-photoshopcc/extensions/basic my_extension
 ```
 
 The above command will write the built extension to the `~/dev/my_extension`
