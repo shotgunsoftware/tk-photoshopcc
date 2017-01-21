@@ -14,7 +14,7 @@ import sys
 import traceback
 
 # NOTE: this module becomes available once the plugin is built
-from sgtk_plugin_basic_adobecc import manifest
+from sgtk_plugin_basic_photoshopcc import manifest
 
 # exit status codes used when the python process dies. these are known by the
 # js process that spawned python so they can be used as a primitive form of
