@@ -44,7 +44,6 @@ base_configuration:
   type: git_branch
   branch: 39540_adobecc
   path: https://github.com/shotgunsoftware/tk-config-basic.git
-  version: bbc7489
 
 # The Plugin Id helps uniquely identify this plugin and can be used to override
 # and customize it. For more information, see:
@@ -53,7 +52,7 @@ base_configuration:
 # When the plugin is built, this file will be converted into a manifest.py file
 # and located in a python module named based on the plugin id in order to ensure
 # uniqueness.
-plugin_id: "basic.adobecc"
+plugin_id: "basic.photoshopcc"
 
 # ---- Values specific to this plug-in.
 
