@@ -177,26 +177,26 @@ div.sg_error {
 
 /* grayscale images in favorites until hovered */
 .sg_panel_command_img {
-    -webkit-filter: grayscale(1);
-    width: 26px;
-    height: 26px;
+    -webkit-filter: grayscale(1) brightness(.75);
+    width: 19px;
+    height: 19px;
 }
 
 .sg_panel_command_other_img {
-    width: 26px;
-    height: 26px;
+    width: 19px;
+    height: 19px;
 }
 
 .sg_panel_command_img:hover {
-    -webkit-filter: grayscale(0);
+    -webkit-filter: grayscale(0) brightness(1);
 }
 
 /* regular command button */
 .sg_command_button {
     display: inline-block;
     border-radius: 3px;
-    margin: 4px;
-    padding: 2px;
+    margin: 1px;
+    padding: 4px;
     border: 1px solid rgba(0, 0, 0, 0);
 }
 
@@ -219,10 +219,11 @@ div.sg_error {
 /* a single command div */
 .sg_panel_command {
     border-bottom: 1px solid #373737;
-    height: 34px;
-    padding-left: 18px;
+    height: 32px;
+    padding-left: 16px;
     padding-right: 18px;
-    -webkit-filter: grayscale(1);
+    padding-top: 5px;
+    -webkit-filter: grayscale(1) brightness(.75);
     color: #D7D7D7;
 }
 
@@ -237,7 +238,7 @@ div.sg_error {
 .sg_panel_command:hover {
     background-color: #6B6B6B;
     color: white;
-    -webkit-filter: grayscale(0);
+    -webkit-filter: grayscale(0) brightness(1);
 }
 
 .sg_panel_command:hover a:link {

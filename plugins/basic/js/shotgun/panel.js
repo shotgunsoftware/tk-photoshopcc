@@ -403,22 +403,18 @@ sg_panel.Panel = new function() {
                     commands_html +=
                         "<div class='sg_panel_command' " +
                             "onmouseover='sg_panel.Panel.show_command_help(\"\", \"" +description + "\", false)' " +
-                        "onmouseout='sg_panel.Panel.hide_command_help()' " +
+                            "onmouseout='sg_panel.Panel.hide_command_help()' " +
                         ">" +
-                        "<table style='width:100%;'>" +
-                            "<colgroup>" +
-                                "<col width='0%' />" +
-                                "<col width='100%' />" +
-                            "</colgroup>" +
+                        "<table>" +
                             "<tr>" +
-                                "<td align='left' width='30px' style='vertical-align:middle;'>" +
+                                "<td>" +
                                     "<a href='#' "  +
                                         "onClick='sg_panel.Panel.trigger_command(\"" + command_id + "\", \"" + display_name + "\")'" +
                                     ">" +
                                     "<img class='sg_panel_command_other_img' src='" + icon_path + "'>" +
                                     "</a>" +
                                 "</td>" +
-                                "<td align='left' style='padding-left:10px; vertical-align:middle; white-space:nowrap;'>" +
+                                "<td style='padding-left:8px'>" +
                                     "<a href='#' "  +
                                         "onClick='sg_panel.Panel.trigger_command(\"" + command_id + "\", \"" + display_name + "\")'" +
                                     ">" +
