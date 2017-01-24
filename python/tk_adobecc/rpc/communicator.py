@@ -37,7 +37,7 @@ class Communicator(object):
     _REGISTRY = dict()
     _COMMAND_REGISTRY = dict()
 
-    def __init__(self, port=8090, host="localhost", disconnect_callback=None, logger=None, network_debug=False):
+    def __init__(self, port=8090, host="localhost", disconnect_callback=None, logger=None, network_debug=False, event_processor=None):
         """
         Constructor. Rather than instantiating the Communicator directly,
         it is advised to make use of the get_or_create() classmethod as
@@ -50,11 +50,20 @@ class Communicator(object):
         :param logger: A standard Python logger to use for network debug
                        logging.
         :param bool network_debug: Whether network debug logging is desired.
+        :param event_processor: A callable that will be called during each
+                                iteration of the response wait loop. An
+                                example would be passing in the
+                                QtGui.QApplication.processEvents callable,
+                                which will force an iteration of the Qt
+                                event loop during response wait periods,
+                                which will stop Qt widgets from being
+                                blocked from repainting.
         """
         self._port = port
         self._host = host
         self._network_debug = network_debug
         self._logger = logger or logging.getLogger(__name__)
+        self._event_processor = event_processor
 
         self._io = SocketIO(host, port)
         self._io.on("return", self._handle_response)
@@ -98,6 +107,18 @@ class Communicator(object):
 
     ##########################################################################################
     # properties
+
+    @property
+    def event_processor(self):
+        """
+        The callable event processor that will be called between iterations
+        of the RPC response wait loop.
+        """
+        return self._event_processor
+
+    @event_processor.setter
+    def event_processor(self, processor):
+        self._event_processor = processor
 
     @property
     def host(self):
@@ -178,6 +199,11 @@ class Communicator(object):
                         "likely not a problem if it only happens occasionally."
                     )
                     pass
+
+                # Force an event loop iteration if we were provided with a
+                # callable event processor.
+                if self.event_processor:
+                    self.event_processor()
         finally:
             self._io._heartbeat_thread.relax()
             self._io._transport.set_timeout()
@@ -445,27 +471,19 @@ class Communicator(object):
         self.log_network_debug("Interval is %s" % self._WAIT_INTERVAL)
 
         while uid not in self._RESULTS:
+            # If we were given an event processor, we can call that here. That
+            # be something like QApplication.processEvents, which will force an
+            # iteration of the Qt event loop so that we're not completely
+            # the UI thread here, even though we're blocking Python.
+            if self.event_processor:
+                self.event_processor()
+
             self._io.wait(self._WAIT_INTERVAL)
 
         results = self._RESULTS[uid]
         del self._RESULTS[uid]
 
         self.log_network_debug("Results arrived for UID %s" % uid)
-        return results
-
-    def _wait_for_response(self, uid):
-        """
-        Waits for the results of an RPC call.
-
-        :param int uid: The unique id of the RPC call to wait for.
-
-        :returns: The raw returned results data.
-        """
-        while uid not in self._RESULTS:
-            self._io.wait(self._WAIT_INTERVAL)
-
-        results = self._RESULTS[uid]
-        del self._RESULTS[uid]
         return results
 
     ##########################################################################################

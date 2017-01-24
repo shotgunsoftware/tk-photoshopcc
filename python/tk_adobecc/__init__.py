@@ -8,5 +8,10 @@
 # agreement to the Shotgun Pipeline Toolkit Source Code License. All rights
 # not expressly granted therein are reserved by Shotgun Software Inc.
 
+import sys
+
 from .adobe_bridge import AdobeBridge, RPCTimeoutError
 import shotgunutils
+
+if sys.platform == "win32":
+    import win_32_api
