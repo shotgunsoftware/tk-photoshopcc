@@ -82,7 +82,9 @@ optional arguments:
                         The version to attached to the built plugin. If not
                         specified, the version will be set to 'dev' and will
                         override any version of the extension at
-                        launch/install time.
+                        launch/install time. The current version can be found
+                        in the .version file that lives next to the existing
+                        .zxp file.
   --output_dir /path/to/output/extension, -o /path/to/output/extension
                         If supplied, output the built extension here. If not
                         supplied, the extension will be built in the engine

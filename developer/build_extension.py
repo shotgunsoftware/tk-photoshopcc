@@ -157,7 +157,9 @@ def _parse_args():
         metavar="v#.#.#",
         help="The version to attached to the built plugin. If not specified, " +
              "the version will be set to 'dev' and will override any version " +
-             "of the extension at launch/install time."
+             "of the extension at launch/install time. The current version " +
+             "can be found in the .version file that lives next to the " +
+             "existing .zxp file."
     )
 
     parser.add_argument(
