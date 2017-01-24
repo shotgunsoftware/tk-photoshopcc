@@ -147,8 +147,6 @@ issues inside the Adobe product.
 
 ### `Adobe Docs`
 
-A command line toolkit for signing extensions. Docs:
-
 * [ZXPSignCmd](http://download.macromedia.com/pub/labs/extensionbuilder3/ccextensions.pdf)
 * [Packaging and Signing Extensions](http://wwwimages.adobe.com/content/dam/Adobe/en/devnet/creativesuite/pdfs/SigningTechNote_CC.pdf)
 
