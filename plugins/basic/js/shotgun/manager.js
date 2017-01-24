@@ -112,8 +112,12 @@ sg_manager.Manager = new function() {
             );
 
         } catch (error) {
+
+            const error_lines = error.stack.split(/\r?\n/);
+            const stack_err_msg = error_lines[0];
+
             const message = "There was an unexpected error during startup of " +
-                "the Adobe Shotgun integration.";
+                "the Adobe Shotgun integration:<br><br>" + stack_err_msg;
 
             // log the error in the event that the panel has started and the
             // user can click the console
@@ -287,8 +291,7 @@ sg_manager.Manager = new function() {
         sg_logging.debug("Spawning child process... ");
         sg_logging.debug("Python executable: " + python_exe_path);
         sg_logging.debug("Current working directory: " + plugin_python_path);
-        sg_logging.debug("Executing command: ");
-        sg_logging.debug("  " +
+        sg_logging.debug("Executing command: " +
             [
                 python_exe_path,
                 plugin_bootstrap_py,
@@ -322,15 +325,17 @@ sg_manager.Manager = new function() {
             throw error;
         }
 
-        sg_logging.debug("Child process spawned! PID: " + self.python_process.pid)
+        self.python_process.on("error", function(error) {
+            sg_logging.error("Python process error: " + error);
+        });
 
         // log stdout from python process
-        self.python_process.stdout.on("data", function (data) {
+        self.python_process.stdout.on("data", function(data) {
             sg_logging.python(data.toString());
         });
 
         // log stderr from python process
-        self.python_process.stderr.on("data", function (data) {
+        self.python_process.stderr.on("data", function(data) {
             sg_logging.python(data.toString());
         });
 
@@ -366,9 +371,6 @@ sg_manager.Manager = new function() {
 
     const _get_open_port = function(port_found_callback) {
         // Find an open port and send it to the supplied callback
-
-        // TODO: allow specification of an explicit port to use for debugging
-        //    perhaps something that is exposed during the build process?
 
         // https://nodejs.org/api/http.html#http_class_http_server
         const http = require('http');
@@ -519,6 +521,8 @@ sg_manager.Manager = new function() {
         // setup listeners for any events that need to be processed by the
         // manager
 
+        sg_logging.debug("Setting up event listeners...");
+
         // ---- Events from the panel
         sg_panel.REQUEST_MANAGER_RELOAD.connect(_reload);
 
@@ -556,6 +560,8 @@ sg_manager.Manager = new function() {
 
         // Keep an eye on the active document.
         setInterval(_active_document_check, active_document_interval);
+
+        sg_logging.debug("Event listeners created.");
     };
 
     const _emit_python_critical_error = function(error) {
