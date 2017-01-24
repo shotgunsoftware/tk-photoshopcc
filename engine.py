@@ -19,7 +19,7 @@ import sgtk
 
 class PhotoshopCCEngine(sgtk.platform.Engine):
     """
-    An Adobe CC engine for Shotgun Toolkit.
+    A Photoshop CC engine for Shotgun Toolkit.
     """
 
     SHOTGUN_ADOBE_PORT = os.environ.get("SHOTGUN_ADOBE_PORT")
@@ -103,7 +103,7 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
         """
 
         # import and keep a handle on the bundled python module
-        self.__tk_adobecc = self.import_module("tk_adobecc")
+        self.__tk_photoshopcc = self.import_module("tk_photoshopcc")
 
         # TODO: do we need this if it's stored at the class level?
         self._app_id = self.SHOTGUN_ADOBE_APPID
@@ -114,7 +114,7 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
 
         # get the adobe instance. it may have been initialized already by a
         # previous instance of the engine. if not, initialize a new one.
-        self._adobe = self.__tk_adobecc.AdobeBridge.get_or_create(
+        self._adobe = self.__tk_photoshopcc.AdobeBridge.get_or_create(
             identifier=self.instance_name,
             port=self.SHOTGUN_ADOBE_PORT,
             logger=self.logger,
@@ -136,8 +136,8 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
         # in order to use frameworks, they have to be imported via
         # import_module. so they're exposed in the bundled python. keep a handle
         # on them for reuse.
-        self.__shotgun_data = self.__tk_adobecc.shotgunutils.shotgun_data
-        self.__shotgun_globals = self.__tk_adobecc.shotgunutils.shotgun_globals
+        self.__shotgun_data = self.__tk_photoshopcc.shotgunutils.shotgun_data
+        self.__shotgun_globals = self.__tk_photoshopcc.shotgunutils.shotgun_globals
 
         # import here since the engine is responsible for defining Qt.
         from sgtk.platform.qt import QtCore

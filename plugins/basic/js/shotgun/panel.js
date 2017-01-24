@@ -348,7 +348,8 @@ sg_panel.Panel = new function() {
         if (favorites.length > 0) {
 
             favorites_html = "<div id='sg_panel_favorites'>" +
-                "<div id='sg_panel_favorites_header'>Run a Command</div>";
+                "<div id='sg_panel_favorites_header'>Run a Command</div>" +
+                "<div id='sg_panel_favorites_shelf'>";
 
             // loop over favorites here
             favorites.forEach(function(favorite) {
@@ -378,7 +379,7 @@ sg_panel.Panel = new function() {
                 // TODO: if command is missing something, log it.
             });
 
-            favorites_html += "</div>";
+            favorites_html += "</div></div>";
         }
 
         // Now process the non-favorite commands
@@ -701,7 +702,7 @@ sg_panel.Panel = new function() {
         const subject = encodeURIComponent("Adobe Integration Error");
         const body = encodeURIComponent(
             "Greetings Shotgun Support Team!\n\n" +
-            "We have some questions about the Adobe CC Integration.\n\n" +
+            "We have some questions about the Photoshop CC Integration.\n\n" +
             "*** Please enter your questions here... ***\n\n"
         );
 
@@ -1191,7 +1192,7 @@ sg_panel.Panel = new function() {
 
         return encodeURIComponent(
             "Greetings Shotgun Support Team!\n\n" +
-            "We are experiencing some difficulties with the Adobe CC Integration. " +
+            "We are experiencing some difficulties with the Photoshop CC Integration. " +
             "The details are included below.\n\n" +
             "Summary of the issue:\n\n" +
             "*** Please enter a summary of the issue here... ***\n\n" +

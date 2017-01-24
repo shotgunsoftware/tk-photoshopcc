@@ -1,23 +1,14 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
-<ExtensionManifest xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" ExtensionBundleId="com.shotgunsoftware.basic.adobecc" ExtensionBundleName="Shotgun Engine for AdobeCC" ExtensionBundleVersion="1.0" Version="6.0">
+<ExtensionManifest xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" ExtensionBundleId="com.shotgunsoftware.basic.photoshopcc" ExtensionBundleName="Shotgun Engine for Photoshop CC" ExtensionBundleVersion="1.0" Version="6.0">
     <ExtensionList>
-        <Extension Id="com.shotgunsoftware.basic.adobecc.manager" Version="1.0"/>
-        <Extension Id="com.shotgunsoftware.basic.adobecc.panel" Version="1.0"/>
+        <Extension Id="com.shotgunsoftware.basic.photoshopcc.manager" Version="1.0"/>
+        <Extension Id="com.shotgunsoftware.basic.photoshopcc.panel" Version="1.0"/>
     </ExtensionList>
     <ExecutionEnvironment>
         <HostList>
             <!-- Photoshop - CC 2014+ -->
             <Host Name="PHSP" Version="15.0"/>
             <Host Name="PHXS" Version="15.0"/>
-
-            <!-- TODO: comment these out before release! -->
-            <!-- TODO: Manager does not sart properly for AE or PPro -->
-
-            <!-- After Effects -->
-            <Host Name="AEFT" Version="13.0" />
-
-            <!-- Premiere Pro -->
-            <Host Name="PPRO" Version="10.0" />
         </HostList>
         <LocaleList>
             <Locale Code="All"/>
@@ -27,7 +18,7 @@
         </RequiredRuntimeList>
     </ExecutionEnvironment>
     <DispatchInfoList>
-        <Extension Id="com.shotgunsoftware.basic.adobecc.manager">
+        <Extension Id="com.shotgunsoftware.basic.photoshopcc.manager">
             <DispatchInfo>
                 <Resources>
                     <MainPath>./html/manager.html</MainPath>
@@ -58,7 +49,7 @@
                 </UI>
             </DispatchInfo>
         </Extension>
-        <Extension Id="com.shotgunsoftware.basic.adobecc.panel">
+        <Extension Id="com.shotgunsoftware.basic.photoshopcc.panel">
             <DispatchInfo>
                 <Resources>
                     <MainPath>./html/panel.html</MainPath>

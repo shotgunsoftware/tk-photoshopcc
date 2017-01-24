@@ -54,8 +54,8 @@ def bootstrap(engine_name, context, app_path, app_args, **kwargs):
 
     # the basic plugin needs to be installed in order to launch the adobe
     # engine. we need to make sure the plugin is installed and up-to-date.
-    # will only run if SHOTGUN_ADOBECC_DISABLE_AUTO_INSTALL is not set.
-    if not "SHOTGUN_ADOBECC_DISABLE_AUTO_INSTALL" in os.environ:
+    # will only run if SHOTGUN_ADOBE_DISABLE_AUTO_INSTALL is not set.
+    if not "SHOTGUN_ADOBE_DISABLE_AUTO_INSTALL" in os.environ:
         logger.debug("Ensuring adobe extension is up-to-date...")
         try:
             _ensure_extension_up_to_date(context)
@@ -80,7 +80,7 @@ def _ensure_extension_up_to_date(context):
     :param context:  The context to use when bootstrapping.
     """
 
-    extension_name = "com.shotgunsoftware.basic.adobecc"
+    extension_name = "com.shotgunsoftware.basic.photoshopcc"
 
     # the CEP install directory is OS-specific
     if sys.platform == "win32":

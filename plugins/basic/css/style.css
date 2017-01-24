@@ -162,8 +162,6 @@ div.sg_error {
     background-color: #525152;
     text-align: left;
     flex-wrap: wrap;
-    padding-left: 14px;
-    padding-right: 0px;
     padding-top: 8px;
     padding-bottom: 4px;
     margin: 0px;
@@ -172,12 +170,15 @@ div.sg_error {
 
 #sg_panel_favorites_header {
     color: #D7D7D7;
-    padding-left: 6px;
+    padding-left: 20px;
+}
+
+#sg_panel_favorites_shelf {
+    padding-left: 12px;
 }
 
 /* grayscale images in favorites until hovered */
 .sg_panel_command_img {
-    -webkit-filter: grayscale(1) brightness(.75);
     width: 19px;
     height: 19px;
 }
@@ -187,17 +188,21 @@ div.sg_error {
     height: 19px;
 }
 
-.sg_panel_command_img:hover {
-    -webkit-filter: grayscale(0) brightness(1);
-}
-
 /* regular command button */
 .sg_command_button {
     display: inline-block;
     border-radius: 3px;
-    margin: 1px;
+    margin: 2px;
     padding: 4px;
     border: 1px solid rgba(0, 0, 0, 0);
+}
+
+.sg_command_button img {
+    -webkit-filter: grayscale(1) brightness(1) contrast(1);
+}
+
+.sg_command_button:hover img {
+    -webkit-filter: grayscale(0) brightness(2) contrast(2);
 }
 
 .sg_command_button:hover {
@@ -223,8 +228,11 @@ div.sg_error {
     padding-left: 16px;
     padding-right: 18px;
     padding-top: 5px;
-    -webkit-filter: grayscale(1) brightness(.75);
     color: #D7D7D7;
+}
+
+.sg_panel_command img {
+    -webkit-filter: grayscale(1) brightness(1) contrast(1);
 }
 
 .sg_panel_command a:link {
@@ -238,7 +246,10 @@ div.sg_error {
 .sg_panel_command:hover {
     background-color: #6B6B6B;
     color: white;
-    -webkit-filter: grayscale(0) brightness(1);
+}
+
+.sg_panel_command:hover img {
+    -webkit-filter: grayscale(0) brightness(2) contrast(2);
 }
 
 .sg_panel_command:hover a:link {

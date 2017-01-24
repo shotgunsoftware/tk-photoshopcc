@@ -117,7 +117,7 @@ def bootstrap(root_path, port, engine_name, app_id):
 
     from sgtk.platform.qt import QtGui
 
-    app_name = 'Shotgun Engine for Adobe CC'
+    app_name = 'Shotgun Engine for Photoshop CC'
 
     # create and set up the Qt app. we don't want the app to close when the
     # last window is shut down since it's running in parallel to the CC product.

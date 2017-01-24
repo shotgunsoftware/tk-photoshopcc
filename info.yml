@@ -45,8 +45,8 @@ configuration:
 requires_shotgun_fields:
 
 # More verbose description of this item 
-display_name: "Shotgun Engine for Adobe CC"
-description: "Shotgun Integration for Adobe CC"
+display_name: "Shotgun Engine for Photoshop CC"
+description: "Shotgun Integration for Photoshop CC"
 
 # Required minimum versions for this item to run
 requires_shotgun_version:

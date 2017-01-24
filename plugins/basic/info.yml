@@ -16,7 +16,7 @@
 name: "tk-photoshopcc-basic"
 version: "0.0.1"
 
-description: "Plugin to bootstrap the Shotgun Engine for Adobe CC"
+description: "Plugin to bootstrap the Shotgun Engine for Photoshop CC"
 author: "Shotgun Software"
 organization: "Autodesk Inc."
 contact: "support@shotgunsoftware.com"

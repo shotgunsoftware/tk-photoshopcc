@@ -68,7 +68,7 @@ optional arguments:
                         The name of the engine plugin to build. Ex: 'basic'.
   --extension_name name, -e name
                         The name of the output extension. Ex:
-                        'com.shotgunsoftware.basic.adobecc'
+                        'com.shotgunsoftware.basic.photoshopcc'
   --sign /path/to/ZXPSignCmd /path/to/certificate password, -s /path/to/ZXPSignCmd /path/to/certificate password
                         If supplied, sign the build extension. Requires 3
                         arguments: the path to the 'ZXPSignCmd', the
@@ -119,7 +119,7 @@ file (what Adobe wants for its Add-ons site). This scenario will simply run the
 underlying SG plugin build into a directory of your choosing.
 
 To test with this setup, set an environment variable:
-`SHOTGUN_ADOBECC_DISABLE_AUTO_INSTALL`. In the classic toolkit startup (web,
+`SHOTGUN_ADOBE_DISABLE_AUTO_INSTALL`. In the classic toolkit startup (web,
 Desktop, tk-shell) this will prevent the `.zxp` packaged with the engine from
 being installed automatically.
 
@@ -127,7 +127,7 @@ Now you can build the extension directly to the CEP extensions directory. Here's
 an example of the command run from the top level of the engine repo:
 
 ```
-python developer/build_extension.py -c ../tk-core -p basic -e com.shotgunsoftware.basic.adobecc -o "/Users/josh/Library/Application Support/Adobe/CEP/extensions/"
+python developer/build_extension.py -c ../tk-core -p basic -e com.shotgunsoftware.basic.photoshopcc -o "/Users/josh/Library/Application Support/Adobe/CEP/extensions/"
 ```
 
 Argument breakdown:
@@ -151,7 +151,7 @@ You can also build a signed extension that mimics the final build. This workflow
 involves building a `.zxp` file that can be auto-installed and updated as you
 launch toolkit (via web, Desktop, or tk-shell).
 
-First, make sure you do **NOT** have the `SHOTGUN_ADOBECC_DISABLE_AUTO_INSTALL`
+First, make sure you do **NOT** have the `SHOTGUN_ADOBE_DISABLE_AUTO_INSTALL`
 set in your environment. We will build the `.zxp` and allow the auto install to
 run. This env variable prevents that.
 
@@ -165,7 +165,7 @@ Now you can build the `.zxp` file with the extension build script. Here's an
 example command run from the top level of the engine repo:
 
 ```
-python developer/build_extension.py -c ../tk-core -p basic -e com.shotgunsoftware.basic.adobecc -s ../ZXPSignCmd ~/Documents/certs/my_certificate.p12 my_cert_password
+python developer/build_extension.py -c ../tk-core -p basic -e com.shotgunsoftware.basic.photoshopcc -s ../ZXPSignCmd ~/Documents/certs/my_certificate.p12 my_cert_password
 ```
 
 The first few arguments are identical to the previous example. The additional
@@ -183,8 +183,8 @@ be build and overwrite the `.zxp` file in the engine. The built extension file
 will look like this:
 
 ```
-com.shotgunsoftware.basic.adobecc.version
-com.shotgunsoftware.basic.adobecc.zxp
+com.shotgunsoftware.basic.photoshopcc.version
+com.shotgunsoftware.basic.photoshopcc.zxp
 ```
 
 Notice the `.version` file. This file is used by the toolkit startup logic to
@@ -206,14 +206,14 @@ exception of specifying an actual version. To do that, you simple add an additio
 argument to the build command:
 
 ```
-python developer/build_extension.py -c ../tk-core -p basic -e com.shotgunsoftware.basic.adobecc -s ../ZXPSignCmd ~/Documents/certs/my_certificate.p12 my_cert_password -v v0.0.1
+python developer/build_extension.py -c ../tk-core -p basic -e com.shotgunsoftware.basic.photoshopcc -s ../ZXPSignCmd ~/Documents/certs/my_certificate.p12 my_cert_password -v v0.0.1
 ```
 
 The results of the command will look like this:
 
 ```
-com.shotgunsoftware.basic.adobecc.version
-com.shotgunsoftware.basic.adobecc.zxp
+com.shotgunsoftware.basic.photoshopcc.version
+com.shotgunsoftware.basic.photoshopcc.zxp
 ```
 
 Unlike the previous section, the `.version` file will now include the string
@@ -224,7 +224,7 @@ compare and determine if the user's installed version requires an update.
 ### Testing
 
 The `basic` plugin/extension has a flyout menu with options useful for testing
-and debugging. To enable these, set the environment variable `SHOTGUN_ADOBECC_DEVELOPER`.
+and debugging. To enable these, set the environment variable `SHOTGUN_ADOBE_DEVELOPER`.
 
 
 * **Chrome Console...** - Requires Chrome as the default browser. Opens a Chrome

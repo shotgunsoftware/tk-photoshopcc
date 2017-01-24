@@ -16,11 +16,11 @@ var sg_constants = sg_constants || {};
 sg_constants.extension_info = {
 
     manager: {
-        id: "com.shotgunsoftware.basic.adobecc.manager"
+        id: "com.shotgunsoftware.basic.photoshopcc.manager"
     },
 
     panel: {
-        id: "com.shotgunsoftware.basic.adobecc.panel"
+        id: "com.shotgunsoftware.basic.photoshopcc.panel"
     }
 };
 
@@ -46,22 +46,6 @@ sg_constants.product_info = {
         display_name: "Photoshop",
         tk_engine_name: "tk-photoshop",
         debug_url: "http://localhost:45217"
-    },
-
-    // After Effects
-
-    AEFT: {
-        display_name: "After Effects",
-        tk_engine_name: "tk-aftereffects",
-        debug_url: "http://localhost:45218"
-    },
-
-    // Premiere Pro
-
-    PPRO: {
-        display_name: "Premiere Pro",
-        tk_engine_name: "tk-premiere",
-        debug_url: "http://localhost:45219"
     }
 
     // NOTE: the debug ports are defined in .debug file at the top level of the

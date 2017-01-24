@@ -517,7 +517,7 @@ sg_manager.Manager = new function() {
         // Handle requests for test running.
         sg_panel.RUN_TESTS.connect(
             function(event) {
-                sg_logging.debug("Requesting that tk_adobecc run tests...");
+                sg_logging.debug("Requesting that tk_photoshopcc run tests...");
                 sg_socket_io.rpc_run_tests();
             }
         );
