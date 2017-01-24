@@ -145,6 +145,13 @@ backup directory in the CEP extensions directory, next to the build. You will li
 want to make sure these are cleaned up after each build to avoid confusion and prevent
 issues inside the Adobe product.
 
+### `Adobe Docs`
+
+A command line toolkit for signing extensions. Docs:
+
+* [ZXPSignCmd](http://download.macromedia.com/pub/labs/extensionbuilder3/ccextensions.pdf)
+* [Packaging and Signing Extensions](http://wwwimages.adobe.com/content/dam/Adobe/en/devnet/creativesuite/pdfs/SigningTechNote_CC.pdf)
+
 ### Local testing with signing
 
 You can also build a signed extension that mimics the final build. This workflow
@@ -159,7 +166,7 @@ Next, clean out any previous direct builds (see previous section) from the CEP
 install directory. The first toolkit startup will install the `.zxp` automatically.
 
 Finally, download the `ZXPSignCmd` tool to sign the built extension. You can find
-it [here](http://labs.adobe.com/downloads/extensionbuilder3.html).
+it [here](https://github.com/Adobe-CEP/CEP-Resources/tree/master/ZXPSignCMD).
 
 Now you can build the `.zxp` file with the extension build script. Here's an
 example command run from the top level of the engine repo:
