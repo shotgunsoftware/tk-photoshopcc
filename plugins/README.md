@@ -183,15 +183,18 @@ be build and overwrite the `.zxp` file in the engine. The built extension file
 will look like this:
 
 ```
-com.shotgunsoftware.basic.adobecc-dev.zxp
+com.shotgunsoftware.basic.adobecc.version
+com.shotgunsoftware.basic.adobecc.zxp
 ```
 
-Notice the `dev` portion of the filename. This is a "version" indicator that is
-used by the toolkit startup logic to know when to auto install the extension.
-`dev` versions of the plugin are always installed. This means that after you've
-run the build script, assuming your configuration is using the engine where you
-built the extension, toolkit startup will install the build prior to launching
-the adobe product.
+Notice the `.version` file. This file is used by the toolkit startup logic to
+know when to auto install the extension. When the `-v` (version) flag is not
+specified, this file will contain the string `dev` which tells the engine
+startup code to always install/update this extension. This makes the developer
+round trip from extension build to engine startup straight forward. A copy of
+this `.version` file is also included in the `.zxp` bundle so that when it is
+unpacked within the CEP extensions directory, it can be easily compared against
+what is in the engine for the non `dev` case.
 
 If you're worried about overwriting the `.zxp` file bundled with the engine,
 remember you can always use `git checkout` to discard your changes.
@@ -206,11 +209,17 @@ argument to the build command:
 python developer/build_extension.py -c ../tk-core -p basic -e com.shotgunsoftware.basic.adobecc -s ../ZXPSignCmd ~/Documents/certs/my_certificate.p12 my_cert_password -v v0.0.1
 ```
 
-The resulting `.zxp` file will look like this:
+The results of the command will look like this:
 
 ```
-com.shotgunsoftware.basic.adobecc-v0.0.1.zxp
+com.shotgunsoftware.basic.adobecc.version
+com.shotgunsoftware.basic.adobecc.zxp
 ```
+
+Unlike the previous section, the `.version` file will now include the string
+`v0.0.1`. As bug fixes and features are added to the extension, and it is rebuilt
+with higher version numbers, the engine startup code will use this file to
+compare and determine if the user's installed version requires an update.
 
 ### Testing
 
