@@ -8,6 +8,7 @@
 # agreement to the Shotgun Pipeline Toolkit Source Code License. All rights 
 # not expressly granted therein are reserved by Shotgun Software Inc.
 
+import glob
 import os
 import re
 import shutil
@@ -23,6 +24,7 @@ from sgtk.util.filesystem import (
 )
 
 logger = sgtk.LogManager.get_logger(__name__)
+
 
 def bootstrap(engine_name, context, app_path, app_args, **kwargs):
     """
@@ -52,8 +54,8 @@ def bootstrap(engine_name, context, app_path, app_args, **kwargs):
 
     # the basic plugin needs to be installed in order to launch the adobe
     # engine. we need to make sure the plugin is installed and up-to-date.
-    # only do this if the SHOTGUN_ADOBE_DEVELOP environment variable is not set.
-    if "SHOTGUN_ADOBE_DEVELOP" not in os.environ:
+    # will only run if SHOTGUN_ADOBECC_DISABLE_AUTO_INSTALL is not set.
+    if not "SHOTGUN_ADOBECC_DISABLE_AUTO_INSTALL" in os.environ:
         logger.debug("Ensuring adobe extension is up-to-date...")
         try:
             _ensure_extension_up_to_date(context)
@@ -78,7 +80,6 @@ def _ensure_extension_up_to_date(context):
     :param context:  The context to use when bootstrapping.
     """
 
-    # TODO: will need to rename to photoshopcc probably
     extension_name = "com.shotgunsoftware.basic.adobecc"
 
     # the CEP install directory is OS-specific
@@ -98,8 +99,8 @@ def _ensure_extension_up_to_date(context):
         logger.debug("Extension folder does not exist. Creating it.")
         ensure_folder_exists(adobe_cep_dir)
 
-    # get the path to the installed engine's .zxp file. the extension_name is
-    # 3 levels up from this file.
+    # get the path to the installed engine's .zxp file. the extension_name file i
+    # is 3 levels up from this file.
     bundled_ext_path = os.path.abspath(
         os.path.join(
             os.path.dirname(__file__),
@@ -108,6 +109,34 @@ def _ensure_extension_up_to_date(context):
             "%s.zxp" % (extension_name,)
         )
     )
+
+    if not os.path.exists(bundled_ext_path):
+        raise Exception(
+            "Could not find bundled extension. Expected: '%s'" %
+            (bundled_ext_path,)
+        )
+
+    # now get the version of the bundled extension
+    version_file = "%s.version" % (extension_name,)
+
+    bundled_version_file_path = os.path.abspath(
+        os.path.join(
+            os.path.dirname(__file__),
+            os.pardir,
+            os.pardir,
+            version_file
+        )
+    )
+
+    if not os.path.exists(bundled_version_file_path):
+        raise Exception(
+            "Could not find bundled version file. Expected: '%s'" %
+            (bundled_version_file_path,)
+        )
+
+    # get the bundled version from the version file
+    with open(bundled_version_file_path, "r") as bundled_version_file:
+        bundled_version = bundled_version_file.read().strip()
 
     # check to see if the extension is installed in the CEP extensions directory
     installed_ext_dir = os.path.join(adobe_cep_dir, extension_name)
@@ -120,73 +149,58 @@ def _ensure_extension_up_to_date(context):
 
     # ---- already installed, check for udpate
 
-    # first, get the build date from the .zxp's manifest file.
+    logger.debug("Bundled extension's version is: %s" % (bundled_version,))
 
-    # note: this is the zip file member specification not a file path. the
-    # slashes should work regardless of the current OS.
-    bundled_manifest_member = "python/sgtk_plugin_basic_adobecc/manifest.py"
+    # get the version from the installed extension's build_version.txt file
+    installed_version_file_path = os.path.join(installed_ext_dir, version_file)
 
-    # the date the bundled .zxp file was built
-    bundled_build_date = None
-
-    # access the files within the zxp
-    with zipfile.ZipFile(bundled_ext_path, 'r') as ext_zxp:
-        logger.debug("Extracting the build date from the bundled .zxp file.")
-        # open the manifest file
-        bundled_manifest_info = ext_zxp.getinfo(bundled_manifest_member)
-        bundled_manifest_file = ext_zxp.open(bundled_manifest_info, "r")
-        bundled_build_date = _get_build_date(bundled_manifest_file)
-
-    if bundled_build_date is None:
-        raise Exception(
-            "Could not determine build date for bundled extension.")
-
-    logger.debug("Bundled extension's build date is: %s" % (bundled_build_date,))
-
-    # get the build date from the installed extension's manifest file
-    installed_manifest_path = os.path.join(
-        installed_ext_dir,
-        "python",
-        "sgtk_plugin_basic_adobecc",
-        "manifest.py"
+    logger.debug(
+        "The installed version file path is: %s" %
+        (installed_version_file_path,)
     )
 
-    logger.debug("The installed manifest path is: %s" % (installed_manifest_path,))
-
-    if not os.path.exists(installed_manifest_path):
+    if not os.path.exists(installed_version_file_path):
         raise Exception(
-            "Could not find installed manifest file '%s'" %
-            (installed_manifest_path,)
+            "Could not find installed version file '%s'" %
+            (installed_version_file_path,)
         )
 
-    # the date the installed extension was built
-    installed_build_date = None
+    # the version of the installed extension
+    installed_version = None
 
-    # get the installed build date from the installed manifest file
-    with open(installed_manifest_path, "r") as installed_manifest_file:
-        logger.debug("Extracting the build date from the installed extension.")
-        installed_build_date = _get_build_date(installed_manifest_file)
+    # get the installed version from the installed version info file
+    with open(installed_version_file_path, "r") as installed_version_file:
+        logger.debug("Extracting the version from the installed extension.")
+        installed_version = installed_version_file.read().strip()
 
-    if installed_build_date is None:
+    if installed_version is None:
         raise Exception(
-            "Could not determine build date for the installed extension.")
+            "Could not determine version for the installed extension.")
 
-    logger.debug("Installed extension's build date is: %s" % (installed_build_date,))
+    logger.debug("Installed extension's version is: %s" % (installed_version,))
 
-    if bundled_build_date <= installed_build_date:
-        # a newer version is installed. nothing to do here.
-        logger.debug(
-            "Installed extension is equal to or newer than the bundled build. "
-            "Nothing to do!"
-        )
-        return
+    from sgtk.util.version import is_version_older
+    if bundled_version != "dev" and installed_version != "dev":
+        if (bundled_version == installed_version or
+           is_version_older(bundled_version, installed_version)):
+
+            # the bundled version is the same or older. or it is a 'dev' build
+            # which means always install that one.
+            logger.debug(
+                "Installed extension is equal to or newer than the bundled "
+                "build. Nothing to do!"
+            )
+            return
 
     # ---- extension in engine is newer. update!
 
-    logger.debug(
-        "Bundled extension build is newer than the installed "
-        "extension build! Updating..."
-    )
+    if bundled_version == "dev":
+        logger.debug("Installing the bundled 'dev' version of the extension.")
+    else:
+        logger.debug(
+            "Bundled extension build is newer than the installed extension " +
+            "build! Updating..."
+        )
 
     # move the installed extension to the backup directory
     backup_ext_dir = tempfile.mkdtemp()
@@ -241,22 +255,3 @@ def _install_extension(ext_path, dest_dir):
     with zipfile.ZipFile(ext_path, 'r') as ext_zxp:
         ext_zxp.extractall(dest_dir)
 
-
-def _get_build_date(manifest_file_object):
-    """
-    Find the build date within the supplied, open file object.
-
-    :param manifest_file_object:  A file-like object that supports read().
-    :return: str build date.
-    """
-
-    # The manifest file should include a line that looks like this:
-    #   BUILD_DATE="20170118_143247"
-    # Find the build date in the manifest file
-
-    manifest_contents = manifest_file_object.read()
-    matches = re.search('BUILD_DATE="([\d_]+)"', manifest_contents)
-    if matches:
-        return matches.group(1)
-    else:
-        return None
