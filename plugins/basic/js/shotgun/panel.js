@@ -52,6 +52,8 @@ sg_panel.Panel = new function() {
         // clears any state for the current context.
 
         _context_thumbnail_data = undefined;
+        _build_flyout_menu([]);
+
     };
 
     this.set_panel_loading_state = function() {
@@ -63,12 +65,53 @@ sg_panel.Panel = new function() {
 
         _show_header(false);
         _set_contents(
-            "<img id='loading_img' src='../images/sg_logo_loading.png'>");
+            "<img id='loading_img' src='../images/sg_logo_with_text.png'>");
 
         _show_info(true);
         _set_info(
             "Loading Shotgun Integration..."
         );
+    };
+
+    this.set_unknown_context_state = function() {
+        // Clears the panel's contents and displays a message that it is disabled
+
+        this.clear();
+
+        _set_bg_color("#222222");
+
+        _show_header(false);
+        _clear_messages();
+
+        var app_name = _cs_interface.getHostEnvironment().appName;
+        const app_display_name = sg_constants.product_info[app_name].display_name;
+
+        _set_contents(
+            "<table id='sg_unknown_context_table'>" +
+              "<tr>" +
+                "<td style='vertical-align:top;'>" +
+                  "<img src='../images/sg_logo.png' height='85px'>" +
+                "</td>" +
+                "<td style='vertical-align:top;'>" +
+                  "<table>" +
+                    "<tr>" +
+                      "<td id='sg_unknown_context_title'>" +
+                        "<strong><big>Integration Disabled</big></strong>" +
+                      "</td>" +
+                    "</tr>" +
+                    "<tr>" +
+                      "<td id='sg_unknown_context_details'>" +
+                        "The currently active file can't be associated with a " +
+                        "Shotgun context. Try switching to another file or " +
+                        "restarting " + app_display_name + "." +
+                      "</td>" +
+                    "</tr>" +
+                  "</table>" +
+                "</td>" +
+              "</tr>" +
+            "</table>"
+        );
+
     };
 
     this.set_context_loading_state = function() {
@@ -195,6 +238,15 @@ sg_panel.Panel = new function() {
             // TODO: display error in the panel
         }
 
+        // Here we send the "AppOnline" event strictly in the event of a manual
+        // reload/restart of the SG extension. For initial launch of PS, this
+        // will be a no-op since the manager will already be running. For the
+        // reload scenario, this is the jumpstart that the manager requires to
+        // start up.
+        const event_type = "com.adobe.csxs.events.AppOnline";
+        var event = new CSEvent(event_type, "APPLICATION");
+        event.extensionId = _cs_interface.getExtensionID();
+        _cs_interface.dispatchEvent(event);
     };
 
     this.on_unload = function() {
@@ -351,22 +403,18 @@ sg_panel.Panel = new function() {
                     commands_html +=
                         "<div class='sg_panel_command' " +
                             "onmouseover='sg_panel.Panel.show_command_help(\"\", \"" +description + "\", false)' " +
-                        "onmouseout='sg_panel.Panel.hide_command_help()' " +
+                            "onmouseout='sg_panel.Panel.hide_command_help()' " +
                         ">" +
-                        "<table style='width:100%;'>" +
-                            "<colgroup>" +
-                                "<col width='0%' />" +
-                                "<col width='100%' />" +
-                            "</colgroup>" +
+                        "<table>" +
                             "<tr>" +
-                                "<td align='left' width='30px' style='vertical-align:middle;'>" +
+                                "<td>" +
                                     "<a href='#' "  +
                                         "onClick='sg_panel.Panel.trigger_command(\"" + command_id + "\", \"" + display_name + "\")'" +
                                     ">" +
                                     "<img class='sg_panel_command_other_img' src='" + icon_path + "'>" +
                                     "</a>" +
                                 "</td>" +
-                                "<td align='left' style='padding-left:10px; vertical-align:middle; white-space:nowrap;'>" +
+                                "<td style='padding-left:8px'>" +
                                     "<a href='#' "  +
                                         "onClick='sg_panel.Panel.trigger_command(\"" + command_id + "\", \"" + display_name + "\")'" +
                                     ">" +
@@ -413,7 +461,7 @@ sg_panel.Panel = new function() {
 
     this.trigger_command = function(command_id, command_display) {
         // Emits the signal to launch the supplied command id.
-        // Also shows a tmp message in the footer to confirm user click
+        // Also shows a tmp message to confirm user click
 
         // show the progress message temporarily
         _set_info("Launching: " + command_display);
@@ -458,11 +506,16 @@ sg_panel.Panel = new function() {
                           Enabled="true" \
                           Checked="false"/>';
 
-        if ( process.env.SHOTGUN_ADOBE_NETWORK_DEBUG || process.env.SHOTGUN_ADOBE_TESTS_ROOT || process.env.TK_DEBUG ) {
+        if (process.env.SHOTGUN_ADOBE_NETWORK_DEBUG ||
+            process.env.SHOTGUN_ADOBE_TESTS_ROOT ||
+            process.env.TK_DEBUG ||
+            process.env.SHOTGUN_ADOBE_DEVELOP) {
+
             flyout_xml += '<MenuItem Id="sg_dev_debug" \
                               Label="Chrome Console..." \
                               Enabled="true" \
                               Checked="false"/>';
+
             flyout_xml += '<MenuItem Id="sg_dev_reload" \
                               Label="Reload Shotgun Extension" \
                               Enabled="true" \
@@ -492,8 +545,8 @@ sg_panel.Panel = new function() {
         }
 
         var event = new CSEvent(event_type, "APPLICATION");
-         event.extensionId = _cs_interface.getExtensionID();
-         _cs_interface.dispatchEvent(event);
+        event.extensionId = _cs_interface.getExtensionID();
+        _cs_interface.dispatchEvent(event);
     };
 
     const _on_flyout_menu_clicked = function(event) {
@@ -577,10 +630,10 @@ sg_panel.Panel = new function() {
             contents_html +=
                 "<br>If you encounter this problem consistently or have any " +
                 "other questions, please send the following error and a " +
-                "description of the steps to reproduce the problem to: " +
+                "description of the steps to reproduce the problem to " +
                 "<a href='#' onClick='sg_panel.Panel.email_support(\"" +
                     subject + "\", \"" + body + "\")'>" +
-                    "Shotgun Support" +
+                    "support@shotgunsoftware.com" +
                 "</a>." +
                 "<br><br>" +
                 "<center>" +
@@ -591,10 +644,10 @@ sg_panel.Panel = new function() {
         } else {
             contents_html +=
                 "<br>If you encounter this problem consistently or have any " +
-                "other questions, please send the steps to reproduce to: " +
+                "other questions, please send the steps to reproduce to " +
                 "<a href='#' onClick='sg_panel.Panel.email_support(\"" +
                     subject + "\", \"" + body + "\")'>" +
-                    "Shotgun Support" +
+                    "support@shotgunsoftware.com" +
                 "</a>.";
         }
 
@@ -624,9 +677,14 @@ sg_panel.Panel = new function() {
 
         _show_header(false);
 
+        var python_display = "system <samp>python</samp>";
+        if (process.env.SHOTGUN_ADOBE_PYTHON) {
+            python_display = "<samp>" + process.env.SHOTGUN_ADOBE_PYTHON + "</samp>";
+        }
+
         var contents_html = "<div class='sg_error_message'>" +
             "The Shotgun integration failed to load because <samp>PySide" +
-            "</samp> is not installed." +
+            "</samp> is not installed (Running " + python_display + ")." +
             "</div>";
 
         contents_html +=
@@ -647,14 +705,17 @@ sg_panel.Panel = new function() {
             "*** Please enter your questions here... ***\n\n"
         );
 
+        var app_name = _cs_interface.getHostEnvironment().appName;
+        const app_display_name = sg_constants.product_info[app_name].display_name;
+
         contents_html +=
-            "<br>Once you have <samp>PySide</samp> installed, restart this " +
-            "application to load the Shotgun integration.<br><br> " +
+            "<br>Once you have <samp>PySide</samp> installed, restart " +
+            app_display_name + " to load the Shotgun integration.<br><br> " +
             "If you believe the error is incorrect or you have any further " +
-            "questions, please contact: " +
+            "questions, please contact " +
             "<a href='#' onClick='sg_panel.Panel.email_support(\"" +
             subject + "\", \"" + body + "\")'>" +
-            "Shotgun Support" +
+            "support@shotgunsoftware.com" +
             "</a>.";
 
         contents_html = "<div class='sg_container'>" + contents_html + "</div>";
@@ -815,21 +876,25 @@ sg_panel.Panel = new function() {
             div_id = "sg_log_message_error"
         }
 
-        // just a little indicator so that we know if the log message came from
-        // (javascript or python) when looking in the panel console.
-        if (log_source == "js") {
-            msg = " > " + msg;
-        } else {
-            msg = ">> " + msg;
-        }
+        // append the <pre> element to the log div
+        const log = document.getElementById("sg_panel_console_log");
 
         // create a <pre> element and insert the msg
         const node = document.createElement("pre");
         node.setAttribute("id", div_id);
         node.appendChild(document.createTextNode(msg));
 
-        // append the <pre> element to the log div
-        const log = document.getElementById("sg_panel_console_log");
+        // just a little indicator so that we know if the log message came from
+        // (javascript or python) when looking in the panel console.
+        const tag = document.createElement("pre");
+        tag.setAttribute("id", "sg_panel_console_tag");
+        if (log_source == "js") {
+            tag.appendChild(document.createTextNode("js"))
+        } else {
+            tag.appendChild(document.createTextNode("py"))
+        }
+
+        log.appendChild(tag);
         log.appendChild(node);
         log.appendChild(document.createElement("br"));
 
@@ -1011,6 +1076,13 @@ sg_panel.Panel = new function() {
         sg_manager.UPDATE_CONTEXT_THUMBNAIL.connect(
             function(event) {
                 self.set_context_thumbnail(event.data);
+            }
+        );
+
+        // Sets the panel into a state where the context is not known
+        sg_manager.UNKNOWN_CONTEXT.connect(
+            function(event) {
+                self.set_unknown_context_state();
             }
         );
 

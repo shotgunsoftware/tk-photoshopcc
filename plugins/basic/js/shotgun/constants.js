@@ -36,12 +36,14 @@ sg_constants.product_info = {
 
     // Photoshop
     PHSP: {
+        display_name: "Photoshop",
         tk_engine_name: "tk-photoshop",
         debug_url: "http://localhost:45216"
     },
 
     // Photoshop alt
     PHXS: {
+        display_name: "Photoshop",
         tk_engine_name: "tk-photoshop",
         debug_url: "http://localhost:45217"
     },
@@ -49,6 +51,7 @@ sg_constants.product_info = {
     // After Effects
 
     AEFT: {
+        display_name: "After Effects",
         tk_engine_name: "tk-aftereffects",
         debug_url: "http://localhost:45218"
     },
@@ -56,6 +59,7 @@ sg_constants.product_info = {
     // Premiere Pro
 
     PPRO: {
+        display_name: "Premiere Pro",
         tk_engine_name: "tk-premiere",
         debug_url: "http://localhost:45219"
     }
@@ -84,7 +88,8 @@ sg_constants.panel_div_ids = {
 sg_constants.python_error_codes = {
     EXIT_STATUS_CLEAN: 0,
     EXIT_STATUS_ERROR: 100,
-    EXIT_STATUS_NO_PYSIDE: 101
+    EXIT_STATUS_NO_PYSIDE: 101,
+    EXIT_STATUS_PYTHON_FAIL: 102
 };
 
 // External link to pyside docs
