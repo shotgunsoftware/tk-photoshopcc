@@ -164,7 +164,7 @@ div.sg_error {
     flex-wrap: wrap;
     padding-top: 8px;
     padding-bottom: 4px;
-    margin: 0px;
+    margin: 0;
     border-bottom: 2px solid #373737;
 }
 
@@ -177,7 +177,6 @@ div.sg_error {
     padding-left: 12px;
 }
 
-/* grayscale images in favorites until hovered */
 .sg_panel_command_img {
     width: 19px;
     height: 19px;
@@ -198,11 +197,11 @@ div.sg_error {
 }
 
 .sg_command_button img {
-    -webkit-filter: grayscale(1) brightness(1) contrast(1);
+    -webkit-filter: grayscale(1) brightness(.8);
 }
 
 .sg_command_button:hover img {
-    -webkit-filter: grayscale(0) brightness(2) contrast(2);
+    -webkit-filter: grayscale(0) brightness(1);
 }
 
 .sg_command_button:hover {
@@ -217,7 +216,7 @@ div.sg_error {
 
 /* container for the commands */
 #sg_panel_commands {
-    margin: 0px;
+    margin: 0;
     background-color: #525152;
 }
 
@@ -232,7 +231,7 @@ div.sg_error {
 }
 
 .sg_panel_command img {
-    -webkit-filter: grayscale(1) brightness(1) contrast(1);
+    -webkit-filter: grayscale(1) brightness(.8);
 }
 
 .sg_panel_command a:link {
@@ -249,7 +248,7 @@ div.sg_error {
 }
 
 .sg_panel_command:hover img {
-    -webkit-filter: grayscale(0) brightness(2) contrast(2);
+    -webkit-filter: grayscale(0) brightness(1);
 }
 
 .sg_panel_command:hover a:link {

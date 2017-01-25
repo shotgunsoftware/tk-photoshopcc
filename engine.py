@@ -710,6 +710,51 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
             self._COMMAND_UID_COUNTER += 1
             return self._COMMAND_UID_COUNTER
 
+    def __get_icon_path(self, properties):
+        """
+        Processes the command properties dictionary to find the most appropriate
+        icon path.
+
+        This code looks for an `icons` dictionary of the following form::
+
+            {
+                "dark": {
+                    "png": "/path/to/dark_icon.png",
+                    "svg": "/path/to/dark_icon.svg"
+                },
+                "light": {
+                    "png": "/path/to/light_icon.png",
+                    "svg": "/path/to/light_icon.svg"
+                }
+            }
+
+        For Adobe, the preference is dark png then light png
+
+        If neither of these is found, fall back to the standard
+        `properties["icon"]`.
+        """
+
+        icon_path = None
+        icons = properties.get("icons")
+
+        if icons:
+            dark = icons.get("dark")
+            light = icons.get("light")
+
+            # check for dark icon
+            if dark:
+                icon_path = dark.get("png", icon_path)
+
+            # if no dark icon, check the light:
+            if not icon_path and light:
+                icon_path = dark.get("png", icon_path)
+
+        # still no icon path, fall back to regular icon
+        if not icon_path:
+            icon_path = properties.get("icon")
+
+        return icon_path
+
     def __send_state(self):
         """
         Sends information back to javascript representing the current context.
@@ -787,7 +832,7 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
             command = dict(
                 uid=properties.get("uid"),
                 display_name=command_name,
-                icon_path=properties.get("icon"),
+                icon_path=self.__get_icon_path(properties),
                 description=properties.get("description"),
                 type=properties.get("type", "default"),
             )
