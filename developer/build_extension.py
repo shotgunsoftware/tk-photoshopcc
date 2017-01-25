@@ -10,13 +10,15 @@
 # agreement to the Shotgun Pipeline Toolkit Source Code License. All rights
 # not expressly granted therein are reserved by Shotgun Software Inc.
 
+import sys
+sys.dont_write_bytecode = True
+
 import argparse
 import os
 import re
 import shlex
 import shutil
 import subprocess
-import sys
 
 # global placeholder for when we import sgtk
 sgtk = None
@@ -50,6 +52,9 @@ def main():
 
     # add a version file to the built plugin
     _write_version_file(args)
+
+    # do a final pass on the plugin directory before bundling it up
+    _clean_plugin_dir(args)
 
     # sign the newly built plugin and create the .ZXP file
     if args["sign"]:
@@ -98,6 +103,25 @@ def _build_plugin(args):
     # add the full ext dir path to the args dict
     args["plugin_build_dir"] = plugin_build_dir
     logger.info("Built plugin: %s" % (args["plugin_build_dir"],))
+
+
+def _clean_plugin_dir(args):
+    """
+    Ensure the plugin dir is in a clean state before bundling.
+
+    NOTE: Once signed, nothing in the plugin directory can be modified, so
+    do any and all work to ensure it is in it's ready state.
+    """
+
+    # remove all .pyc files recursively
+    logger.info("Cleaning built plugin directory...")
+    from sgtk.util.filesystem import safe_delete_file
+    for (root, dir_names, file_names) in os.walk(args["plugin_build_dir"]):
+        for file_name in file_names:
+            if file_name.endswith(".pyc"):
+                full_path = os.path.join(root, file_name)
+                logger.info("Removing pyc file: %s" % (full_path,))
+                safe_delete_file(full_path)
 
 
 def _parse_args():

@@ -8,9 +8,11 @@
 # agreement to the Shotgun Pipeline Toolkit Source Code License. All rights
 # not expressly granted therein are reserved by Shotgun Software Inc.
 
+import sys
+sys.dont_write_bytecode = True
+
 import logging
 import os
-import sys
 import traceback
 
 # NOTE: this module becomes available once the plugin is built

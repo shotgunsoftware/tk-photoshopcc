@@ -226,6 +226,31 @@ Unlike the previous section, the `.version` file will now include the string
 with higher version numbers, the engine startup code will use this file to
 compare and determine if the user's installed version requires an update.
 
+#### Signature verification:
+
+Once the `.zxp` bundle is created, you can verify the signature using the same
+`ZXPSignCmd` supplied to the build script. Here's the usage:
+
+```
+> ZXPSignCmd -verify com.shotgunsoftware.basic.photoshopcc.zxp -certInfo
+```
+
+The output of the command will show the basic information about the certificate.
+Most importantly, it should show `OS Trusted: true`, `Revoked: false`, a valid
+timestamp within the valid certificate's signing range.
+
+Note, the command may take a couple of minutes to run. For more information, see
+this [document from adobe](http://wwwimages.adobe.com/content/dam/Adobe/en/devnet/creativesuite/pdfs/SigningTechNote_CC.pdf).
+
+#### Important Developer Note:
+
+Once the extension is signed and installed, **any** modifications to the files
+in that directory will cause Adobe's signature verification to fail. It is
+important to understand this while developing. Because the `basic` plugin
+includes python code we have manually disabled the creation of `.pyc` files
+during boostrap for this reason.
+
+
 ### Testing
 
 The `basic` plugin/extension has a flyout menu with options useful for testing
