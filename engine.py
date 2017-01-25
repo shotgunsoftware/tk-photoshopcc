@@ -55,6 +55,8 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
     _CHECK_CONNECTION_TIMER = None
     _CONTEXT_CHANGES_DISABLED = False
     _DIALOG_PARENT = None
+    _WIN32_PHOTOSHOP_MAIN_HWND = None
+    _PROXY_WIN_HWND = None
 
     ############################################################################
     # context changing
@@ -169,6 +171,13 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
         """
         Runs after all apps have been initialized.
         """
+        if not self.adobe.event_processor:
+            try:
+                from sgtk.platform.qt import QtGui
+                self.adobe.event_processor = QtGui.QApplication.processEvents
+            except ImportError:
+                pass
+
         self.__setup_connection_timer()
 
         # now that qt is setup and the engine is ready to go, forward the
@@ -179,6 +188,11 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
         """
         Called when the engine should tear down itself and all its apps.
         """
+        # Set our parent widget back to being owned by the window manager
+        # instead of Photoshop's application window.
+        if self._PROXY_WIN_HWND and sys.platform == "win32":
+            self.__tk_photoshopcc.win_32_api.SetParent(self._PROXY_WIN_HWND, 0)
+
         # No longer poll for new messages from this engine.
         if self._CHECK_CONNECTION_TIMER:
             self._CHECK_CONNECTION_TIMER.stop()
@@ -204,10 +218,17 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
         Called externally once a ``QApplication`` has been created and completes
         the engine setup process.
         """
-        # since this is running in our own Qt event loop, we'll use the bundled
+        # We need to have the RPC API call processEvents during its response
+        # wait loop. This will keep that loop from blocking the UI thread.
+        from sgtk.platform.qt import QtGui
+        self.adobe.event_processor = QtGui.QApplication.processEvents
+
+        # Since this is running in our own Qt event loop, we'll use the bundled
         # dark look and feel. breaking encapsulation to do so.
         self.logger.debug("Initializing default styling...")
         self._initialize_dark_look_and_feel()
+
+        # Sets up the heartbeat timer to run asynchronously.
         self.__setup_connection_timer(force=True)
 
     def register_command(self, name, callback, properties=None):
@@ -500,21 +521,87 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
 
         return base
 
+    def _win32_get_photoshop_main_hwnd(self):
+        """
+        Windows specific method to find the main Photoshop window
+        handle (HWND)
+        """
+        if not self._WIN32_PHOTOSHOP_MAIN_HWND:
+            found_hwnds = self.__tk_photoshopcc.win_32_api.find_windows(
+                class_name="Photoshop",
+                stop_if_found=True,
+            )
+
+            if found_hwnds:
+                self._WIN32_PHOTOSHOP_MAIN_HWND = found_hwnds[0]
+
+        return self._WIN32_PHOTOSHOP_MAIN_HWND
+
+    def _win32_get_proxy_window(self):
+        """
+        Windows-specific method to get the proxy window that will 'own' all
+        Toolkit dialogs.  This will be parented to the main photoshop
+        application.
+
+        :returns: A QWidget that has been parented to Photoshop's window.
+        """
+        # Get the main Photoshop window:
+        ps_hwnd = self._win32_get_photoshop_main_hwnd()
+        win32_proxy_win = None
+
+        if ps_hwnd:
+            from tank.platform.qt import QtGui, QtCore
+
+            # Create the proxy QWidget.
+            win32_proxy_win = QtGui.QWidget()
+            win32_proxy_win.setWindowTitle('sgtk dialog owner proxy')
+
+            proxy_win_hwnd = self.__tk_photoshopcc.win_32_api.qwidget_winid_to_hwnd(
+                win32_proxy_win.winId(),
+            )
+
+            # Set the window style/flags. We don't need or want our Python
+            # dialogs to notify the Photoshop application window when they're
+            # opened or closed, so we'll disable that behavior.
+            win_ex_style = self.__tk_photoshopcc.win_32_api.GetWindowLong(
+                proxy_win_hwnd,
+                self.__tk_photoshopcc.win_32_api.GWL_EXSTYLE,
+            )
+
+            self.__tk_photoshopcc.win_32_api.SetWindowLong(
+                proxy_win_hwnd,
+                self.__tk_photoshopcc.win_32_api.GWL_EXSTYLE, 
+                win_ex_style | self.__tk_photoshopcc.win_32_api.WS_EX_NOPARENTNOTIFY,
+            )
+
+            # Parent to the Photoshop application window.
+            self.__tk_photoshopcc.win_32_api.SetParent(proxy_win_hwnd, ps_hwnd)
+            self._PROXY_WIN_HWND = proxy_win_hwnd
+
+        return win32_proxy_win
+
     def _get_dialog_parent(self):
         """
         Get the QWidget parent for all dialogs created through
         show_dialog & show_modal.
         """
-        from sgtk.platform.qt import QtGui, QtCore
+
+        """
+        Get the QWidget parent for all dialogs created through
+        show_dialog & show_modal.
+        """
+        # determine the parent widget to use:
+        from tank.platform.qt import QtGui, QtCore
 
         if not self._DIALOG_PARENT:
-            self._DIALOG_PARENT = QtGui.QWidget(
-                parent=QtGui.QApplication.activeWindow(),
-            )
-            self._DIALOG_PARENT.setWindowFlags(
-                self._DIALOG_PARENT.windowFlags() | QtCore.Qt.WindowStaysOnTopHint,
-            )
-
+            if sys.platform == "win32":
+                # for windows, we create a proxy window parented to the
+                # main application window that we can then set as the owner
+                # for all Toolkit dialogs
+                self._DIALOG_PARENT = self._win32_get_proxy_window()
+            else:
+                self._DIALOG_PARENT = QtGui.QApplication.activeWindow()
+            
         return self._DIALOG_PARENT
 
     def show_dialog(self, title, bundle, widget_class, *args, **kwargs):
@@ -558,11 +645,9 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
         # Keeping track of all dialogs will ensure this doesn't happen
         self.__qt_dialogs.append(dialog)
 
-        # show the dialog:
-        dialog.show()
-
         # make sure the window raised so it doesn't
         # appear behind the main Photoshop window
+        dialog.show()
         dialog.raise_()
         dialog.activateWindow()
 
