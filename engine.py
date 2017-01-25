@@ -715,7 +715,7 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
         Processes the command properties dictionary to find the most appropriate
         icon path.
 
-        This code looks for an `icon_info` dictionary of the following form::
+        This code looks for an `icons` dictionary of the following form::
 
             {
                 "dark": {
@@ -735,11 +735,11 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
         """
 
         icon_path = None
-        icon_info = properties.get("icon_info")
+        icons = properties.get("icons")
 
-        if icon_info:
-            dark = icon_info.get("dark")
-            light = icon_info.get("light")
+        if icons:
+            dark = icons.get("dark")
+            light = icons.get("light")
 
             # check for dark icon
             if dark:

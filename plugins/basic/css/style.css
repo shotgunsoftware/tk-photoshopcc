@@ -197,11 +197,11 @@ div.sg_error {
 }
 
 .sg_command_button img {
-    -webkit-filter: grayscale(1);
+    -webkit-filter: grayscale(1) brightness(.8);
 }
 
 .sg_command_button:hover img {
-    -webkit-filter: grayscale(0);
+    -webkit-filter: grayscale(0) brightness(1);
 }
 
 .sg_command_button:hover {
@@ -231,7 +231,7 @@ div.sg_error {
 }
 
 .sg_panel_command img {
-    -webkit-filter: grayscale(1);
+    -webkit-filter: grayscale(1) brightness(.8);
 }
 
 .sg_panel_command a:link {
@@ -248,7 +248,7 @@ div.sg_error {
 }
 
 .sg_panel_command:hover img {
-    -webkit-filter: grayscale(0);
+    -webkit-filter: grayscale(0) brightness(1);
 }
 
 .sg_panel_command:hover a:link {
