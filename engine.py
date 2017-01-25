@@ -301,52 +301,53 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
         # which is useful when an app is doing a lot of Photoshop work that
         # might be triggering active document changes that we don't want to
         # result in SGTK context changes.
-        if self._CONTEXT_CHANGES_DISABLED:
-            self.logger.debug(
-                "Engine is in 'no context changes' mode. Not changing context."
-            )
-            return
-
-        if active_document_path:
-            self.logger.debug("New active document is %s" % active_document_path)
-        else:
-            self.logger.debug(
-                "New active document check failed. This is likely due to the "
-                "new active document being in an unsaved state."
-            )
-            return
-
-        if active_document_path in self._CONTEXT_CACHE:
-            context = self._CONTEXT_CACHE[active_document_path]
-        else:
-            try:
-                context = sgtk.sgtk_from_path(active_document_path).context_from_path(
-                    active_document_path,
-                    previous_context=self.context,
-                )
-            except Exception:
+        with self.heartbeat_disabled():
+            if self._CONTEXT_CHANGES_DISABLED:
                 self.logger.debug(
-                    "Unable to determine context from path. Not changing context."
-                )
-                # clear the context finding task ids so that any tasks that
-                # finish won't send data to js.
-                self.__context_find_uid = None
-                self.__context_thumb_uid = None
-                self.adobe.send_unknown_context()
-                return
-
-            if not context.project:
-                self.logger.debug(
-                    "New context doesn't have a Project entity. Not changing "
-                    "context."
+                    "Engine is in 'no context changes' mode. Not changing context."
                 )
                 return
 
-            self._CONTEXT_CACHE[active_document_path] = context
+            if active_document_path:
+                self.logger.debug("New active document is %s" % active_document_path)
+            else:
+                self.logger.debug(
+                    "New active document check failed. This is likely due to the "
+                    "new active document being in an unsaved state."
+                )
+                return
 
-        if context != self.context:
-            self.adobe.context_about_to_change()
-            sgtk.platform.change_context(context)
+            if active_document_path in self._CONTEXT_CACHE:
+                context = self._CONTEXT_CACHE[active_document_path]
+            else:
+                try:
+                    context = sgtk.sgtk_from_path(active_document_path).context_from_path(
+                        active_document_path,
+                        previous_context=self.context,
+                    )
+                except Exception:
+                    self.logger.debug(
+                        "Unable to determine context from path. Not changing context."
+                    )
+                    # clear the context finding task ids so that any tasks that
+                    # finish won't send data to js.
+                    self.__context_find_uid = None
+                    self.__context_thumb_uid = None
+                    self.adobe.send_unknown_context()
+                    return
+
+                if not context.project:
+                    self.logger.debug(
+                        "New context doesn't have a Project entity. Not changing "
+                        "context."
+                    )
+                    return
+
+                self._CONTEXT_CACHE[active_document_path] = context
+
+            if context != self.context:
+                self.adobe.context_about_to_change()
+                sgtk.platform.change_context(context)
 
     def _handle_command(self, uid):
         """
@@ -354,24 +355,25 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
 
         :param int uid: The unique id of the engine command to run.
         """
-        from sgtk.platform.qt import QtGui
+        with self.heartbeat_disabled():
+            from sgtk.platform.qt import QtGui
 
-        if uid == self.__jump_to_fs_command_id:
-            # jump to fs special command triggered
-            self._jump_to_fs()
-        elif uid == self.__jump_to_sg_command_id:
-            # jump to sg special command triggered
-            self._jump_to_sg()
-        else:
-            # a registered command was triggered
-            for command in self.commands.values():
-                if command.get("properties", dict()).get("uid") == uid:
-                    self.logger.debug(
-                        "Executing callback for command: %s" % (command,))
-                    result = command["callback"]()
-                    if isinstance(result, QtGui.QWidget):
-                        # if the callback returns a widget, keep a handle on it
-                        self.__qt_dialogs.append(result)
+            if uid == self.__jump_to_fs_command_id:
+                # jump to fs special command triggered
+                self._jump_to_fs()
+            elif uid == self.__jump_to_sg_command_id:
+                # jump to sg special command triggered
+                self._jump_to_sg()
+            else:
+                # a registered command was triggered
+                for command in self.commands.values():
+                    if command.get("properties", dict()).get("uid") == uid:
+                        self.logger.debug(
+                            "Executing callback for command: %s" % (command,))
+                        result = command["callback"]()
+                        if isinstance(result, QtGui.QWidget):
+                            # if the callback returns a widget, keep a handle on it
+                            self.__qt_dialogs.append(result)
 
     def _handle_logging(self, level, message):
         """
@@ -491,7 +493,28 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
         self._CONTEXT_CHANGES_DISABLED = True
         yield
         self._CONTEXT_CHANGES_DISABLED = False
-    
+
+    @contextmanager
+    def heartbeat_disabled(self):
+        """
+        A context manager that disables the heartbeat and message processing
+        timer on enter, and restarts it on exit.
+        """
+        try:
+            self.logger.debug("Pausing heartbeat...")
+            self._CHECK_CONNECTION_TIMER.stop()
+        except Exception, e:
+            self.logger.debug("Unable to pause heartbeat as requested.")
+            self.logger.error(str(e))
+        else:
+            self.logger.debug("Heartbeat paused.")
+
+        yield
+
+        self._CHECK_CONNECTION_TIMER.start(
+            self.SHOTGUN_ADOBE_HEARTBEAT_INTERVAL * 1000.0,
+        )
+        self.logger.debug("Heartbeat restarted.")
 
     ############################################################################
     # UI

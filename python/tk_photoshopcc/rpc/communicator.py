@@ -32,7 +32,7 @@ class Communicator(object):
     _RESULTS = dict()
     _UID = 0
     _LOCK = threading.Lock()
-    _WAIT_INTERVAL = 0.01
+    _WAIT_INTERVAL = 0.0
     _RPC_EXECUTE_COMMAND = "execute_command"
     _REGISTRY = dict()
     _COMMAND_REGISTRY = dict()
@@ -172,12 +172,19 @@ class Communicator(object):
         """
         self._io._ping()
 
-    def process_new_messages(self, wait=0.01):
+    def process_new_messages(self, wait=0.01, single_loop=False, process_events=True):
         """
         Processes new messages that have arrived but that have not been
         previously handled.
 
         :param float wait: How long to poll for new messages, in seconds.
+        :param bool single_loop: If True, only a single check for messages
+                                 will be made and the timeout duration will
+                                 not be used. Default is False.
+        :param bool process_events: If True and an event processor callable
+                                    is registered with the communicator, it
+                                    will be called at the end of the wait
+                                    duration.
         """
         self.log_network_debug("Processing new messages, wait is %s" % wait)
 
@@ -186,7 +193,7 @@ class Communicator(object):
             self._io._transport.set_timeout(seconds=1)
             start = time.time()
 
-            while wait >= (time.time() - start):
+            while wait >= (time.time() - start) or single_loop:
                 try:
                     self._io._process_packets()
                 except socketIO_client.exceptions.TimeoutError:
@@ -200,10 +207,13 @@ class Communicator(object):
                     )
                     pass
 
-                # Force an event loop iteration if we were provided with a
-                # callable event processor.
-                if self.event_processor:
-                    self.event_processor()
+                    # Force an event loop iteration if we were provided with a
+                    # callable event processor.
+                    if self.event_processor and process_events:
+                        self.event_processor()
+                else:
+                    if single_loop:
+                        break
         finally:
             self._io._heartbeat_thread.relax()
             self._io._transport.set_timeout()
@@ -355,16 +365,29 @@ class Communicator(object):
             wrapper_class=ProxyWrapper,
         )
 
-    def wait(self, timeout=0.1):
+    def wait(self, timeout=0.1, single_loop=False, process_events=True):
         """
         Triggers a wait and the processing of any messages already
         queued up or that arrive during the wait period.
 
         :param float timeout: The duration of time, in seconds, to
                               wait.
+        :param bool single_loop: If True, only a single check for messages
+                                 will be made and the timeout duration will
+                                 not be used. Default is False.
+        :param bool process_events: If True and an event processor callable
+                                    is registered with the communicator, it
+                                    will be called at the end of the wait
+                                    duration.
         """
         self.log_network_debug("Triggering a wait of duration %s" % timeout)
-        self._io.wait(float(timeout))
+        self.log_network_debug("single_loop is %s" % single_loop)
+        self.log_network_debug("process_events is %s" % process_events)
+        self.process_new_messages(
+            wait=float(timeout),
+            single_loop=single_loop,
+            process_events=process_events,
+        )
 
     ##########################################################################################
     # logging
@@ -439,25 +462,24 @@ class Communicator(object):
         """
         self.log_network_debug("Handling RPC response...")
 
-        with self._LOCK:
-            result = json.loads(response)
-            uid = result["id"]
-            self.log_network_debug("Response UID is %s" % uid)
+        result = json.loads(response)
+        uid = result["id"]
+        self.log_network_debug("Response UID is %s" % uid)
 
-            try:
-                self._RESULTS[uid] = json.loads(result["result"])
-            except (TypeError, ValueError):
-                self._RESULTS[uid] = result.get("result")
-            except KeyError:
-                self.logger.error("RPC command (UID=%s) failed!" % uid)
-                self.logger.error("Failed command payload: %s" % self._COMMAND_REGISTRY[uid])
-                self.logger.debug("Failure raw response: %s" % response)
-                self.logger.debug("Failure results: %s" % result)
-                raise RuntimeError("RPC command (UID=%s) failed!" % uid)
+        try:
+            self._RESULTS[uid] = json.loads(result["result"])
+        except (TypeError, ValueError):
+            self._RESULTS[uid] = result.get("result")
+        except KeyError:
+            self.logger.error("RPC command (UID=%s) failed!" % uid)
+            self.logger.error("Failed command payload: %s" % self._COMMAND_REGISTRY[uid])
+            self.logger.debug("Failure raw response: %s" % response)
+            self.logger.debug("Failure results: %s" % result)
+            raise RuntimeError("RPC command (UID=%s) failed!" % uid)
 
-            self.log_network_debug(
-                "Processed response data: %s" % self._RESULTS[uid]
-            )
+        self.log_network_debug(
+            "Processed response data: %s" % self._RESULTS[uid]
+        )
 
     def _wait_for_response(self, uid):
         """
@@ -478,7 +500,7 @@ class Communicator(object):
             if self.event_processor:
                 self.event_processor()
 
-            self._io.wait(self._WAIT_INTERVAL)
+            self.wait(single_loop=True, process_events=False)
 
         results = self._RESULTS[uid]
         del self._RESULTS[uid]
