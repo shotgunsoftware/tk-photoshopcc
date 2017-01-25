@@ -472,9 +472,9 @@ class Communicator(object):
 
         while uid not in self._RESULTS:
             # If we were given an event processor, we can call that here. That
-            # be something like QApplication.processEvents, which will force an
-            # iteration of the Qt event loop so that we're not completely
-            # the UI thread here, even though we're blocking Python.
+            # will be something like QApplication.processEvents, which will
+            # force an iteration of the Qt event loop so that we're not
+            # completely the UI thread here, even though we're blocking Python.
             if self.event_processor:
                 self.event_processor()
 
