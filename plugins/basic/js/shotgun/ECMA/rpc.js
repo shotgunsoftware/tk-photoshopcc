@@ -407,7 +407,7 @@ function map_global_scope() {
     // Some things don't end up in the scope's reflection interface
     // for whatever reason. We'll have to force them into the scope
     // wrapper list ourselves.
-    var add_items = ["charIDToTypeID", "executeAction"];
+    var add_items = ["stringIDToTypeID", "charIDToTypeID", "executeAction"];
 
     for ( i in add_items ) {
         var item_name = add_items[i];

@@ -82,18 +82,17 @@ def _build_plugin(args):
         )
     )
 
-    # the full plugin build script command
-    command = "{py} {build_script} '{plugin_dir}' '{plugin_build_dir}'".format(
-        py=sys.executable,
-        build_script=os.path.join(args["core"], CORE_BUILD_SCRIPT),
-        plugin_dir=args["plugin_dir"],
-        plugin_build_dir=plugin_build_dir,
-    )
+    command = [
+        sys.executable,
+        os.path.join(args["core"], CORE_BUILD_SCRIPT),
+        args["plugin_dir"],
+        plugin_build_dir
+    ]
 
     # execute the build script
     logger.info("Plugin build command: %s" % (command,))
     logger.info("Executing plugin build command...")
-    status = subprocess.call(shlex.split(command))
+    status = subprocess.call(command)
 
     # check the return status
     if status:
