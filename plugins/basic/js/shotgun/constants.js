@@ -16,11 +16,11 @@ var sg_constants = sg_constants || {};
 sg_constants.extension_info = {
 
     manager: {
-        id: "com.sg.basic.sg.manager"
+        id: "com.sg.basic.ps.manager"
     },
 
     panel: {
-        id: "com.sg.basic.sg.panel"
+        id: "com.sg.basic.ps.panel"
     }
 };
 
