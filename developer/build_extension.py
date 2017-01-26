@@ -225,21 +225,21 @@ def _sign_plugin(args):
 
     (sign_command, certificate_path, certificate_pwd) = args["sign"]
 
-    cmd_str = "{zxp_sign} -sign {plugin_build_dir} {extension_path} {cert} " + \
-              "{cert_pwd} -tsa {tsa}"
-    command = cmd_str.format(
-        zxp_sign=sign_command,
-        plugin_build_dir=args["plugin_build_dir"],
-        extension_path=extension_path,
-        cert=certificate_path,
-        cert_pwd=certificate_pwd,
-        tsa=TIMESTAMP_URL,
-    )
+    command = [
+        sign_command,
+        "-sign",
+        args["plugin_build_dir"],
+        extension_path,
+        certificate_path,
+        certificate_pwd,
+        "-tsa",
+        TIMESTAMP_URL,
+    ]
 
     # execute the build script
     logger.info("Signing extension command: %s" % (command,))
     logger.info("Signing the extension...")
-    status = subprocess.call(shlex.split(command))
+    status = subprocess.call(command)
 
     # check the return status
     if status:
