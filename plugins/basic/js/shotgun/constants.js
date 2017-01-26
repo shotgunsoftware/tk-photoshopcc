@@ -16,11 +16,11 @@ var sg_constants = sg_constants || {};
 sg_constants.extension_info = {
 
     manager: {
-        id: "com.shotgunsoftware.basic.photoshopcc.manager"
+        id: "com.sg.basic.sg.manager"
     },
 
     panel: {
-        id: "com.shotgunsoftware.basic.photoshopcc.panel"
+        id: "com.sg.basic.sg.panel"
     }
 };
 

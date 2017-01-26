@@ -78,7 +78,7 @@ def _ensure_extension_up_to_date(context):
     :param context:  The context to use when bootstrapping.
     """
 
-    extension_name = "com.shotgunsoftware.basic.photoshopcc"
+    extension_name = "com.sg.basic.ps"
 
     # the CEP install directory is OS-specific
     if sys.platform == "win32":

@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
-<ExtensionManifest xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" ExtensionBundleId="com.shotgunsoftware.basic.photoshopcc" ExtensionBundleName="Shotgun Engine for Photoshop CC" ExtensionBundleVersion="1.0" Version="6.0">
+<ExtensionManifest xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" ExtensionBundleId="com.sg.basic.sg" ExtensionBundleName="Shotgun Engine for Photoshop CC" ExtensionBundleVersion="1.0" Version="6.0">
     <ExtensionList>
-        <Extension Id="com.shotgunsoftware.basic.photoshopcc.manager" Version="1.0"/>
-        <Extension Id="com.shotgunsoftware.basic.photoshopcc.panel" Version="1.0"/>
+        <Extension Id="com.sg.basic.sg.manager" Version="1.0"/>
+        <Extension Id="com.sg.basic.sg.panel" Version="1.0"/>
     </ExtensionList>
     <ExecutionEnvironment>
         <HostList>
@@ -18,7 +18,7 @@
         </RequiredRuntimeList>
     </ExecutionEnvironment>
     <DispatchInfoList>
-        <Extension Id="com.shotgunsoftware.basic.photoshopcc.manager">
+        <Extension Id="com.sg.basic.sg.manager">
             <DispatchInfo>
                 <Resources>
                     <MainPath>./html/manager.html</MainPath>
@@ -49,7 +49,7 @@
                 </UI>
             </DispatchInfo>
         </Extension>
-        <Extension Id="com.shotgunsoftware.basic.photoshopcc.panel">
+        <Extension Id="com.sg.basic.sg.panel">
             <DispatchInfo>
                 <Resources>
                     <MainPath>./html/panel.html</MainPath>
