@@ -68,7 +68,7 @@ optional arguments:
                         The name of the engine plugin to build. Ex: 'basic'.
   --extension_name name, -e name
                         The name of the output extension. Ex:
-                        'com.shotgunsoftware.basic.photoshopcc'
+                        'com.sg.basic.ps'
   --sign /path/to/ZXPSignCmd /path/to/certificate password, -s /path/to/ZXPSignCmd /path/to/certificate password
                         If supplied, sign the build extension. Requires 3
                         arguments: the path to the 'ZXPSignCmd', the
@@ -127,7 +127,7 @@ Now you can build the extension directly to the CEP extensions directory. Here's
 an example of the command run from the top level of the engine repo:
 
 ```
-python developer/build_extension.py -c ../tk-core -p basic -e com.shotgunsoftware.basic.photoshopcc -o "/Users/josh/Library/Application Support/Adobe/CEP/extensions/"
+python developer/build_extension.py -c ../tk-core -p basic -e com.sg.basic.ps -o "/Users/josh/Library/Application Support/Adobe/CEP/extensions/"
 ```
 
 Argument breakdown:
@@ -170,7 +170,7 @@ Now you can build the `.zxp` file with the extension build script. Here's an
 example command run from the top level of the engine repo:
 
 ```
-python developer/build_extension.py -c ../tk-core -p basic -e com.shotgunsoftware.basic.photoshopcc -s ../ZXPSignCmd ~/Documents/certs/my_certificate.p12 my_cert_password
+python developer/build_extension.py -c ../tk-core -p basic -e com.sg.basic.ps -s ../ZXPSignCmd ~/Documents/certs/my_certificate.p12 my_cert_password
 ```
 
 The first few arguments are identical to the previous example. The additional
@@ -188,8 +188,8 @@ be build and overwrite the `.zxp` file in the engine. The built extension file
 will look like this:
 
 ```
-com.shotgunsoftware.basic.photoshopcc.version
-com.shotgunsoftware.basic.photoshopcc.zxp
+com.sg.basic.ps.version
+com.sg.basic.ps.zxp
 ```
 
 Notice the `.version` file. This file is used by the toolkit startup logic to
@@ -211,14 +211,14 @@ exception of specifying an actual version. To do that, you simple add an additio
 argument to the build command:
 
 ```
-python developer/build_extension.py -c ../tk-core -p basic -e com.shotgunsoftware.basic.photoshopcc -s ../ZXPSignCmd ~/Documents/certs/my_certificate.p12 my_cert_password -v v0.0.1
+python developer/build_extension.py -c ../tk-core -p basic -e com.sg.basic.ps -s ../ZXPSignCmd ~/Documents/certs/my_certificate.p12 my_cert_password -v v0.0.1
 ```
 
 The results of the command will look like this:
 
 ```
-com.shotgunsoftware.basic.photoshopcc.version
-com.shotgunsoftware.basic.photoshopcc.zxp
+com.sg.basic.ps.version
+com.sg.basic.ps.zxp
 ```
 
 Unlike the previous section, the `.version` file will now include the string
@@ -232,7 +232,7 @@ Once the `.zxp` bundle is created, you can verify the signature using the same
 `ZXPSignCmd` supplied to the build script. Here's the usage:
 
 ```
-> ZXPSignCmd -verify com.shotgunsoftware.basic.photoshopcc.zxp -certInfo
+> ZXPSignCmd -verify com.sg.basic.ps.zxp -certInfo
 ```
 
 The output of the command will show the basic information about the certificate.

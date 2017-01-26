@@ -153,8 +153,7 @@ def _parse_args():
     parser.add_argument(
         "--extension_name", "-e",
         metavar="name",
-        help="The name of the output extension. Ex: " +
-             "'com.shotgunsoftware.basic.photoshopcc'",
+        help="The name of the output extension. Ex: 'com.sg.basic.ps'",
         required=True,
     )
 
