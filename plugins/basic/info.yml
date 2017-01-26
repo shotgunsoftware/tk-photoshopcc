@@ -56,5 +56,4 @@ plugin_id: "basic.photoshopcc"
 
 # ---- Values specific to this plug-in.
 
-# TODO: turn off before release
-debug_logging: true
+debug_logging: false

@@ -8,8 +8,9 @@
 # agreement to the Shotgun Pipeline Toolkit Source Code License. All rights 
 # not expressly granted therein are reserved by Shotgun Software Inc.
 
-import sys
+import logging
 import os
+import sys
 import threading
 
 from contextlib import contextmanager
@@ -106,9 +107,6 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
 
         # import and keep a handle on the bundled python module
         self.__tk_photoshopcc = self.import_module("tk_photoshopcc")
-
-        # TODO: do we need this if it's stored at the class level?
-        self._app_id = self.SHOTGUN_ADOBE_APPID
 
         # constant command uid lookups for these special commands
         self.__jump_to_sg_command_id = self.__get_command_uid()
@@ -382,19 +380,20 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
         :param str level: One of "debug", "info", "warning", or "error".
         :param str message: The log message.
         """
-        command_map = dict(
-            debug=self.logger.debug,
-            error=self.logger.error,
-            info=self.logger.info,
-            warn=self.logger.warning,
-        )
 
-        # TODO: figure out how to add this back in. this will end up back in
-        #       _emit_log_message which will send back to js. Maybe we don't
-        #       need the js logging in python?
-        #if level in command_map:
-        #    # native logging from Python.
-        #    command_map[level]("[ADOBE] %s" % message)
+        # manually create a record to log to the standard file handler.
+        # we format it to match the regular logs, but tack on the '.js' to
+        # indicate that it came from javascript.
+        record = logging.makeLogRecord({
+            "levelname": level.upper(),
+            "name": "%s.js" % (self.logger.name,),
+            "msg": message,
+        })
+
+        # forward this message to the base file handler so that it is logged
+        # appropriately.
+        if sgtk.LogManager().base_file_handler:
+            sgtk.LogManager().base_file_handler.handle(record)
 
     def _run_tests(self):
         """
@@ -470,7 +469,7 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
         The runtime app id. This will be a string -- something like
         PHSP for Photoshop, or AEFT for After Effect.
         """
-        return self._app_id
+        return self.SHOTGUN_ADOBE_APPID
 
     @property
     def context_change_allowed(self):
@@ -1067,10 +1066,30 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
         """
 
         # log a message if the worker failed to retrieve the necessary info.
-        # TODO: should we do anything else here?
         if uid == self.__context_find_uid:
+
+            # clear the find id since we are now processing it
+            self.__context_find_uid = None
+
+            # send an error message back to the context header.
+            self.adobe.send_context_display(
+                """
+                There was an error retrieving fields for this context. Please
+                see the logs for the specific error message. If this is a
+                recurring error and you need further assistance, please
+                send an email to <a href='mailto:support@shotgunsoftware.com'>
+                support@shotgunsoftware.com</a>.
+                """
+            )
             self.logger.error("Failed to query context fields: %s" % (msg,))
+
         elif uid == self.__context_thumb_uid:
+
+            # clear the thumb id since we are now processing it
+            self.__context_thumb_uid = None
+
+            # log this. the panel will display a default thumbnail, so this
+            # should be sufficient
             self.logger.error("Failed to query context thumbnail: %s" % (msg,))
 
     def __on_worker_signal(self, uid, request_type, data):

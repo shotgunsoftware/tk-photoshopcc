@@ -30,7 +30,6 @@ sg_constants.product_info = {
 
     // ---- key'd on app id which is what we have access to in the extensions
 
-    // TODO: consider if this is the best approach...
     // tk_engine_name: translates the app id (like "PHSP") to the expected
     // engine block name (like "tk-photoshop") in a tk configuration.
 

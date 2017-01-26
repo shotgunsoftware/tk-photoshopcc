@@ -4,9 +4,6 @@
         <HostList>
            <Host Name="PHSP" Port="45216"/>
            <Host Name="PHXS" Port="45217"/>
-           <!-- TODO: comment these out before release -->
-           <Host Name="AEFT" Port="45218"/>
-           <Host Name="PPRO" Port="45219"/>
         </HostList>
     </Extension>
 </ExtensionList>

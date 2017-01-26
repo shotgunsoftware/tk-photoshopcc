@@ -182,7 +182,6 @@ sg_panel.Panel = new function() {
 
     this.email_support = function(subject, body) {
         // Open an email in default email client.
-        // TODO: do we still want to do this?
 
         const mailto_url = "mailto:support@shotgunsoftware.com?" +
                            "subject=" + subject +
@@ -235,7 +234,6 @@ sg_panel.Panel = new function() {
         } catch(error) {
             sg_logging.error("Manager startup error: " + error.stack);
             alert("Manager startup error: " + error.stack);
-            // TODO: display error in the panel
         }
 
         // Here we send the "AppOnline" event strictly in the event of a manual
@@ -277,16 +275,6 @@ sg_panel.Panel = new function() {
         sg_panel.REQUEST_MANAGER_RELOAD.emit();
         _cs_interface.closeExtension();
     };
-
-
-    // TODO: store current html for contents/header so that each update can
-    // set/update if need be
-
-        // It's possible that a timeout was triggered when requesting the
-        // state and that now, only after, we're receiving it. If that's
-        // the situation then we'll have an error message to clear since
-        // all is now well.
-        //_clear_messages();
 
     this.set_context_thumbnail = function(context_thumbnail_data) {
         // given thumbnail from python, display it in the header
@@ -375,8 +363,9 @@ sg_panel.Panel = new function() {
                                 "</center>" +
                             "</div>" +
                         "</a>";
+                } else {
+                    sg_logging.warn("Favorite command missing required info: " + favorite);
                 }
-                // TODO: if command is missing something, log it.
             });
 
             favorites_html += "</div></div>";
@@ -425,6 +414,8 @@ sg_panel.Panel = new function() {
                             "</tr>" +
                         "</table>" +
                     "</div>";
+                } else {
+                    sg_logging.warn("Command missing required info: " + command);
                 }
             });
 
@@ -1031,8 +1022,6 @@ sg_panel.Panel = new function() {
     const _select_text = function(div_id) {
         // Select all the text within the provided div
 
-        // TODO: add a button for this in the console
-
         if (document.selection) {
             const range = document.body.createTextRange();
             range.moveToElementText(document.getElementById(div_id));
@@ -1203,8 +1192,6 @@ sg_panel.Panel = new function() {
             "Stack trace:\n\n" +
             stack + "\n\n"
         );
-
-        // TODO: include current version info of core, app, CC, etc.
     };
 
 };
