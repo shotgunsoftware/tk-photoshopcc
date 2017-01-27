@@ -16,7 +16,6 @@ sys.dont_write_bytecode = True
 import argparse
 import os
 import re
-import shlex
 import shutil
 import subprocess
 
