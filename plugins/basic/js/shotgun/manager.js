@@ -216,7 +216,6 @@ sg_manager.Manager = new function() {
         );
     };
 
-    // TODO: add a progress callback
     const _bootstrap_python = function(port) {
         // Bootstrap the toolkit python process.
         //
@@ -283,7 +282,6 @@ sg_manager.Manager = new function() {
 
         try {
             self.python_process = child_process.spawn(
-                // TODO: which python to use
                 python_exe_path,
                 [
                     // path to the python bootstrap script
@@ -466,8 +464,8 @@ sg_manager.Manager = new function() {
     };
 
     const _on_server_port_found = function(port) {
+        // Callback for when an open port is found.
 
-        // TODO: docs. anything else? channels?
         sg_socket_io.SocketManager.start_socket_server(port, _cs_interface);
 
         // Register the socket manager for logging.

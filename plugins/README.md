@@ -74,7 +74,7 @@ optional arguments:
                         arguments: the path to the 'ZXPSignCmd', the
                         certificate and the password.Note, the ZXPSignCmd can
                         be downloaded here:
-                        http://labs.adobe.com/downloads/extensionbuilder3.html
+                        https://github.com/Adobe-CEP/CEP-Resources/tree/master/ZXPSignCMD/4.0.7
   --bundle_cache, -b    If supplied, include the 'bundle_cache' directory in
                         the build plugin. If not, it is removed after the
                         build.
@@ -147,7 +147,7 @@ issues inside the Adobe product.
 
 ### `Adobe Docs`
 
-* [ZXPSignCmd](http://download.macromedia.com/pub/labs/extensionbuilder3/ccextensions.pdf)
+* [ZXPSignCmd](https://github.com/Adobe-CEP/CEP-Resources/tree/master/ZXPSignCMD/4.0.7)
 * [Packaging and Signing Extensions](http://wwwimages.adobe.com/content/dam/Adobe/en/devnet/creativesuite/pdfs/SigningTechNote_CC.pdf)
 
 ### Local testing with signing
@@ -164,7 +164,7 @@ Next, clean out any previous direct builds (see previous section) from the CEP
 install directory. The first toolkit startup will install the `.zxp` automatically.
 
 Finally, download the `ZXPSignCmd` tool to sign the built extension. You can find
-it [here](https://github.com/Adobe-CEP/CEP-Resources/tree/master/ZXPSignCMD).
+it [here](https://github.com/Adobe-CEP/CEP-Resources/tree/master/ZXPSignCMD/4.0.7)
 
 Now you can build the `.zxp` file with the extension build script. Here's an
 example command run from the top level of the engine repo:
