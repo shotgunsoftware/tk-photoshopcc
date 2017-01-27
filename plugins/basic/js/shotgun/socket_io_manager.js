@@ -124,10 +124,6 @@ sg_socket_io.SocketManager = new function() {
         :param result: The result data to be returned back to the RPC
                        caller.
         */
-        // TODO: Using false here as the first argument is saying
-        // "no, there weren't any errors." We need to check the
-        // result data structure here and make that determination
-        // instead of always assuming success.
         if ( result == "EvalScript error." ) {
             sg_logging.error(result);
             next(true, result);
@@ -344,9 +340,8 @@ sg_socket_io.SocketManager = new function() {
             /*
             Stops the socket server.
             */
-            sg_logging.debug("Shutting down socket server.")
-
-            // TODO: properly shut down the socket server
+            sg_logging.debug("Shutting down socket server.");
+            io.close();
         };
 
         sg_logging.info("Setting up connection handling...");
