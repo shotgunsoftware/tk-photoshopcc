@@ -721,6 +721,9 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
         # Keeping track of all dialogs will ensure this doesn't happen
         self.__qt_dialogs.append(dialog)
 
+        # make python active if possible
+        self.__activate_python()
+
         # make sure the window raised so it doesn't
         # appear behind the main Photoshop window
         self.logger.debug("Showing dialog: %s" % (title,))
@@ -767,6 +770,9 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
         # an event after the dialog has been deleted.
         # Keeping track of all dialogs will ensure this doesn't happen
         self.__qt_dialogs.append(dialog)
+
+        # make python active if possible
+        self.__activate_python()
 
         self.logger.debug("Showing modal: %s" % (title,))
         dialog.raise_()
