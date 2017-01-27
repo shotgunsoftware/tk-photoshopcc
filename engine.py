@@ -212,6 +212,15 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
         # Disconnect from the server.
         self.adobe.disconnect()
 
+        # Disconnect the signals in case there are references to this engine
+        # out there. without disconnecting, it will still respond to signals
+        # from the adobe bridge.
+        self.adobe.logging_received.disconnect(self._handle_logging)
+        self.adobe.command_received.disconnect(self._handle_command)
+        self.adobe.active_document_changed.disconnect(self._handle_active_document_change)
+        self.adobe.run_tests_request_received.disconnect(self._run_tests)
+        self.adobe.state_requested.disconnect(self.__send_state)
+
     def post_qt_init(self):
         """
         Called externally once a ``QApplication`` has been created and completes
@@ -354,6 +363,9 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
 
         :param int uid: The unique id of the engine command to run.
         """
+
+        self.logger.debug("Handling command request for uid: %s" % (uid,))
+
         with self.heartbeat_disabled():
             from sgtk.platform.qt import QtGui
 
@@ -709,6 +721,9 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
         # Keeping track of all dialogs will ensure this doesn't happen
         self.__qt_dialogs.append(dialog)
 
+        # make python active if possible
+        self.__activate_python()
+
         # make sure the window raised so it doesn't
         # appear behind the main Photoshop window
         self.logger.debug("Showing dialog: %s" % (title,))
@@ -755,6 +770,9 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
         # an event after the dialog has been deleted.
         # Keeping track of all dialogs will ensure this doesn't happen
         self.__qt_dialogs.append(dialog)
+
+        # make python active if possible
+        self.__activate_python()
 
         self.logger.debug("Showing modal: %s" % (title,))
         dialog.raise_()
