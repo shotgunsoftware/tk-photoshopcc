@@ -10,6 +10,7 @@
 
 import logging
 import os
+import subprocess
 import sys
 import threading
 
@@ -541,7 +542,50 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
         utf8 = QtCore.QTextCodec.codecForName("utf-8")
         QtCore.QTextCodec.setCodecForCStrings(utf8)
 
+        self._override_qmessagebox()
+
         return base
+
+    def _override_qmessagebox(self):
+        """
+        Redefine the method calls for QMessageBox static methods.
+
+        These are often called from within apps and because QT is running in a
+        separate process, they will pop up behind the photoshop window. Wrap
+        each of these calls in a raise method to activate the QT process.
+        """
+
+        from PySide import QtCore, QtGui
+
+        info_fn = QtGui.QMessageBox.information
+        critical_fn = QtGui.QMessageBox.critical
+        question_fn = QtGui.QMessageBox.question
+        warning_fn = QtGui.QMessageBox.warning
+
+        @staticmethod
+        def _info_wrapper(*args, **kwargs):
+            self.__activate_python()
+            return info_fn(*args, **kwargs)
+
+        @staticmethod
+        def _critical_wrapper(*args, **kwargs):
+            self.__activate_python()
+            return critical_fn(*args, **kwargs)
+
+        @staticmethod
+        def _question_wrapper(*args, **kwargs):
+            self.__activate_python()
+            return question_fn(*args, **kwargs)
+
+        @staticmethod
+        def _warning_wrapper(*args, **kwargs):
+            self.__activate_python()
+            return warning_fn(*args, **kwargs)
+
+        QtGui.QMessageBox.information = _info_wrapper
+        QtGui.QMessageBox.critical = _critical_wrapper
+        QtGui.QMessageBox.question = _question_wrapper
+        QtGui.QMessageBox.warning = _warning_wrapper
 
     def _win32_get_photoshop_main_hwnd(self):
         """
@@ -650,8 +694,6 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
             )
             return None
 
-        from tank.platform.qt import QtGui, QtCore
-
         # create the dialog:
         dialog, widget = self._create_dialog_with_widget(
             title,
@@ -669,6 +711,7 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
 
         # make sure the window raised so it doesn't
         # appear behind the main Photoshop window
+        self.logger.debug("Showing dialog: %s" % (title,))
         dialog.show()
         dialog.raise_()
         dialog.activateWindow()
@@ -697,8 +740,6 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
                 "show the requested window '%s'." % title)
             return
 
-        from tank.platform.qt import QtGui, QtCore
-
         # create the dialog:
         dialog, widget = self._create_dialog_with_widget(
             title,
@@ -715,6 +756,7 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
         # Keeping track of all dialogs will ensure this doesn't happen
         self.__qt_dialogs.append(dialog)
 
+        self.logger.debug("Showing modal: %s" % (title,))
         dialog.raise_()
         dialog.activateWindow()
         status = dialog.exec_()
@@ -1203,4 +1245,34 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
                 url=url,
                 text=text,
             )
+
+    def __activate_python(self):
+        """
+        Do the Os-specific thing to show this process above all others.
+        """
+
+        if sys.platform == "darwin":
+            # force this python process to the front
+            cmd = ["osascript", "-e", OSX_ACTIVATE_SCRIPT]
+            status = subprocess.call(cmd)
+            if status:
+                self.logger.error("Could not activate python.")
+        elif sys.platform == "win32":
+            pass
+
+
+# a little action script to activate the given python process.
+OSX_ACTIVATE_SCRIPT = \
+"""
+tell application "System Events"
+  set frontmost of the first process whose unix id is {pid} to true
+end tell
+""".format(pid=os.getpid())
+
+
+
+
+
+
+
 
