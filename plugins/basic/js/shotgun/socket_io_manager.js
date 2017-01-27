@@ -125,7 +125,11 @@ sg_socket_io.SocketManager = new function() {
                        caller.
         */
         if ( result == "EvalScript error." ) {
-            sg_logging.error(result);
+            // This is a debug instead of an error because the client
+            // will be notified of the failed eval. In that case, it
+            // can determine the severity of the situation and report
+            // an error if it's appropriate.
+            sg_logging.debug(result);
             next(true, result);
         }
         else {
