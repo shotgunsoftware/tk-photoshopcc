@@ -8,14 +8,6 @@
 # agreement to the Shotgun Pipeline Toolkit Source Code License. All rights
 # not expressly granted therein are reserved by Shotgun Software Inc.
 
-# TODO: expose direct CC DOM APIs here
-# TODO: factory to return proper API based on current DCC (ps, premiere, etc)
-    # TODO: module level log methods?
-    # TODO: clear panel
-    # TODO: set message in panel
-    # TODO: get remote objects/classes
-    # TODO: wrap save as
-
 import os
 import functools
 import threading

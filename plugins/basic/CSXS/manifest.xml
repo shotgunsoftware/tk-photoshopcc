@@ -34,7 +34,6 @@
                         <Event>com.adobe.csxs.events.AppOnline</Event>
                         <!-- Premiere startup event -->
                         <Event>com.adobe.csxs.events.ApplicationActivate</Event>
-                        <!-- TODO: may need the panel to trigger manager startup in other products!-->
                     </StartOn>
                 </Lifecycle>
                 <UI>

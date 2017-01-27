@@ -25,7 +25,6 @@ EXIT_STATUS_CLEAN = 0
 EXIT_STATUS_ERROR = 100
 EXIT_STATUS_NO_PYSIDE = 101
 
-# TODO: move this into the engine?
 class _BootstrapLogHandler(logging.StreamHandler):
     """
     Manually flushes emitted records for js to pickup.
