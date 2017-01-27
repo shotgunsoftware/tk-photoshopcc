@@ -59,6 +59,7 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
     _DIALOG_PARENT = None
     _WIN32_PHOTOSHOP_MAIN_HWND = None
     _PROXY_WIN_HWND = None
+    _HEARTBEAT_DISABLED = False
 
     ############################################################################
     # context changing
@@ -257,6 +258,11 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
 
     def _check_connection(self):
         """Make sure we are still connected to the adobe cc product."""
+        # If we're in a disabled state, then we don't do anything here. This
+        # is controlled by the heartbeat_disabled context manager provided
+        # by this engine.
+        if self._HEARTBEAT_DISABLED:
+            return
 
         try:
             self.adobe.ping()
@@ -514,7 +520,7 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
         """
         try:
             self.logger.debug("Pausing heartbeat...")
-            self._CHECK_CONNECTION_TIMER.stop()
+            self._HEARTBEAT_DISABLED = True
         except Exception, e:
             self.logger.debug("Unable to pause heartbeat as requested.")
             self.logger.error(str(e))
@@ -523,9 +529,7 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
 
         yield
 
-        self._CHECK_CONNECTION_TIMER.start(
-            self.SHOTGUN_ADOBE_HEARTBEAT_INTERVAL * 1000.0,
-        )
+        self._HEARTBEAT_DISABLED = False
         self.logger.debug("Heartbeat restarted.")
 
     ############################################################################

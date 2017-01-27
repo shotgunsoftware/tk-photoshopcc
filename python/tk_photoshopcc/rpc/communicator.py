@@ -32,7 +32,6 @@ class Communicator(object):
     _RESULTS = dict()
     _UID = 0
     _LOCK = threading.Lock()
-    _WAIT_INTERVAL = 0.0
     _RPC_EXECUTE_COMMAND = "execute_command"
     _REGISTRY = dict()
     _COMMAND_REGISTRY = dict()
@@ -205,15 +204,14 @@ class Communicator(object):
                         "Timed out during _process_packets call. This is "
                         "likely not a problem if it only happens occasionally."
                     )
-                    pass
-
-                    # Force an event loop iteration if we were provided with a
-                    # callable event processor.
-                    if self.event_processor and process_events:
-                        self.event_processor()
                 else:
                     if single_loop:
                         break
+
+                # Force an event loop iteration if we were provided with a
+                # callable event processor.
+                if self.event_processor and process_events:
+                    self.event_processor()
         finally:
             self._io._heartbeat_thread.relax()
             self._io._transport.set_timeout()
@@ -490,7 +488,6 @@ class Communicator(object):
         :returns: The raw returned results data.
         """
         self.log_network_debug("Waiting for RPC response for UID %s..." % uid)
-        self.log_network_debug("Interval is %s" % self._WAIT_INTERVAL)
 
         while uid not in self._RESULTS:
             # If we were given an event processor, we can call that here. That
