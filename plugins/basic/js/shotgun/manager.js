@@ -153,9 +153,6 @@ sg_manager.Manager = new function() {
         //
         // Also emits an event for listeners to respond to manager shutdown.
 
-        // shut down socket.io server
-        sg_socket_io.SocketManager.stop_socket_server();
-
         // alert listeners that the manager is shutting down
         sg_manager.SHUTTING_DOWN.emit();
 
@@ -170,6 +167,9 @@ sg_manager.Manager = new function() {
                     "Unable to terminate python process: " + error.stack);
             }
         }
+
+        // shut down socket.io server
+        sg_socket_io.SocketManager.stop_socket_server();
     };
 
     // ---- private methods
