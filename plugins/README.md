@@ -254,13 +254,14 @@ during boostrap for this reason.
 ### Testing
 
 The `basic` plugin/extension has a flyout menu with options useful for testing
-and debugging. To enable these, set the environment variable `SHOTGUN_ADOBE_DEVELOPER`.
-
+and debugging.
 
 * **Chrome Console...** - Requires Chrome as the default browser. Opens a Chrome
 console connected to the Adobe extensions.
 * **Reload Shotgun Extension** - Reloads the extension, including restarting the
 external python process.
+
+To enable these, set the environment variable `TK_DEBUG`.
 
 ### Configuration repo
 
