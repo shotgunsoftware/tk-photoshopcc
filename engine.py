@@ -60,6 +60,7 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
     _WIN32_PHOTOSHOP_MAIN_HWND = None
     _PROXY_WIN_HWND = None
     _HEARTBEAT_DISABLED = False
+    _PROJECT_CONTEXT = None
 
     ############################################################################
     # context changing
@@ -347,8 +348,16 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
                     # finish won't send data to js.
                     self.__context_find_uid = None
                     self.__context_thumb_uid = None
-                    self.adobe.send_unknown_context()
-                    return
+
+                    # We go to the project context if this is a file outside of
+                    # SGTK control.
+                    if self._PROJECT_CONTEXT is None:
+                        self._PROJECT_CONTEXT = sgtk.Context(
+                            tk=self.context.sgtk,
+                            project=self.context.project,
+                        )
+
+                    context = self._PROJECT_CONTEXT
 
                 if not context.project:
                     self.logger.debug(
