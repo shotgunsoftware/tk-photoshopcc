@@ -109,7 +109,7 @@ sg_socket_io.SocketManager = new function() {
     :param file_path: The file path string to sanitize.
     */
     var sanitize_path = function(file_path) {
-        return file_path.replace(/\\\\/g, '/');
+        return file_path.replace(RegExp('\\\\', 'g'), '/');
     };
 
     /*
