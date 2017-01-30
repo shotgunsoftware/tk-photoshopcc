@@ -39,7 +39,7 @@ sg_logging._get_logger_by_level = function(level, send_to_rpc) {
 };
 
 sg_logging._log_rpc = function(level, message) {
-    if ( sg_logging.rpc != undefined ) {
+    if ( sg_logging.rpc !== undefined ) {
         sg_logging.rpc.rpc_log(level, message);
     }
 };
@@ -47,7 +47,7 @@ sg_logging._log_rpc = function(level, message) {
 sg_logging._log = function(level, message, send_to_rpc) {
     // Attempt to send the log message to the socket.io server to
     // be emitted to clients.
-    if ( send_to_rpc && sg_logging.rpc != undefined ) {
+    if ( send_to_rpc && sg_logging.rpc !== undefined ) {
         sg_logging._log_rpc(level, message);
     }
 

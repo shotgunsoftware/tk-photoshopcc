@@ -15,89 +15,86 @@ var sg_socket_io = sg_socket_io || {};
 
 sg_socket_io.io = undefined;
 
-sg_socket_io.emit = function(message_type, payload) {
-    /*
-    Emits the provided payload stringified as JSON via the
-    currently open socket.io server.
+/*
+Emits the provided payload stringified as JSON via the currently open socket.io
+server.
 
-    :param message_type: The type of message to emit.
-    :param payload: The payload data to emit as a message.
-    */
-    if ( sg_socket_io.io != undefined ) {
+:param message_type: The type of message to emit.
+:param payload: The payload data to emit as a message.
+*/
+sg_socket_io.emit = function(message_type, payload) {
+    if ( sg_socket_io.io !== undefined ) {
         sg_socket_io.io.emit(message_type, JSON.stringify(payload));
     }
 };
 
+/*
+Emits a message that informs any listeners of a change in active document within
+the host application.
+*/
 sg_socket_io.rpc_active_document_changed = function(active_document_path) {
-    /*
-    Emits a message that informs any listeners of a change in active
-    document within the host application.
-    */
     sg_logging.debug("Emitting 'active_document_changed' message via socket.io.");
-    var msg = {};
-    msg.active_document_path = active_document_path;
+    var msg = {
+        active_document_path: active_document_path
+    };
     sg_socket_io.emit("active_document_changed", msg);
 };
 
-sg_socket_io.rpc_log = function(level, message) {
-    /*
-    Emits a "logging" message from the currently open socket.io
-    server. The log message string and level are combined into
-    a single payload object with "level" and "message" properties
-    that is JSON encoded before emission.
+/*
+Emits a "logging" message from the currently open socket.io server. The log
+message string and level are combined into a single payload object with "level"
+and "message" properties that is JSON encoded before emission.
 
-    :param level: The severity level of the logging message.
-    :param message: The logging message.
-    */
-    var msg = {};
-    msg.level = level;
-    msg.message = message;
+:param level: The severity level of the logging message.
+:param message: The logging message.
+*/
+sg_socket_io.rpc_log = function(level, message) {
+    var msg = {
+        level: level,
+        message: message
+    };
     sg_socket_io.emit("logging", msg);
 };
 
+/*
+Emits a "state_requested" message from the currently open socket.io server.
+*/
 sg_socket_io.rpc_state_requested = function() {
-    /*
-    Emits a "state_requested" message from the currently open socket.io server.
-    */
     sg_logging.debug("Emitting 'state_requested' message via socket.io.");
     sg_socket_io.emit("state_requested");
 };
 
+/*
+Emits a "command" message from the currently open socket.io server. The given
+uid references an SGTK engine command by the same id, which will be used to look
+up the appropriate callback once the message is handled by a client.
+
+:param uid: The unique id associated with the command to be by the remote client.
+*/
 sg_socket_io.rpc_command = function(uid) {
-    /*
-    Emits a "command" message from the currently open socket.io
-    server. The given uid references an SGTK engine command by
-    the same id, which will be used to look up the appropriate
-    callback once the message is handled by a client.
-
-    :param uid: The unique id associated with the command to be
-                by the remote client. 
-
-    */
     sg_logging.debug("Emitting 'command' message via socket.io.");
     sg_socket_io.emit("command", uid);
 };
 
+/*
+Emits a "run_tests" message from the currently open socket.io server.
+*/
 sg_socket_io.rpc_run_tests = function() {
-    /*
-    Emits a "run_tests" message from the currently open socket.io
-    server.
-    */
     sg_logging.debug("Emitting 'run_tests' message via socket.io.");
     sg_socket_io.emit("run_tests", {});
 };
 
 sg_socket_io.SocketManager = new function() {
-    var self = this;
+
     var io = undefined;
 
-    var log_network_debug = function(msg) {
-        /*
-        Emits a debug logging message only if network logging has been
-        turned on via the environment.
+    /*
+    Emits a debug logging message only if network logging has been
+    turned on via the environment.
 
-        :param msg: The logging message.
-        */
+    :param msg: The logging message.
+    */
+    var log_network_debug = function(msg) {
         const legacy_env = process.env.SGTK_PHOTOSHOP_NETWORK_DEBUG;
         const env_var = process.env.SHOTGUN_ADOBE_NETWORK_DEBUG;
 
@@ -106,25 +103,23 @@ sg_socket_io.SocketManager = new function() {
         }
     };
 
-    var sanitize_path = function(file_path) {
-        /*
-        Replaces Windows-style backslash paths with forward slashes.
+    /*
+    Replaces Windows-style backslash paths with forward slashes.
 
-        :param file_path: The file path string to sanitize.
-        */
-        return file_path.replace(RegExp('\\\\', 'g'), '/');
+    :param file_path: The file path string to sanitize.
+    */
+    var sanitize_path = function(file_path) {
+        return file_path.replace(/\\\\/g, '/');
     };
 
-    var _eval_callback = function(next, result) {
-        /*
-        The callback attached to each JSON-RPC call that's made.
+    /*
+    The callback attached to each JSON-RPC call that's made.
 
-        :param next: The "next" callback that unlocks the socket
-                     server event loop.
-        :param result: The result data to be returned back to the RPC
-                       caller.
-        */
-        if ( result == "EvalScript error." ) {
+    :param next: The "next" callback that unlocks the socket server event loop.
+    :param result: The result data to be returned back to the RPC caller.
+    */
+    var _eval_callback = function(next, result) {
+        if ( result === "EvalScript error." ) {
             // This is a debug instead of an error because the client
             // will be notified of the failed eval. In that case, it
             // can determine the severity of the situation and report
@@ -137,14 +132,14 @@ sg_socket_io.SocketManager = new function() {
         }
     };
 
-    this.start_socket_server = function (port, csLib) {
-        /*
-        Starts the socket.io server and defines the JSON-RPC interface
-        that is made publicly available to clients.
+    /*
+    Starts the socket.io server and defines the JSON-RPC interface that is made
+    publicly available to clients.
 
-        :param port: The port number to use when opening the socket.
-        :param csLib: A handle to the standard Adobe CSInterface object.
-        */
+    :param port: The port number to use when opening the socket.
+    :param csLib: A handle to the standard Adobe CSInterface object.
+    */
+    this.start_socket_server = function (port, csLib) {
         var path = require('path');
         var jrpc = require('jrpc');
         var io = require('socket.io').listen(port);
@@ -165,79 +160,78 @@ sg_socket_io.SocketManager = new function() {
 
         sg_logging.info("Establishing jrpc interface.");
 
+        /*
+        The object that defines the JSON-RPC interface exposed by the socket.io
+        server. Each method on this object becomes a callable method over the
+        socket.io connection.
+        */
         function RPCInterface() {
+
             /*
-            The object that defines the JSON-RPC interface exposed
-            by the socket.io server. Each method on this object
-            becomes a callable method over the socket.io connection.
+            Maps the global scope of ExtendScript and returns a list of wrapper
+            objects as JSON data. Each wrapper describes the object, its
+            properties, and its methods.
+
+            :param params: The list of parameters associated with the rpc call.
+            :param next: The handle to the "next" callback that triggers the
+                return of data to the caller and causes the next RPC call queued
+                 up to be processed.
             */
-
             this.get_global_scope = function(params, next) {
-                /*
-                Maps the global scope of ExtendScript and returns a
-                list of wrapper objects as JSON data. Each wrapper
-                describes the object, its properties, and its methods.
-
-                :param params: The list of parameters associated with the
-                               rpc call.
-                :param next: The handle to the "next" callback that triggers
-                             the return of data to the caller and causes the
-                             next RPC call queued up to be processed.
-                */
                 const cmd = "map_global_scope()";
                 log_network_debug(cmd);
-                csLib.evalScript(cmd, _eval_callback.bind(self, next));
+                csLib.evalScript(cmd, _eval_callback.bind(this, next));
             };
 
-            this.eval = function(params, next) {
-                /*
-                Evalualtes an arbitrary string of Javascript in
-                ExtendScript and returns the resulting data.
+            /*
+            Evalualtes an arbitrary string of Javascript in ExtendScript and
+            returns the resulting data.
 
-                :param params: The list of parameters associated with the
-                               rpc call. [extendscript_command]
-                :param next: The handle to the "next" callback that triggers
-                             the return of data to the caller and causes the
-                             next RPC call queued up to be processed.
-                */
+            :param params: The list of parameters associated with the rpc call.
+                [extendscript_command]
+            :param next: The handle to the "next" callback that triggers the
+                return of data to the caller and causes the next RPC call queued
+                up to be processed.
+            */
+            this.eval = function(params, next) {
                 log_network_debug(params[0]);
                 csLib.evalScript(params[0], function(result) {
                     next(false, result);
                 });
             };
 
-            this.new = function(params, next) {
-                /*
-                Instantiates an object for the given global-scope
-                class. The given class name must be available in the
-                global scope of ExtendScript at call time.
+            /*
+            Instantiates an object for the given global-scope class. The given
+            class name must be available in the global scope of ExtendScript at
+            call time.
 
-                :param params: The list of parameters associated with the
-                               rpc call. [class_name]
-                :param next: The handle to the "next" callback that triggers
-                             the return of data to the caller and causes the
-                             next RPC call queued up to be processed.
-                */
+            :param params: The list of parameters associated with the rpc call.
+                [class_name]
+            :param next: The handle to the "next" callback that triggers the
+                return of data to the caller and causes the next RPC call queued
+                up to be processed.
+            */
+            this.new = function(params, next) {
                 var class_name = JSON.stringify(params.shift());
                 var cmd = "rpc_new(" + class_name + ")";
                 log_network_debug(cmd);
 
                 csLib.evalScript(
                     cmd,
-                    _eval_callback.bind(self, next)
+                    _eval_callback.bind(this, next)
                 );
             };
 
-            this.get = function(params, next) {
-                /*
-                Gets the value of the given property on the given object.
+            /*
+            Gets the value of the given property on the given object.
 
-                :param params: The list of parameters associated with the
-                               rpc call. [object, property_name]
-                :param next: The handle to the "next" callback that triggers
-                             the return of data to the caller and causes the
-                             next RPC call queued up to be processed.
-                */
+            :param params: The list of parameters associated with the rpc call.
+                [object, property_name]
+            :param next: The handle to the "next" callback that triggers the
+                return of data to the caller and causes the next RPC call queued
+                up to be processed.
+            */
+            this.get = function(params, next) {
                 var base = JSON.parse(params.shift());
                 var property = params.shift();
                 var args = [base.__uniqueid, JSON.stringify(property)].join();
@@ -246,21 +240,21 @@ sg_socket_io.SocketManager = new function() {
 
                 csLib.evalScript(
                     cmd,
-                    _eval_callback.bind(self, next)
+                    _eval_callback.bind(this, next)
                 );
             };
 
-            this.get_index = function(params, next) {
-                /*
-                Gets the value for the given index number on the given
-                iterable object.
+            /*
+            Gets the value for the given index number on the given iterable
+                object.
 
-                :param params: The list of parameters associated with the
-                               rpc call. [object, index]
-                :param next: The handle to the "next" callback that triggers
-                             the return of data to the caller and causes the
-                             next RPC call queued up to be processed.
-                */
+            :param params: The list of parameters associated with the rpc call.
+                [object, index]
+            :param next: The handle to the "next" callback that triggers the
+                return of data to the caller and causes the next RPC call queued
+                up to be processed.
+            */
+            this.get_index = function(params, next) {
                 var base = JSON.parse(params.shift());
                 var index = JSON.stringify(params.shift());
                 var args = [base.__uniqueid, index].join();
@@ -269,20 +263,20 @@ sg_socket_io.SocketManager = new function() {
 
                 csLib.evalScript(
                     cmd,
-                    _eval_callback.bind(self, next)
+                    _eval_callback.bind(this, next)
                 );
             };
 
-            this.set = function(params, next) {
-                /*
-                Sets the value of the given property on the given object.
+            /*
+            Sets the value of the given property on the given object.
 
-                :param params: The list of parameters associated with the
-                               rpc call. [object, property_name, value]
-                :param next: The handle to the "next" callback that triggers
-                             the return of data to the caller and causes the
-                             next RPC call queued up to be processed.
-                */
+            :param params: The list of parameters associated with the rpc call.
+                [object, property_name, value]
+            :param next: The handle to the "next" callback that triggers the
+                return of data to the caller and causes the
+                next RPC call queued up to be processed.
+            */
+            this.set = function(params, next) {
                 var base = JSON.parse(params.shift());
                 var property = params.shift();
                 var value = params.shift();
@@ -297,20 +291,20 @@ sg_socket_io.SocketManager = new function() {
 
                 csLib.evalScript(
                     cmd,
-                    _eval_callback.bind(self, next)
+                    _eval_callback.bind(this, next)
                 );
             };
 
-            this.call = function(params, next) {
-                /*
-                Calls the given method on the given object.
+            /*
+            Calls the given method on the given object.
 
-                :param params: The list of parameters associated with the
-                               rpc call. [method_wrapper, parent_uid, method_arg_1, ...]
-                :param next: The handle to the "next" callback that triggers
-                             the return of data to the caller and causes the
-                             next RPC call queued up to be processed.
-                */
+            :param params: The list of parameters associated with the rpc call.
+                [method_wrapper, parent_uid, method_arg_1, ...]
+            :param next: The handle to the "next" callback that triggers the
+                return of data to the caller and causes the next RPC call queued
+                up to be processed.
+            */
+            this.call = function(params, next) {
                 var base = JSON.parse(params.shift());
                 // The parent object of the method being called. Since we
                 // need to know what the method is bound to in order to
@@ -334,16 +328,14 @@ sg_socket_io.SocketManager = new function() {
 
                 csLib.evalScript(
                     cmd,
-                    _eval_callback.bind(self, next)
+                    _eval_callback.bind(this, next)
                 );
             };
 
-        };
+        }
 
+        // Stops the socket server.
         this.stop_socket_server = function() {
-            /*
-            Stops the socket server.
-            */
             sg_logging.debug("Shutting down socket server.");
             io.close();
         };

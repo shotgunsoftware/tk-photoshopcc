@@ -16,13 +16,10 @@ var sg_panel = sg_panel || {};
 // ---------------------------------------------------------------------------
 // The panel
 
+// A singleton "class" to manage the state of the extension's panel display.
 sg_panel.Panel = new function() {
-    // A singleton "class" to manage the state of the extension's panel display.
 
     // ---- private vars
-
-    // keep a handle on the instance.
-    const self = this;
 
     // adobe interface
     const _cs_interface = new CSInterface();
@@ -32,7 +29,7 @@ sg_panel.Panel = new function() {
     var _show_tooltip_timeout_id = undefined;
     var _hide_tooltip_timeout_id = undefined;
 
-    // we keep track fo mouse position to make tooltips easier to manage
+    // we keep track of mouse position to make tooltips easier to manage
     var _cur_mouse_pos = {
         x: undefined,
         y: undefined
@@ -56,8 +53,8 @@ sg_panel.Panel = new function() {
 
     };
 
+    // Clears the panel's contents and resets it to the loading state.
     this.set_panel_loading_state = function() {
-        // Clears the panel's contents and resets it to the loading state.
 
         this.clear();
 
@@ -73,8 +70,8 @@ sg_panel.Panel = new function() {
         );
     };
 
+    // Clears the panel's contents and displays a message that it is disabled
     this.set_unknown_context_state = function() {
-        // Clears the panel's contents and displays a message that it is disabled
 
         this.clear();
 
@@ -87,50 +84,50 @@ sg_panel.Panel = new function() {
         const app_display_name = sg_constants.product_info[app_name].display_name;
 
         _set_contents(
-            "<table id='sg_unknown_context_table'>" +
-              "<tr>" +
-                "<td style='vertical-align:top;'>" +
-                  "<img src='../images/sg_logo.png' height='85px'>" +
-                "</td>" +
-                "<td style='vertical-align:top;'>" +
-                  "<table>" +
-                    "<tr>" +
-                      "<td id='sg_unknown_context_title'>" +
-                        "<strong><big>Integration Disabled</big></strong>" +
-                      "</td>" +
-                    "</tr>" +
-                    "<tr>" +
-                      "<td id='sg_unknown_context_details'>" +
-                        "The currently active file can't be associated with a " +
-                        "Shotgun context. Try switching to another file or " +
-                        "restarting " + app_display_name + "." +
-                      "</td>" +
-                    "</tr>" +
-                  "</table>" +
-                "</td>" +
-              "</tr>" +
-            "</table>"
+            `<table id='sg_unknown_context_table'>
+              <tr>
+                <td style='vertical-align:top;'>
+                  <img src='../images/sg_logo.png' height='85px'>
+                </td>
+                <td style='vertical-align:top;'>
+                  <table>
+                    <tr>
+                      <td id='sg_unknown_context_title'>
+                        <strong><big>Integration Disabled</big></strong>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td id='sg_unknown_context_details'>
+                        The currently active file can't be associated with a
+                        Shotgun context. Try switching to another file or
+                        restarting ${app_display_name}.
+                      </td>
+                    </tr>
+                  </table>
+                </td>
+              </tr>
+            </table>`
         );
 
     };
 
+    // Clears the current context and displays it as loading a new one.
     this.set_context_loading_state = function() {
-        // clears the current context and displays it as loading a new one.
 
         this.clear();
 
         _set_bg_color("#4D4D4D");
 
-        var header_html = "<table class='sg_context_header'>" +
-                            "<tr style='display:flex; align-items:stretch'>" +
-                              "<td id='context_thumbnail_data'>" +
-                                "<img id='context_thumbnail' src='../images/default_Site_thumb_dark.png'>" +
-                              "</td>" +
-                              "<td id='context_field_data'>" +
-                                "Loading context..." +
-                              "</td>" +
-                            "</tr>" +
-                          "</table>";
+        var header_html = `<table class='sg_context_header'>
+                            <tr style='display:flex; align-items:stretch'>
+                              <td id='context_thumbnail_data'>
+                                <img id='context_thumbnail' src='../images/default_Site_thumb_dark.png'>
+                              </td>
+                              <td id='context_field_data'>
+                                Loading context...
+                              </td>
+                            </tr>
+                          </table>`;
 
         _set_header(header_html);
         _show_header(true);
@@ -142,8 +139,8 @@ sg_panel.Panel = new function() {
         _clear_messages();
     };
 
+    // Need to display a tooltip with the supplied info
     this.show_command_help = function(title, help, favorite) {
-        // Need to display a tooltip with the supplied info
 
         // clear any existing tooltip hide timeout so that it doesn't disappear
         // prematurely
@@ -162,8 +159,8 @@ sg_panel.Panel = new function() {
         }
     };
 
+    // Need to hide the tooltip
     this.hide_command_help = function() {
-        // need to hide the tooltip
 
         // clear any existing timeouts for showing the tooltip.
         if (_show_tooltip_timeout_id !== undefined) {
@@ -180,12 +177,10 @@ sg_panel.Panel = new function() {
         }
     };
 
+    // Open an email in default email client.
     this.email_support = function(subject, body) {
-        // Open an email in default email client.
 
-        const mailto_url = "mailto:support@shotgunsoftware.com?" +
-                           "subject=" + subject +
-                           "&body=" + body;
+        const mailto_url = `mailto:support@shotgunsoftware.com?subject=${subject}&body=${body}`;
 
         sg_logging.debug("Emailing support: " + mailto_url);
 
@@ -193,16 +188,16 @@ sg_panel.Panel = new function() {
         _set_progress_info(100, "Composing SG support email...");
         setTimeout(_clear_info, 2000);
 
-        self.open_external_url(mailto_url);
+        this.open_external_url(mailto_url);
     };
 
+    // Setup the Shotgun integration within the app.
     this.on_load = function() {
-        // Setup the Shotgun integration within the app.
 
         try {
 
             // ensure the panel is in its loading state.
-            self.set_panel_loading_state();
+            this.set_panel_loading_state();
 
             _override_console_logging();
 
@@ -245,23 +240,25 @@ sg_panel.Panel = new function() {
         var event = new CSEvent(event_type, "APPLICATION");
         event.extensionId = _cs_interface.getExtensionID();
         _cs_interface.dispatchEvent(event);
-    };
 
+    }.bind(this);
+
+    // Code to run when the extension panel is unloaded
     this.on_unload = function() {
-        // code to run when the extension panel is unloaded
         sg_logging.debug("Panel unloaded.");
     };
 
+    // Open the supplied url in the default browser
     this.open_external_url = function(url) {
         sg_logging.debug("Opening external url: " + url);
         _cs_interface.openURLInDefaultBrowser(url);
     };
 
+    // Request reload of the manager.
+    //
+    // After requesting manager reload, simply shuts down this extension
+    // since the manager will restart it.
     this.reload = function() {
-        // Request reload of the manager.
-        //
-        // After requesting manager reload, simply shuts down this extension
-        // since the manager will restart it.
 
         sg_logging.debug("Closing the panel.");
 
@@ -269,15 +266,15 @@ sg_panel.Panel = new function() {
         _make_persistent(false);
 
         // close the panel
-        self.on_unload();
+        this.on_unload();
 
         // request manager reload and close the panel
         sg_panel.REQUEST_MANAGER_RELOAD.emit();
         _cs_interface.closeExtension();
     };
 
+    // Given thumbnail from python, display it in the header
     this.set_context_thumbnail = function(context_thumbnail_data) {
-        // given thumbnail from python, display it in the header
 
         sg_logging.debug("Setting thumbnail.");
 
@@ -288,15 +285,15 @@ sg_panel.Panel = new function() {
         const thumb_path = context_thumbnail_data["thumb_path"];
         const url = context_thumbnail_data["url"];
 
-        var thumb_html = "<a href='#' onclick='sg_panel.Panel.open_external_url(\"" + url + "\")'>" +
-                            "<img id='context_thumbnail' src='" + thumb_path + "'>" +
-                         "</a>";
+        var thumb_html = `<a href='#' onclick='sg_panel.Panel.open_external_url(\"${url}\")'>
+                            <img id='context_thumbnail' src='${thumb_path}'>
+                         </a>`;
 
         _set_div_html("context_thumbnail_data", thumb_html);
     };
 
+    // Given context display from python, display it in the header.
     this.set_context_display = function(context_display) {
-        // given context display from python, display it in the header.
 
         sg_logging.debug("Setting context.");
 
@@ -305,26 +302,26 @@ sg_panel.Panel = new function() {
         // if we already have the thumbnail data, display that instead of the default
         if (_context_thumbnail_data !== undefined) {
             const thumb_path = _context_thumbnail_data["thumb_path"];
-            context_thumb = "<img id='context_thumbnail' src='" + thumb_path + "'>";
+            context_thumb = `<img id='context_thumbnail' src='${thumb_path}'>`;
         }
 
-        var header_html = "<table class='sg_context_header'>" +
-                             "<tr style='display:flex; align-items:stretch'>" +
-                              "<td id='context_thumbnail_data'>" +
-                                context_thumb +
-                              "</td>" +
-                              "<td id='context_field_data'>" +
-                                context_display +
-                              "</td>" +
-                            "</tr>" +
-                          "</table>";
+        var header_html = `<table class='sg_context_header'>
+                             <tr style='display:flex; align-items:stretch'>
+                              <td id='context_thumbnail_data'>
+                                ${context_thumb}
+                              </td>
+                              <td id='context_field_data'>
+                                ${context_display}
+                              </td>
+                            </tr>
+                          </table>`;
 
         _set_header(header_html);
         _show_header(true);
     };
 
+    // Display the registered commands for the current context
     this.set_commands = function(all_commands) {
-        // Display the registered commands for the current context
 
         sg_logging.debug("Setting commands.");
 
@@ -335,9 +332,9 @@ sg_panel.Panel = new function() {
 
         if (favorites.length > 0) {
 
-            favorites_html = "<div id='sg_panel_favorites'>" +
-                "<div id='sg_panel_favorites_header'>Run a Command</div>" +
-                "<div id='sg_panel_favorites_shelf'>";
+            favorites_html = `<div id='sg_panel_favorites'>
+                              <div id='sg_panel_favorites_header'>Run a Command</div>
+                              <div id='sg_panel_favorites_shelf'>`;
 
             // loop over favorites here
             favorites.forEach(function(favorite) {
@@ -351,18 +348,15 @@ sg_panel.Panel = new function() {
                     const description = favorite["description"];
 
                     favorites_html +=
-                        "<a href='#' "  +
-                            "onClick='sg_panel.Panel.trigger_command(\"" + command_id + "\", \"" + display_name + "\")'" +
-                        ">" +
-                            "<div class='sg_command_button' " +
-                                "onmouseover='sg_panel.Panel.show_command_help(\"" + display_name + "\", \"" +description + "\", true)' " +
-                                "onmouseout='sg_panel.Panel.hide_command_help()' " +
-                            ">" +
-                                "<center>" +
-                                    "<img class='sg_panel_command_img' src='" + icon_path + "'>" +
-                                "</center>" +
-                            "</div>" +
-                        "</a>";
+                        `<a href='#' onClick='sg_panel.Panel.trigger_command(\"${command_id}\", \"${display_name}\")'>
+                            <div class='sg_command_button'
+                                onmouseover='sg_panel.Panel.show_command_help(\"${display_name}\", \"${description}\", true)'
+                                onmouseout='sg_panel.Panel.hide_command_help()'>
+                                <center>
+                                    <img class='sg_panel_command_img' src='${icon_path}'>
+                                </center>
+                            </div>
+                         </a>`
                 } else {
                     sg_logging.warn("Favorite command missing required info: " + favorite);
                 }
@@ -391,29 +385,24 @@ sg_panel.Panel = new function() {
                     const description = command["description"];
 
                     commands_html +=
-                        "<div class='sg_panel_command' " +
-                            "onmouseover='sg_panel.Panel.show_command_help(\"\", \"" +description + "\", false)' " +
-                            "onmouseout='sg_panel.Panel.hide_command_help()' " +
-                        ">" +
-                        "<table>" +
-                            "<tr>" +
-                                "<td>" +
-                                    "<a href='#' "  +
-                                        "onClick='sg_panel.Panel.trigger_command(\"" + command_id + "\", \"" + display_name + "\")'" +
-                                    ">" +
-                                    "<img class='sg_panel_command_other_img' src='" + icon_path + "'>" +
-                                    "</a>" +
-                                "</td>" +
-                                "<td style='padding-left:8px'>" +
-                                    "<a href='#' "  +
-                                        "onClick='sg_panel.Panel.trigger_command(\"" + command_id + "\", \"" + display_name + "\")'" +
-                                    ">" +
-                                        display_name +
-                                    "</a>" +
-                                "</td>" +
-                            "</tr>" +
-                        "</table>" +
-                    "</div>";
+                        `<div class='sg_panel_command'
+                            onmouseover='sg_panel.Panel.show_command_help(\"\", \"${description}\", false)'
+                            onmouseout='sg_panel.Panel.hide_command_help()'>
+                        <table>
+                          <tr>
+                            <td>
+                              <a href='#' onClick='sg_panel.Panel.trigger_command(\"${command_id}\", \"${display_name}\")'>
+                                <img class='sg_panel_command_other_img' src='${icon_path}'>
+                              </a>
+                            </td>
+                            <td style='padding-left:8px'>
+                              <a href='#' onClick='sg_panel.Panel.trigger_command(\"${command_id}\", \"${display_name}\")'>
+                                ${display_name}
+                              </a>
+                            </td>
+                          </tr>
+                        </table>
+                        </div>`;
                 } else {
                     sg_logging.warn("Command missing required info: " + command);
                 }
@@ -435,8 +424,8 @@ sg_panel.Panel = new function() {
 
     };
 
+    // Show or hide the console.
     this.show_console = function(show) {
-        // Show or hide the console.
 
         const console_div_id = sg_constants.panel_div_ids["console"];
         const console_log_div_id = sg_constants.panel_div_ids["console_log"];
@@ -451,9 +440,9 @@ sg_panel.Panel = new function() {
         }
     };
 
+    // Emits the signal to launch the supplied command id.
+    // Also shows a tmp message to confirm user click
     this.trigger_command = function(command_id, command_display) {
-        // Emits the signal to launch the supplied command id.
-        // Also shows a tmp message to confirm user click
 
         // show the progress message temporarily
         _set_info("Launching: " + command_display);
@@ -465,8 +454,8 @@ sg_panel.Panel = new function() {
 
     // ---- private methods
 
+    // Builds the flyout menu with the debug/reload options.
     const _build_flyout_menu = function(context_menu_cmds) {
-        // Builds the flyout menu with the debug/reload options.
 
         // clear the context menu lookup
         _context_menu_lookup = {};
@@ -525,23 +514,22 @@ sg_panel.Panel = new function() {
         _cs_interface.setPanelFlyoutMenu(flyout_xml);
     };
 
+    // Provides a way to make the panel persistent.
+    //
+    // Only valid for Photoshop.
     const _make_persistent = function(persistent) {
-        // Provides a way to make the panel persistent.
-        //
-        // Only valid for Photoshop.
 
-        var event_type = "com.adobe.PhotoshopUnPersistent";
-        if (persistent) {
-            event_type = "com.adobe.PhotoshopPersistent";
-        }
+        var event_type = persistent ?
+            'com.adobe.PhotoshopPersistent' :
+            'com.adobe.PhotoshopUnPersistent';
 
         var event = new CSEvent(event_type, "APPLICATION");
         event.extensionId = _cs_interface.getExtensionID();
         _cs_interface.dispatchEvent(event);
     };
 
+    // Handles flyout menu clicks
     const _on_flyout_menu_clicked = function(event) {
-        // Handles flyout menu clicks
 
         const cmd_id = event.data.menuId;
         const cmd_name = event.data.menuName;
@@ -558,17 +546,17 @@ sg_panel.Panel = new function() {
                 sg_logging.debug("Opening debugger in default browser.");
                 var app_name = _cs_interface.getHostEnvironment().appName;
                 var debug_url = sg_constants.product_info[app_name].debug_url;
-                self.open_external_url(debug_url);
+                this.open_external_url(debug_url);
                 break;
 
             // reload extension
             case "sg_dev_reload":
-                self.reload();
+                this.reload();
                 break;
 
             // about the extension
             case "sg_console":
-                self.show_console(true);
+                this.show_console(true);
                 break;
 
             // run test suite
@@ -581,7 +569,7 @@ sg_panel.Panel = new function() {
 
                 // see if the command id matches one of the context menu ids
                 if (cmd_id in _context_menu_lookup) {
-                    self.trigger_command(cmd_id, cmd_name);
+                    this.trigger_command(cmd_id, cmd_name);
 
                 // can't determine what this is
                 } else {
@@ -589,10 +577,10 @@ sg_panel.Panel = new function() {
                         "Unhandled menu event '" + cmd_name + "' clicked.");
                 }
         }
-    };
+    }.bind(this);
 
+    // Display critical error in the panel
     const _on_critical_error = function(message, stack) {
-        // Display critical error in the panel
 
         _set_bg_color("#222222");
         _clear_messages();
@@ -601,48 +589,46 @@ sg_panel.Panel = new function() {
 
         _show_header(false);
 
-        var contents_html = "<div class='sg_error_message'>" +
-            message +
-            "</div>";
+        var contents_html = `<div class='sg_error_message'>${message}</div>`;
 
         contents_html +=
-            "<br>You can try link below to attempt a full restart " +
-            " of the Adobe integration.<br><br>" +
-            "<center>" +
-            "<a href='#' onclick='sg_panel.Panel.reload()'>" +
-            "Restart Shotgun Integration" +
-            "</a>" +
-            "</center><br>";
+            `<br>
+              You can try link below to attempt a full restart of the Adobe integration.
+            <br><br>
+            <center>
+              <a href='#' onclick='sg_panel.Panel.reload()'>
+                Restart Shotgun Integration
+              </a>
+            </center>
+            <br>`;
 
         const subject = encodeURIComponent("Adobe Integration Error");
         const body = _format_email_error_message(message, stack);
 
         if (typeof stack !== "undefined") {
             contents_html +=
-                "<br>If you encounter this problem consistently or have any " +
-                "other questions, please send the following error and a " +
-                "description of the steps to reproduce the problem to " +
-                "<a href='#' onClick='sg_panel.Panel.email_support(\"" +
-                    subject + "\", \"" + body + "\")'>" +
-                    "support@shotgunsoftware.com" +
-                "</a>." +
-                "<br><br>" +
-                "<center>" +
-                    "<div class='sg_error'>" +
-                        "<pre>" + stack + "</pre>" +
-                    "</div>" +
-                "</center>";
+                `<br>
+                If you encounter this problem consistently or have any other
+                questions, please send the following error and a description
+                of the steps to reproduce the problem to
+                <a href='#' onClick='sg_panel.Panel.email_support(\"${subject}\", \"${body}\")'>
+                  support@shotgunsoftware.com
+                </a>.
+                <br><br>
+                <center>
+                  <div class='sg_error'><pre>${stack}</pre></div>
+                </center>`;
         } else {
             contents_html +=
-                "<br>If you encounter this problem consistently or have any " +
-                "other questions, please send the steps to reproduce to " +
-                "<a href='#' onClick='sg_panel.Panel.email_support(\"" +
-                    subject + "\", \"" + body + "\")'>" +
-                    "support@shotgunsoftware.com" +
-                "</a>.";
+                `<br>
+                  If you encounter this problem consistently or have any other
+                  questions, please send the steps to reproduce to
+                  <a href='#' onClick='sg_panel.Panel.email_support(\"${subject}\", \"${body}\")'>
+                    support@shotgunsoftware.com
+                  </a>.`;
         }
 
-        contents_html = "<div class='sg_container'>" + contents_html + "</div>";
+        contents_html = `<div class='sg_container'>${contents_html}</div>`;
 
         _set_contents(contents_html);
         _set_error(
@@ -650,16 +636,16 @@ sg_panel.Panel = new function() {
         );
     };
 
+    // store the mouse position always
     const _on_mouse_move = function(event) {
-        // store the mouse position always
         _cur_mouse_pos = {
             x: event.clientX,
             y: event.clientY
         };
     };
 
+    // Display pyside unavailable error in the panel
     const _on_pyside_unavailable = function(event) {
-        // Display pyside unavailable error in the panel
 
         _set_bg_color("#222222");
         _clear_messages();
@@ -673,21 +659,25 @@ sg_panel.Panel = new function() {
             python_display = "<samp>" + process.env.SHOTGUN_ADOBE_PYTHON + "</samp>";
         }
 
-        var contents_html = "<div class='sg_error_message'>" +
-            "The Shotgun integration failed to load because <samp>PySide" +
-            "</samp> is not installed (Running " + python_display + ")." +
-            "</div>";
+        var contents_html = `<div class='sg_error_message'>
+                The Shotgun integration failed to load because <samp>PySide
+                </samp> is not installed (Running ${python_display}).
+                </div>`;
 
         contents_html +=
-            "<br>In order for the Shotgun integration to work properly,  " +
-            "<samp>PySide</samp> must be installed on your system.<br><br>" +
-            "For information about <samp>PySide</samp> and how to install " +
-            "it, please click the image below:<br><br><br>" +
-            "<center>" +
-            "<a href='#' onclick='sg_panel.Panel.open_external_url(\"" + sg_constants.pyside_url + "\")'>" +
-                "<img src='../images/PySideLogo1.png' width='150px'>" +
-            "</a>" +
-            "</center><br>";
+            `<br>
+            In order for the Shotgun integration to work properly,
+            <samp>PySide</samp> must be installed on your system.
+            <br><br>
+            For information about <samp>PySide</samp> and how to install it,
+            please click the image below:
+            <br><br><br>
+            <center>
+              <a href='#' onclick='sg_panel.Panel.open_external_url(\"${sg_constants.pyside_url}\")'>
+                <img src='../images/PySideLogo1.png' width='150px'>
+              </a>
+            </center>
+            <br>`;
 
         const subject = encodeURIComponent("Adobe Integration Error");
         const body = encodeURIComponent(
@@ -700,14 +690,15 @@ sg_panel.Panel = new function() {
         const app_display_name = sg_constants.product_info[app_name].display_name;
 
         contents_html +=
-            "<br>Once you have <samp>PySide</samp> installed, restart " +
-            app_display_name + " to load the Shotgun integration.<br><br> " +
-            "If you believe the error is incorrect or you have any further " +
-            "questions, please contact " +
-            "<a href='#' onClick='sg_panel.Panel.email_support(\"" +
-            subject + "\", \"" + body + "\")'>" +
-            "support@shotgunsoftware.com" +
-            "</a>.";
+            `<br>
+            Once you have <samp>PySide</samp> installed, restart
+            ${app_display_name} to load the Shotgun integration.
+            <br><br>
+            If you believe the error is incorrect or you have any further
+            questions, please contact
+            <a href='#' onClick='sg_panel.Panel.email_support(\"${subject}\", \"${body}\")'>
+              support@shotgunsoftware.com
+            </a>.`;
 
         contents_html = "<div class='sg_container'>" + contents_html + "</div>";
 
@@ -717,8 +708,8 @@ sg_panel.Panel = new function() {
         );
     };
 
+    // Handles incoming log messages
     const _on_logged_message = function(event) {
-        // Handles incoming log messages
 
         var level = event.data.level;
         var msg = event.data.message;
@@ -758,8 +749,8 @@ sg_panel.Panel = new function() {
         console[level](msg);
     };
 
+    // This method takes over the default js logging console
     const _override_console_logging = function () {
-        // this method takes over the default js logging console
 
         var console = window.console;
         if (!console) return;
@@ -817,13 +808,13 @@ sg_panel.Panel = new function() {
                     const actual_log_level = _get_actual_log_level(message,
                         previous_log_level);
 
-                    if (actual_log_level == "debug") {
+                    if (actual_log_level === "debug") {
                         message = message.replace("DEBUG: ", "");
-                    } else if (actual_log_level == "warn") {
+                    } else if (actual_log_level === "warn") {
                         message = message.replace("WARNING: ", "");
-                    } else if (actual_log_level == "error") {
+                    } else if (actual_log_level === "error") {
                         message = message.replace("ERROR: ", "");
-                    } else if (actual_log_level == "info") {
+                    } else if (actual_log_level === "info") {
                         message = message.replace("INFO: ", "");
                     }
 
@@ -851,8 +842,8 @@ sg_panel.Panel = new function() {
         });
     };
 
+    // Make the message pretty and add it to the panel's console log
     const _forward_to_panel_console = function(level, msg, log_source) {
-        // make the message pretty and add it to the panel's console log
 
         // remove trailing newline
         msg = msg.replace(/\n$/, "");
@@ -895,10 +886,10 @@ sg_panel.Panel = new function() {
         }
     };
 
+    // Given a log message, do some inspection to see if we can deduce the
+    // actual log level from the string. if not, fall back to the supplied
+    // default value.
     const _get_actual_log_level = function(msg, default_level) {
-        // given a log message, do some inspection to see if we can deduce the
-        // actual log level from the string. if not, fall back to the supplied
-        // default value.
 
         var level = default_level;
 
@@ -917,16 +908,16 @@ sg_panel.Panel = new function() {
         return level
     };
 
+    // Scroll to the bottom of the div
     const _scroll_to_log_bottom = function() {
-        // scroll to the bottom of the div
 
         const console_log_div_id = sg_constants.panel_div_ids["console_log"];
         const log = document.getElementById(console_log_div_id);
         log.scrollTop = log.scrollHeight;
     };
 
+    // Delay happened, still need to show the command
     const _on_show_command_help_timeout = function(help) {
-        // delay happened, still need to show the command
 
         // if no help, display a default message
         if (!help || help === "null") {
@@ -975,11 +966,11 @@ sg_panel.Panel = new function() {
         var adjust_top = 0;
 
         if (beyond_right > 0) {
-            adjust_left = -1 * beyond_right;
+            adjust_left = -beyond_right;
         }
 
         if (beyond_bottom > 0) {
-            adjust_top = -1 * beyond_bottom;
+            adjust_top = -beyond_bottom;
         }
 
         const new_left = mouse_x + offset + adjust_left + window.scrollX;
@@ -1008,18 +999,23 @@ sg_panel.Panel = new function() {
         _show_command_help(true);
 
         _hide_tooltip_timeout_id = setTimeout(
-            function(){ self.hide_command_help()}, 5000);
-    };
+            function(){
+                this.hide_command_help()
+            }.bind(this),
+            5000
+        )
 
+    }.bind(this);
+
+    // Returns a boolean indicating if the point is in the rect
     const _point_in_rect = function(point, rect) {
-        // returns a boolean indicating if the point is in the rect
 
         return ((point.x >= rect.left) && (point.x <= rect.right) &&
                 (point.y >= rect.top)  && (point.y <= rect.bottom));
     };
 
+    // Select all the text within the provided div
     const _select_text = function(div_id) {
-        // Select all the text within the provided div
 
         if (document.selection) {
             const range = document.body.createTextRange();
@@ -1032,8 +1028,8 @@ sg_panel.Panel = new function() {
         }
     };
 
+    // Sets up all the event handling callbacks.
     const _setup_event_listeners = function() {
-        // Sets up all the event handling callbacks.
 
         // Handle python process disconnected
         sg_manager.CRITICAL_ERROR.connect(
@@ -1050,36 +1046,36 @@ sg_panel.Panel = new function() {
         // Updates the panel with the current commands from python
         sg_manager.UPDATE_COMMANDS.connect(
             function(event) {
-                self.set_commands(event.data);
-            }
+                this.set_commands(event.data);
+            }.bind(this)
         );
 
         // Updates the panel with the current context fields from python
         sg_manager.UPDATE_CONTEXT_DISPLAY.connect(
             function(event) {
-                self.set_context_display(event.data);
-            }
+                this.set_context_display(event.data);
+            }.bind(this)
         );
 
         // Updates the panel with the current context thumb path from python
         sg_manager.UPDATE_CONTEXT_THUMBNAIL.connect(
             function(event) {
-                self.set_context_thumbnail(event.data);
-            }
+                this.set_context_thumbnail(event.data);
+            }.bind(this)
         );
 
         // Sets the panel into a state where the context is not known
         sg_manager.UNKNOWN_CONTEXT.connect(
             function(event) {
-                self.set_unknown_context_state();
-            }
+                this.set_unknown_context_state();
+            }.bind(this)
         );
 
         // Clears the current context
         sg_manager.CONTEXT_ABOUT_TO_CHANGE.connect(
             function(event) {
-                self.set_context_loading_state();
-            }
+                this.set_context_loading_state();
+            }.bind(this)
         );
 
         // Handle the manager shutting down.
@@ -1092,10 +1088,9 @@ sg_panel.Panel = new function() {
         // Handle log messages from python process
         sg_logging.LOG_MESSAGE.connect(_on_logged_message);
 
-    };
+    }.bind(this);
 
     // set html for div
-
     const _set_div_html = function(div_id, html) {
         // Updates the inner HTML of the supplied div with the supplied HTML
         _show_div(div_id, true);
@@ -1119,8 +1114,8 @@ sg_panel.Panel = new function() {
 
     // ---- progress bar methods
 
+    // Update the progress section with a % and a message.
     const _set_progress_info = function(progress, message) {
-        // Update the progress section with a % and a message.
         _show_progress(true);
         _show_info(true);
         var elem = document.getElementById(
@@ -1129,8 +1124,8 @@ sg_panel.Panel = new function() {
         _set_info(message);
     };
 
+    // Show or hide a div
     const _show_div = function(div_id, show_or_hide) {
-        // Show or hide a div
         var display = "none";  // hide
         if (show_or_hide) {
             display = "block"; // show
@@ -1155,13 +1150,13 @@ sg_panel.Panel = new function() {
     const _show_progress = _show_div_by_id("progress");
     const _show_command_help = _show_div_by_id("command_help");
 
+    // sets bg to supplied color
     const _set_bg_color = function(color) {
-        // sets bg to supplied color
         document.body.style.background = color;
     };
 
+    // hide all transient divs
     const _clear_messages = function() {
-        // hide all transient divs
         _show_info(false);
         _show_error(false);
         _show_warning(false);
@@ -1169,14 +1164,14 @@ sg_panel.Panel = new function() {
         _show_command_help(false);
     };
 
+    // clears the info related divs
     const _clear_info = function() {
-        // clears the info related divs
         _show_info(false);
         _show_progress(false);
     };
 
+    // format an email message to help client get started
     const _format_email_error_message = function(message, stack) {
-        // format an email message to help client get started
 
         return encodeURIComponent(
             "Greetings Shotgun Support Team!\n\n" +

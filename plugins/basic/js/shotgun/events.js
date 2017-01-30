@@ -33,11 +33,11 @@ sg_event.Event = function(event_type) {
     this.event_type = event_type;
 };
 
+// Convenience wrapper for sending application events.
+//
+// Args:
+//    data: data to send along with the event. for use by listeners
 sg_event.Event.prototype.emit = function(data) {
-    // Convenience wrapper for sending application events.
-    //
-    // Args:
-    //    data: data to send along with the event. for use by listeners
 
     // allow emission with no data. just populate with null
     data = data || null;
@@ -62,14 +62,14 @@ sg_event.Event.prototype.emit = function(data) {
     _cs_interface.dispatchEvent(event);
 };
 
+// Convenience wrapper for listening to application events.
+//
+// Args:
+//    callback: the method to call when the event is heard
+//
+// Callbacks should take a single argument which is the event object
+// itself.
 sg_event.Event.prototype.connect = function(callback) {
-    // Convenience wrapper for listening to application events.
-    //
-    // Args:
-    //    callback: the method to call when the event is heard
-    //
-    // Callbacks should take a single argument which is the event object
-    // itself.
 
     // listen for shutdown requests from panel
     _cs_interface.addEventListener(

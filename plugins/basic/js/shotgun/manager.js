@@ -13,11 +13,11 @@
 // namespace
 var sg_manager = sg_manager || {};
 
+// A singleton "class" to manage the Shotgun integration layers
+//   * python bootstrap
+//   * communication with the panel
+//   * communication with adobe api (extendscript) via socket.io
 sg_manager.Manager = new function() {
-    // A singleton "class" to manage the Shotgun integration layers
-    //   * python bootstrap
-    //   * communication with the panel
-    //   * communication with adobe api (extendscript) via socket.io
 
     // ---- public data members
 
@@ -28,9 +28,6 @@ sg_manager.Manager = new function() {
 
     // Half-second interval.
     const active_document_interval = 500;
-
-    // keep a handle on the instance.
-    const self = this;
 
     // adobe interface
     const _cs_interface = new CSInterface();
@@ -47,8 +44,8 @@ sg_manager.Manager = new function() {
 
     // ---- public methods
 
+    // Setup the Shotgun integration within the app.
     this.on_load = function() {
-        // Setup the Shotgun integration within the app.
 
         // Execute the startup payload and catch *any* errors. If there are
         // errors, display them in the panel if possible.
@@ -138,29 +135,29 @@ sg_manager.Manager = new function() {
         }
     };
 
+    // Code to run when the manager extension is unloaded
     this.on_unload = function() {
-        // Code to run when the manager extension is unloaded
 
         // This callback never seems to run. This could be because this is an
         // "invisible" extension, but it seems like even regular panels never
         // have their page "unload" callbacks called. Leaving this here for now
         // in the event that this becomes called at some point in the future.
-        self.shutdown();
+        this.shutdown();
     };
 
+    // Ensure all the manager's components are shutdown properly
+    //
+    // Also emits an event for listeners to respond to manager shutdown.
     this.shutdown = function() {
-        // Ensure all the manager's components are shutdown properly
-        //
-        // Also emits an event for listeners to respond to manager shutdown.
 
         // alert listeners that the manager is shutting down
         sg_manager.SHUTTING_DOWN.emit();
 
         // ensure the python process is shut down
-        if (typeof self.python_process !== "undefined") {
+        if (typeof this.python_process !== "undefined") {
             sg_logging.debug("Terminating python process...");
             try {
-                self.python_process.kill();
+                this.python_process.kill();
                 sg_logging.debug("Python process terminated successfully.");
             } catch(error) {
                 sg_logging.warning(
@@ -174,8 +171,8 @@ sg_manager.Manager = new function() {
 
     // ---- private methods
 
+    // Tests whether the extension can run with the current application
     const _app_is_supported = function() {
-        // Tests whether the extension can run with the current application
 
         // supported if the panel menu and html extensions are available
         const host_capabilities = _cs_interface.getHostCapabilities();
@@ -198,7 +195,7 @@ sg_manager.Manager = new function() {
                     // this undefined state, then we've switched from a
                     // saved document to one that isn't and we still
                     // need to alert clients.
-                    if ( __active_document != undefined ) {
+                    if ( __active_document !== undefined ) {
                         sg_logging.debug("Active document changed to undefined");
                         __active_document = undefined;
                         sg_socket_io.rpc_active_document_changed("");
@@ -206,7 +203,7 @@ sg_manager.Manager = new function() {
                 }
                 else {
                     // If it's changed, then alert clients.
-                    if ( __active_document != result ) {
+                    if ( __active_document !== result ) {
                         sg_logging.debug("Active document changed to " + result);
                         __active_document = result;
                         sg_socket_io.rpc_active_document_changed(result);
@@ -216,15 +213,16 @@ sg_manager.Manager = new function() {
         );
     };
 
+    // Bootstrap the toolkit python process.
+    //
+    // Returns a `child_process.ChildProcess` object for the running
+    // python process with a bootstrapped toolkit core.
     const _bootstrap_python = function(port) {
-        // Bootstrap the toolkit python process.
-        //
-        // Returns a `child_process.ChildProcess` object for the running
-        // python process with a bootstrapped toolkit core.
 
-        const app_id = _cs_interface.hostEnvironment.appId;
         const child_process = require("child_process");
         const path = require("path");
+
+        const app_id = _cs_interface.hostEnvironment.appId;
         const engine_name = sg_constants.product_info[app_id].tk_engine_name;
 
         // the path to this extension
@@ -281,7 +279,7 @@ sg_manager.Manager = new function() {
         );
 
         try {
-            self.python_process = child_process.spawn(
+            this.python_process = child_process.spawn(
                 python_exe_path,
                 [
                     // path to the python bootstrap script
@@ -303,28 +301,29 @@ sg_manager.Manager = new function() {
             throw error;
         }
 
-        self.python_process.on("error", function(error) {
+        this.python_process.on("error", function(error) {
             sg_logging.error("Python process error: " + error);
         });
 
         // log stdout from python process
-        self.python_process.stdout.on("data", function(data) {
+        this.python_process.stdout.on("data", function(data) {
             sg_logging.python(data.toString());
         });
 
         // log stderr from python process
-        self.python_process.stderr.on("data", function(data) {
+        this.python_process.stderr.on("data", function(data) {
             sg_logging.python(data.toString());
         });
 
         // handle python process disconnection
-        self.python_process.on("close", _handle_python_close);
-    };
+        this.python_process.on("close", _handle_python_close);
 
+    }.bind(this);
+
+    // Python should never be shut down by anything other than the manager.
+    // So if we're here, something caused it to exit early. Handle any known
+    // status codes accordingly.
     const _handle_python_close = function(code, signal) {
-        // Python should never be shut down by anything other than the manager.
-        // So if we're here, something caused it to exit early. Handle any known
-        // status codes accordingly.
 
         const error_codes = sg_constants.python_error_codes;
 
@@ -339,16 +338,16 @@ sg_manager.Manager = new function() {
             sg_logging.error("Python exited unexpectedly.");
             _emit_python_critical_error({
                 message: "The Shotgun integration has unexpectedly shut " +
-                "down. Specifically, the python process that " +
-                "handles the communication with Shotgun has " +
-                "been terminated.",
+                         "down. Specifically, the python process that " +
+                         "handles the communication with Shotgun has " +
+                         "been terminated.",
                 stack: undefined
             });
         }
     };
 
+    // Find an open port and send it to the supplied callback
     const _get_open_port = function(port_found_callback) {
-        // Find an open port and send it to the supplied callback
 
         // https://nodejs.org/api/http.html#http_class_http_server
         const http = require('http');
@@ -363,12 +362,12 @@ sg_manager.Manager = new function() {
         // try limit is reached.
         const _try_port = function() {
 
-            num_tries += 1;
+            ++num_tries;
 
             // double checking whether we need to continue here. this should
             // prevent this method from being called after a suitable port has
             // been identified.
-            if (typeof self.communication_port !== "undefined") {
+            if (typeof this.communication_port !== "undefined") {
                 // the port is defined. no need to continue
                 return;
             }
@@ -407,9 +406,9 @@ sg_manager.Manager = new function() {
                 "listening",
                 function() {
                     // listening, so the port is available
-                    self.communication_port = server.address().port;
+                    this.communication_port = server.address().port;
                     server.close();
-                }
+                }.bind(this)
             );
 
             // if we get an error, we presume that the port is already in use.
@@ -427,9 +426,9 @@ sg_manager.Manager = new function() {
             server.on(
                 "close",
                 function() {
-                    if (typeof self.communication_port !== "undefined") {
+                    if (this.communication_port !== undefined) {
                         // the port is defined. no need to continue
-                        const port = self.communication_port;
+                        const port = this.communication_port;
                         sg_logging.debug("Found available port: " + port);
                         try {
                             port_found_callback(port);
@@ -445,13 +444,13 @@ sg_manager.Manager = new function() {
                         // still no port. try again
                         _try_port();
                     }
-                }
+                }.bind(this)
             );
 
             // now that we've setup the event callbacks, tell the server to
             // listen to a port assigned by the OS.
             server.listen(0);
-        };
+        }.bind(this);
 
         // fake error message to test startup fail. good for debugging.
         //var error = new Error();
@@ -461,10 +460,10 @@ sg_manager.Manager = new function() {
 
         // initiate the port finding
         _try_port();
-    };
+    }.bind(this);
 
+    // Callback for when an open port is found.
     const _on_server_port_found = function(port) {
-        // Callback for when an open port is found.
 
         sg_socket_io.SocketManager.start_socket_server(port, _cs_interface);
 
@@ -475,12 +474,13 @@ sg_manager.Manager = new function() {
         _bootstrap_python(port);
     };
 
+    // Reloads the manager
     const _reload = function(event) {
 
         sg_logging.debug("Reloading the manager...");
 
         // shutdown the python process
-        self.shutdown();
+        this.shutdown();
 
         // remember this extension id to reload it
         const extension_id = _cs_interface.getExtensionID();
@@ -493,11 +493,10 @@ sg_manager.Manager = new function() {
         sg_logging.debug(" Relaunching the manager...");
         _cs_interface.requestOpenExtension(extension_id);
 
-    };
+    }.bind(this);
 
+    // Setup listeners for any events that need to be processed by the manager
     const _setup_event_listeners = function() {
-        // setup listeners for any events that need to be processed by the
-        // manager
 
         sg_logging.debug("Setting up event listeners...");
 
@@ -542,6 +541,7 @@ sg_manager.Manager = new function() {
         sg_logging.debug("Event listeners created.");
     };
 
+    // Wrapper to emit the python critical error for listeners
     const _emit_python_critical_error = function(error) {
         __python_disconnected = true;
         __python_disconnected_error = error;
