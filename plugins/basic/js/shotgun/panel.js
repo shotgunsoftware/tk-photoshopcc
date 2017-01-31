@@ -173,7 +173,7 @@ sg_panel.Panel = new function() {
         // reset the favorite header text
         const fav_header_div = document.getElementById("sg_panel_favorites_header");
         if (fav_header_div) {
-            fav_header_div.innerHTML = "Run a Command";
+            fav_header_div.innerHTML = "Run a command";
         }
     };
 
@@ -333,7 +333,7 @@ sg_panel.Panel = new function() {
         if (favorites.length > 0) {
 
             favorites_html = `<div id='sg_panel_favorites'>
-                              <div id='sg_panel_favorites_header'>Run a Command</div>
+                              <div id='sg_panel_favorites_header'>Run a command</div>
                               <div id='sg_panel_favorites_shelf'>`;
 
             // loop over favorites here
