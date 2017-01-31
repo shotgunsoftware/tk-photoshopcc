@@ -385,24 +385,22 @@ sg_panel.Panel = new function() {
                     const description = command["description"];
 
                     commands_html +=
-                        `<div class='sg_panel_command'
+                        `<a href='#' onClick='sg_panel.Panel.trigger_command(\"${command_id}\", \"${display_name}\")'>
+                        <div class='sg_panel_command'
                             onmouseover='sg_panel.Panel.show_command_help(\"\", \"${description}\", false)'
                             onmouseout='sg_panel.Panel.hide_command_help()'>
                         <table>
                           <tr>
                             <td>
-                              <a href='#' onClick='sg_panel.Panel.trigger_command(\"${command_id}\", \"${display_name}\")'>
                                 <img class='sg_panel_command_other_img' src='${icon_path}'>
-                              </a>
                             </td>
                             <td style='padding-left:8px'>
-                              <a href='#' onClick='sg_panel.Panel.trigger_command(\"${command_id}\", \"${display_name}\")'>
                                 ${display_name}
-                              </a>
                             </td>
                           </tr>
                         </table>
-                        </div>`;
+                        </div>
+                        </a>`;
                 } else {
                     sg_logging.warn("Command missing required info: " + command);
                 }
