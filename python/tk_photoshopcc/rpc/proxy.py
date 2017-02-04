@@ -182,6 +182,20 @@ class ProxyWrapper(object):
             parent=self._parent,
         )
 
+    def __iter__(self):
+        """
+        Custom iteration behavior. This will loop up from index 0 until a failed
+        index lookup occurs, at which time a StopIteration will be raised.
+        """
+        with self._communicator.response_logging_silenced():
+            try:
+                i = 0
+                while True:
+                    yield self[i]
+                    i = i + 1
+            except RuntimeError:
+                raise StopIteration
+
     def __getattr__(self, name):
         """
         Custom attribute getter that accesses and returns the remote data

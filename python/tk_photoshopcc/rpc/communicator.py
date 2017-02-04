@@ -14,6 +14,7 @@ import sys
 import os.path
 import time
 import logging
+import contextlib
 
 # Add our third-party packages to sys.path.
 sys.path.append(os.path.join(os.path.dirname(__file__), "packages"))
@@ -63,6 +64,7 @@ class Communicator(object):
         self._network_debug = network_debug
         self._logger = logger or logging.getLogger(__name__)
         self._event_processor = event_processor
+        self._response_logging_silenced = False
 
         self._io = SocketIO(host, port)
         self._io.on("return", self._handle_response)
@@ -156,6 +158,21 @@ class Communicator(object):
         return self._port
 
     ##########################################################################################
+    # context managers
+
+    @contextlib.contextmanager
+    def response_logging_silenced(self):
+        """
+        A context manager that will silence RPC command response logging
+        on enter, and enable it on exit. This is useful if you're emitting
+        an RPC command that you expect might fail, but you want to handle
+        that failure without alerting a user via logging.
+        """
+        self._response_logging_silenced = True
+        yield
+        self._response_logging_silenced = False
+
+    ##########################################################################################
     # RPC
 
     def disconnect(self):
@@ -189,7 +206,7 @@ class Communicator(object):
 
         try:
             self._io._heartbeat_thread.hurry()
-            self._io._transport.set_timeout(seconds=1)
+            self._io._transport.set_timeout(seconds=0.1)
             start = time.time()
 
             while wait >= (time.time() - start) or single_loop:
@@ -469,10 +486,11 @@ class Communicator(object):
         except (TypeError, ValueError):
             self._RESULTS[uid] = result.get("result")
         except KeyError:
-            self.logger.error("RPC command (UID=%s) failed!" % uid)
-            self.logger.error("Failed command payload: %s" % self._COMMAND_REGISTRY[uid])
-            self.logger.debug("Failure raw response: %s" % response)
-            self.logger.debug("Failure results: %s" % result)
+            if not self._response_logging_silenced:
+                self.logger.error("RPC command (UID=%s) failed!" % uid)
+                self.logger.error("Failed command payload: %s" % self._COMMAND_REGISTRY[uid])
+                self.logger.debug("Failure raw response: %s" % response)
+                self.logger.debug("Failure results: %s" % result)
             raise RuntimeError("RPC command (UID=%s) failed!" % uid)
 
         self.log_network_debug(

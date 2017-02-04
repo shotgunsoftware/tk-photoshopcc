@@ -301,8 +301,14 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
             record.message
         )
 
-        sys.stdout.write(msg_str)
-        sys.stdout.flush()
+        try:
+            sys.stdout.write(msg_str)
+            sys.stdout.flush()
+        except AttributeError:
+            # In a situation where stdout and stderr are being redirected in
+            # non-standard ways, like in our Python Console app, we can just
+            # ignore a missing attribute.
+            pass
 
     def _handle_active_document_change(self, active_document_path):
         """
