@@ -199,8 +199,6 @@ sg_panel.Panel = new function() {
             // ensure the panel is in its loading state.
             this.set_panel_loading_state();
 
-            _override_console_logging();
-
             // build the flyout menu. always do this first so we can have access
             // to the debug console no matter what happens during bootstrap.
             _build_flyout_menu([]);
@@ -711,6 +709,7 @@ sg_panel.Panel = new function() {
 
         var level = event.data.level;
         var msg = event.data.message;
+        var from_python = event.data.from_python;
 
         // Some things are sent via log signal because there's no other
         // way to get access to them. For example, during toolkit
@@ -743,101 +742,13 @@ sg_panel.Panel = new function() {
             return;
         }
 
-        // forward to the js console
+        var log_source = from_python ? "py" : "js";
+
+        // forward message to the panel console
+        _forward_to_panel_console(level, msg, log_source);
+
+        // forward to the chrome console
         console[level](msg);
-    };
-
-    // This method takes over the default js logging console
-    const _override_console_logging = function () {
-
-        var console = window.console;
-        if (!console) return;
-
-        // keep a reference to the original console methods we want to intercept
-        const original_methods = {
-            debug: console.debug,
-            info: console.info,
-            error: console.error,
-            warn: console.warn,
-            log: console.log,
-            python: console.log
-        };
-
-        const console_intercept = function(log_level) {
-            // this function overrides the supplied log_level console method.
-
-            console[log_level] = function () {
-                // overriding log_level console method.
-
-                // the original arguments
-                var message = Array.prototype.slice.apply(arguments).join("\n");
-
-                // keep track of where the log message came from. we display
-                // python messages slightly different than js messages.
-                var log_source = "js";
-                if (log_level === "python") {
-                    // This log message came from python. See if we can
-                    // determine the real log level from the beginning
-                    // of the message. This allows the messages to
-                    // display properly in both the chrome debug console
-                    // and our own console in the panel. NOTE: if the
-                    // formatting of the python logs changes, this may
-                    // not work.
-                    log_source = "py";
-                }
-
-                // since messages can come across in bundles, if this portion is
-                // not the same log level as the first one in the bundle, we
-                // need to pass it over to the proper log method.
-                const messages = message.split("\n");
-
-                // if we're in a bundle of log messages, remember the previous
-                // log level to use as a default for subsequent lines.
-                var previous_log_level = log_level;
-
-                // loop over the message lines and log them.
-                messages.forEach(function(message) {
-
-                    // next if nothing in the message
-                    if (!message) { return; }
-
-                    // use some hackery to determine the actual log level for
-                    // this line in the message
-                    const actual_log_level = _get_actual_log_level(message,
-                        previous_log_level);
-
-                    if (actual_log_level === "debug") {
-                        message = message.replace("DEBUG: ", "");
-                    } else if (actual_log_level === "warn") {
-                        message = message.replace("WARNING: ", "");
-                    } else if (actual_log_level === "error") {
-                        message = message.replace("ERROR: ", "");
-                    } else if (actual_log_level === "info") {
-                        message = message.replace("INFO: ", "");
-                    }
-
-                    // forward the log message to the panel's console
-                    _forward_to_panel_console(actual_log_level, message, log_source);
-
-                    if (log_source == "py") {
-                        // prefix the message with '[python]:` for chrome console
-                        message = "[python]: " + message;
-                    }
-
-                    // call the original log method to log to the chrome console
-                    original_methods[actual_log_level].apply(console, [message]);
-
-                    // remember the current log level for use in next iteration
-                    previous_log_level = actual_log_level;
-                });
-            }
-        };
-
-        // now call the intercept method on each of the console method names
-        var log_levels = ["log", "warn", "error", "debug", "info", "python"];
-        log_levels.forEach(function(log_level) {
-            console_intercept(log_level)
-        });
     };
 
     // Make the message pretty and add it to the panel's console log

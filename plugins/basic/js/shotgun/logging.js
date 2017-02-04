@@ -56,7 +56,8 @@ sg_logging._log = function(level, message, send_to_rpc) {
     // flyout menu where they can click and go to the console.
     sg_logging.LOG_MESSAGE.emit({
         level: level,
-        message: message
+        message: message,
+        from_python: !send_to_rpc
     });
 };
 

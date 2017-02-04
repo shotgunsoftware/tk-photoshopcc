@@ -401,6 +401,11 @@ sg_socket_io.SocketManager = new function() {
                 sg_logging.debug("Sending context about to change from client.");
                 sg_manager.CONTEXT_ABOUT_TO_CHANGE.emit();
             });
+
+            socket.on("log_message", function(level, message) {
+                // log a message from python
+                sg_logging._log(level, message, false)
+            });
         });
     };
 };
