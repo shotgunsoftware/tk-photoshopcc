@@ -53,7 +53,7 @@ def get_sgtk_logger(sgtk):
 
     # add a custom handler to the root logger so that all toolkit log messages
     # are forwarded back to python via the communicator
-    bootstrap_log_formatter = logging.Formatter("%(levelname)s: %(message)s")
+    bootstrap_log_formatter = logging.Formatter("[%(levelname)s]: %(message)s")
     bootstrap_log_handler = _BootstrapLogHandler()
     bootstrap_log_handler.setFormatter(bootstrap_log_formatter)
 
@@ -238,7 +238,7 @@ if __name__ == "__main__":
         # continue.
         from PySide import QtCore, QtGui
     except ImportError:
-        sys.stdout.write("ERROR: %s" % (traceback.format_exc(),))
+        sys.stdout.write("[ERROR]: %s" % (traceback.format_exc(),))
         sys.stdout.flush()
         sys.exit(EXIT_STATUS_NO_PYSIDE)
 
@@ -252,7 +252,7 @@ if __name__ == "__main__":
         # bootstrapping the engine, and starting the Qt event loop
         bootstrap(root_path, port, engine_name, app_id)
     except Exception, e:
-        sys.stdout.write("ERROR: %s" % (traceback.format_exc(),))
+        sys.stdout.write("[ERROR]: %s" % (traceback.format_exc(),))
         sys.stdout.flush()
         sys.exit(EXIT_STATUS_ERROR)
 

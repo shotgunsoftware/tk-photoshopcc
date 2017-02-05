@@ -87,13 +87,14 @@ sg_manager.Manager = new function() {
 
             if (extensions.length > 0) {
                 sg_logging.debug("Loaded extensions:");
-                sg_logging.debug("--------------------------------------");
                 extensions.forEach(function(ext) {
-                    sg_logging.debug("    name: " + ext.name);
-                    sg_logging.debug("      id: " + ext.id);
-                    sg_logging.debug("mainPath: " + ext.mainPath);
-                    sg_logging.debug("basePath: " + ext.basePath);
-                    sg_logging.debug("--------------------------------------");
+                    sg_logging.debug(
+                        "--------------------------------------\n" +
+                        `    name: ${ext.name}\n` +
+                        `      id: ${ext.id}\n` +
+                        `mainPath: ${ext.mainPath}\n` +
+                        `basePath: ${ext.basePath}\n`
+                    );
                 });
             }
 
