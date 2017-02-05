@@ -43,6 +43,8 @@ sg_panel.Panel = new function() {
     // current context.
     var _context_thumbnail_data = undefined;
 
+    var _previous_log_level = "debug";
+
     // ---- public methods
 
     this.clear = function() {
@@ -708,7 +710,7 @@ sg_panel.Panel = new function() {
     const _on_logged_message = function(event) {
 
         var level = event.data.level;
-        var msg = event.data.message;
+        var message = event.data.message;
         var from_python = event.data.from_python;
 
         // Some things are sent via log signal because there's no other
@@ -716,7 +718,7 @@ sg_panel.Panel = new function() {
         // bootstrap, we can only gain access to progress via stdio pipe
         // maintained between js process and the spawned python process.
         // So we intercept messages formatted to relay progress.
-        if (msg.includes("PLUGIN_BOOTSTRAP_PROGRESS")) {
+        if (message.includes("PLUGIN_BOOTSTRAP_PROGRESS")) {
 
             // It is possible that the message contains multiple
             // progress messages packaged together. Identify all of them
@@ -725,7 +727,7 @@ sg_panel.Panel = new function() {
 
             const multi_regex = new RegExp(regex_str, "gm");
 
-            var matches = msg.match(multi_regex);
+            var matches = message.match(multi_regex);
 
             if (!matches) {
                 return;
@@ -744,18 +746,58 @@ sg_panel.Panel = new function() {
 
         var log_source = from_python ? "py" : "js";
 
-        // forward message to the panel console
-        _forward_to_panel_console(level, msg, log_source);
+        var messages = undefined;
 
-        // forward to the chrome console
-        console[level](msg);
+        if (from_python) {
+            messages = message.split("\n")
+        } else {
+            messages = [message]
+        }
+
+        messages.forEach(function(msg) {
+
+            // strip newlines
+            msg = msg.replace(/^\n/, "");
+            msg = msg.replace(/\n$/, "");
+
+            if (msg.startsWith("[DEBUG]: ")) {
+                msg = msg.replace("[DEBUG]: ", "");
+                level = "debug";
+            } else if (msg.startsWith("[INFO]: ")) {
+                msg = msg.replace("[INFO]: ", "");
+                level = "info";
+            } else if (msg.startsWith("[WARNING]: ")) {
+                msg = msg.replace("[WARNING]: ", "");
+                level = "warn";
+            } else if (msg.startsWith("[ERROR]: ")) {
+                msg = msg.replace("[ERROR]: ", "");
+                level = "error";
+            } else if (msg.startsWith("[CRITICAL]: ")) {
+                msg = msg.replace("[ERROR]: ", "");
+                level = "error";
+            } else if (from_python) {
+                // account for multi-line log messages from python that may not
+                // have the expected format
+                level = _previous_log_level;
+            }
+
+            if (!msg) {
+                // continue
+                return;
+            }
+
+            // forward message to the panel console
+            _forward_to_panel_console(level, msg, log_source);
+
+            // forward to the chrome console
+            console[level](msg);
+
+            _previous_log_level = level;
+        });
     };
 
     // Make the message pretty and add it to the panel's console log
-    const _forward_to_panel_console = function(level, msg, log_source) {
-
-        // remove trailing newline
-        msg = msg.replace(/\n$/, "");
+    const _forward_to_panel_console = function(level, message, log_source) {
 
         // figure out which div id to use for style/color
         var div_id = "sg_log_message";
@@ -770,51 +812,37 @@ sg_panel.Panel = new function() {
         // append the <pre> element to the log div
         const log = document.getElementById("sg_panel_console_log");
 
-        // create a <pre> element and insert the msg
-        const node = document.createElement("pre");
-        node.setAttribute("id", div_id);
-        node.appendChild(document.createTextNode(msg));
+        message.split("\n").forEach(function(msg) {
 
-        // just a little indicator so that we know if the log message came from
-        // (javascript or python) when looking in the panel console.
-        const tag = document.createElement("pre");
-        tag.setAttribute("id", "sg_panel_console_tag");
-        if (log_source == "js") {
-            tag.appendChild(document.createTextNode("js"))
-        } else {
-            tag.appendChild(document.createTextNode("py"))
-        }
+            if (!msg) {
+                // continue
+                return;
+            }
 
-        log.appendChild(tag);
-        log.appendChild(node);
-        log.appendChild(document.createElement("br"));
+            // just a little indicator so that we know if the log message came from
+            // (javascript or python) when looking in the panel console.
+            const tag = document.createElement("pre");
+            tag.setAttribute("id", "sg_panel_console_tag");
+            if (log_source == "js") {
+                tag.appendChild(document.createTextNode("js"))
+            } else {
+                tag.appendChild(document.createTextNode("py"))
+            }
 
-        // scroll to the bottom if an error occurs
-        if (["error", "critical"].indexOf(level) >= 0) {
-            _scroll_to_log_bottom();
-        }
-    };
+            // create a <pre> element and insert the msg
+            const node = document.createElement("pre");
+            node.setAttribute("id", div_id);
+            node.appendChild(document.createTextNode(msg));
 
-    // Given a log message, do some inspection to see if we can deduce the
-    // actual log level from the string. if not, fall back to the supplied
-    // default value.
-    const _get_actual_log_level = function(msg, default_level) {
+            log.appendChild(tag);
+            log.appendChild(node);
+            log.appendChild(document.createElement("br"));
 
-        var level = default_level;
-
-        if (msg.startsWith("DEBUG:")) {
-            level = "debug";
-        } else if (msg.startsWith("INFO:")) {
-            level = "info";
-        } else if (msg.startsWith("WARNING:")) {
-            level = "warn";
-        } else if (msg.startsWith("ERROR:")) {
-            level = "error";
-        } else if (msg.startsWith("CRITICAL:")) {
-            level = "error";
-        }
-
-        return level
+            // scroll to the bottom if an error occurs
+            if (["error", "critical"].indexOf(level) >= 0) {
+                _scroll_to_log_bottom();
+            }
+        });
     };
 
     // Scroll to the bottom of the div

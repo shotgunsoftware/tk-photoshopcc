@@ -51,13 +51,23 @@ sg_logging._log = function(level, message, send_to_rpc) {
         sg_logging._log_rpc(level, message);
     }
 
-    // send a log message. this should be received and processed by the
-    // panel extension. that's where the user will have access to the
-    // flyout menu where they can click and go to the console.
-    sg_logging.LOG_MESSAGE.emit({
-        level: level,
-        message: message,
-        from_python: !send_to_rpc
+    // the log messages with level "python" could be comprised of multiple
+    // log messages because of stdout buffering. submit each
+    if (level == "python") {
+        var messages = message.split("\n");
+    } else {
+        var messages = [message];
+    }
+
+    messages.forEach(function(message) {
+        // send a log message. this should be received and processed by the
+        // panel extension. that's where the user will have access to the
+        // flyout menu where they can click and go to the console.
+        sg_logging.LOG_MESSAGE.emit({
+            level: level,
+            message: message,
+            from_python: !send_to_rpc
+        });
     });
 };
 
