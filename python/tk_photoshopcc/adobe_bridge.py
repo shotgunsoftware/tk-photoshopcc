@@ -172,6 +172,23 @@ class AdobeBridge(Communicator):
         """
         super(AdobeBridge, self).ping()
 
+    def log_message(self, level, msg):
+        """
+        Log a message from python so that it is visible on js side.
+
+        :param level: The js log level name.
+        :param msg: The message to log.
+        """
+
+        log_data = {
+            "level": level,
+            "msg": msg
+        }
+
+        # NOTE: do not log in this method
+        json_log_data = json.dumps(log_data)
+        self._io.emit("log_message", json_log_data)
+
     def send_commands(self, commands):
         """
         Responsible for forwarding the current engine commands to js.

@@ -293,16 +293,36 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
         :type record: :class:`~python.logging.LogRecord`
         """
 
-        # we don't use the handler's format method here because the adobe side
-        # expects a certain format.
-        msg_str = "\n%s: [%s] %s\n" % (
-            record.levelname,
-            record.name,
-            record.message
-        )
+        # If the _adobe attribute is set, then we can forward logging calls
+        # back to the js process via rpc.
+        if hasattr(self, '_adobe'):
 
-        sys.stdout.write(msg_str)
-        sys.stdout.flush()
+            py_to_js_log_level_map = {
+                "CRITICAL": "error",
+                "ERROR": "error",
+                "WARNING": "warn",
+                "INFO": "info",
+                "DEBUG": "debug",
+            }
+
+            level = py_to_js_log_level_map[record.levelname]
+
+            # log the message back to js via rpc
+            self.adobe.log_message(level, record.message)
+
+        # prior to the _adobe attribute being set, we rely on the js process
+        # handling stdout and logging it.
+        else:
+
+            # we don't use the handler's format method here because the adobe
+            # side expects a certain format.
+            msg_str = "[%s]: %s" % (
+                record.levelname,
+                record.message
+            )
+
+            sys.stdout.write(msg_str)
+            sys.stdout.flush()
 
     def _handle_active_document_change(self, active_document_path):
         """
