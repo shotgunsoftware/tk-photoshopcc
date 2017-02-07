@@ -237,7 +237,7 @@ sg_manager.Manager = new function() {
         // manifest and other files necessary for the bootstrap.
         if (process.env.PYTHONPATH) {
             // append the plugin's python path to the existing env var
-            process.env.PYTHONPATH += ":" + plugin_python_path;
+            process.env.PYTHONPATH += path.delimiter + plugin_python_path;
         } else {
             // no PYTHONPATH set. set it to the plugin python path
             process.env.PYTHONPATH = plugin_python_path;
