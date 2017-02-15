@@ -273,6 +273,39 @@ sg_panel.Panel = new function() {
         _cs_interface.closeExtension();
     };
 
+    // Copy selectinon to the clipboard
+    this.selection_to_clipboard = function() {
+        var selected_text = "";
+        if (window.getSelection){
+            selected_text = window.getSelection().toString()
+        }
+
+        if (!selected_text) {
+            sg_logging.warn("Nothing selected to copy.")
+        }
+
+        try{
+            document.execCommand("copy");
+        } catch(e){
+            sg_logging.error(`Failed to copy selection to clipboard!\n${e}`);
+        }
+    };
+
+    // Select all the text within the provided div
+    this.select_text = function(div_id) {
+
+        if (document.selection) {
+            const range = document.body.createTextRange();
+            range.moveToElementText(document.getElementById(div_id));
+            range.select();
+        } else if (window.getSelection) {
+            const range = document.createRange();
+            range.selectNode(document.getElementById(div_id));
+            window.getSelection().addRange(range);
+        }
+    };
+
+
     // Given thumbnail from python, display it in the header
     this.set_context_thumbnail = function(context_thumbnail_data) {
 
@@ -823,11 +856,7 @@ sg_panel.Panel = new function() {
             // (javascript or python) when looking in the panel console.
             const tag = document.createElement("pre");
             tag.setAttribute("id", "sg_panel_console_tag");
-            if (log_source == "js") {
-                tag.appendChild(document.createTextNode("js"))
-            } else {
-                tag.appendChild(document.createTextNode("py"))
-            }
+            tag.appendChild(document.createTextNode(log_source + " "));
 
             // create a <pre> element and insert the msg
             const node = document.createElement("pre");
@@ -949,20 +978,6 @@ sg_panel.Panel = new function() {
 
         return ((point.x >= rect.left) && (point.x <= rect.right) &&
                 (point.y >= rect.top)  && (point.y <= rect.bottom));
-    };
-
-    // Select all the text within the provided div
-    const _select_text = function(div_id) {
-
-        if (document.selection) {
-            const range = document.body.createTextRange();
-            range.moveToElementText(document.getElementById(div_id));
-            range.select();
-        } else if (window.getSelection) {
-            const range = document.createRange();
-            range.selectNode(document.getElementById(div_id));
-            window.getSelection().addRange(range);
-        }
     };
 
     // Sets up all the event handling callbacks.
