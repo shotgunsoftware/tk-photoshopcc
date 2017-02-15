@@ -50,6 +50,14 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
 
     TEST_SCRIPT_BASENAME = "run_tests.py"
 
+    PY_TO_JS_LOG_LEVEL_MAPPING = {
+                "CRITICAL": "error",
+                "ERROR": "error",
+                "WARNING": "warn",
+                "INFO": "info",
+                "DEBUG": "debug",
+            }
+
     _COMMAND_UID_COUNTER = 0
     _LOCK = threading.Lock()
     _FAILED_PINGS = 0
@@ -185,6 +193,11 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
         # current state back to the adobe side.
         self.__send_state()
 
+        # forward the log file path back to the js side. this is used to direct
+        # clients to the file in the event of an error
+        log_file = sgtk.LogManager().base_file_handler.baseFilename
+        self.adobe.send_log_file_path(log_file)
+
     def destroy_engine(self):
         """
         Called when the engine should tear down itself and all its apps.
@@ -297,15 +310,7 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
         # back to the js process via rpc.
         if hasattr(self, '_adobe'):
 
-            py_to_js_log_level_map = {
-                "CRITICAL": "error",
-                "ERROR": "error",
-                "WARNING": "warn",
-                "INFO": "info",
-                "DEBUG": "debug",
-            }
-
-            level = py_to_js_log_level_map[record.levelname]
+            level = self.PY_TO_JS_LOG_LEVEL_MAPPING[record.levelname]
 
             # log the message back to js via rpc
             self.adobe.log_message(level, record.message)
@@ -1027,7 +1032,6 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
         }
 
         # send the commands back to adobe
-        self.logger.debug("Sending commands: %s" % str(all_commands))
         self.adobe.send_commands(all_commands)
 
     def __setup_connection_timer(self, force=False):
@@ -1123,7 +1127,6 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
                 entity=None,
                 sg_globals=self.__shotgun_globals,
             )
-            self.logger.debug("Sending context display.")
             self.adobe.send_context_display(fields_html)
 
             # go ahead and forward the site thumbnail back to js
@@ -1131,8 +1134,7 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
                 thumb_path="../images/default_Site_thumb_dark.png",
                 url=self.sgtk.shotgun_url,
             )
-            self.logger.debug(
-                "Sending default context thumbnail: %s" % str(data))
+            self.adobe.send_context_thumbnail(data)
             return
 
         # get the fields to query from the hook
@@ -1223,8 +1225,6 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
                     thumb_path=thumb_path,
                     url=self.get_entity_url(context_entity),
                 )
-                self.logger.debug(
-                    "Sending default context thumbnail: %s" % str(data))
                 self.adobe.send_context_thumbnail(data)
 
             # now that we have all the field values, go back to the hook and
@@ -1237,7 +1237,6 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
             )
 
             # forward the display html back to the js panel
-            self.logger.debug("Sending context display.")
             self.adobe.send_context_display(fields_html)
 
         # thumbnail download. forward the path and a url back to js
@@ -1251,7 +1250,6 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
             # add a url to allow the panel to make the thumbnail clickable
             data["url"] = self.get_entity_url(context_entity)
 
-            self.logger.debug("Sending context thumbnail: %s" % str(data))
             self.adobe.send_context_thumbnail(data)
 
     def __get_project_id(self):

@@ -390,6 +390,13 @@ sg_socket_io.SocketManager = new function() {
                 sg_manager.UPDATE_CONTEXT_THUMBNAIL.emit(context_thumbnail);
             });
 
+            socket.on("set_log_file_path", function(json_log_file_path) {
+                // The client is setting the current log file path
+                var log_file_path = JSON.parse(json_log_file_path);
+                sg_logging.debug("Setting log file path from client: " + json_log_file_path);
+                sg_manager.UPDATE_LOG_FILE_PATH.emit(log_file_path);
+            });
+
             socket.on("set_unknown_context", function() {
                 // The context is unknown
                 sg_logging.debug("Sending unknown context signal from the client.");

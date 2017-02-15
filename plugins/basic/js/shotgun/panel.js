@@ -45,6 +45,8 @@ sg_panel.Panel = new function() {
 
     var _previous_log_level = "debug";
 
+    var _log_file_path = undefined;
+
     // ---- public methods
 
     this.clear = function() {
@@ -659,6 +661,16 @@ sg_panel.Panel = new function() {
                   </a>.`;
         }
 
+        if (typeof _log_file_path !== "undefined") {
+            contents_html +=
+                `<br><br>
+                Please attach a copy of the this log file when emailing the
+                support team:<br><br>
+                <tt><a href='#' onClick='sg_panel.Panel.open_external_url(\"file://${_log_file_path}\")'>${_log_file_path}</a></tt>
+                <br>
+                `
+        }
+
         contents_html = `<div class='sg_container'>${contents_html}</div>`;
 
         _set_contents(contents_html);
@@ -1014,6 +1026,13 @@ sg_panel.Panel = new function() {
             function(event) {
                 this.set_context_thumbnail(event.data);
             }.bind(this)
+        );
+
+        // Updates the panel with the current log file path
+        sg_manager.UPDATE_LOG_FILE_PATH.connect(
+            function(event) {
+                _log_file_path = event.data;
+            }
         );
 
         // Sets the panel into a state where the context is not known
