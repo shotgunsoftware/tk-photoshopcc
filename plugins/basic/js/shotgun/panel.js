@@ -275,7 +275,7 @@ sg_panel.Panel = new function() {
         _cs_interface.closeExtension();
     };
 
-    // Copy selectinon to the clipboard
+    // Copy selection to the clipboard
     this.selection_to_clipboard = function() {
         var selected_text = "";
         if (window.getSelection){

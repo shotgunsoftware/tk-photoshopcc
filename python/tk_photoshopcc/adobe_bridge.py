@@ -227,9 +227,10 @@ class AdobeBridge(Communicator):
 
     def send_log_file_path(self, log_file):
         """
+        Responsible for forwarding the current log file path to js.
 
-        :param log_file:
-        :return:
+        The path is displayed in errors to help facilitate getting the log to
+        support teams when problems occur.
         """
         json_file_path = json.dumps(log_file)
         self.logger.debug("Sending log file path: %s" % json_file_path)
