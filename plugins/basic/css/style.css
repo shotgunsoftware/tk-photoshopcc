@@ -80,15 +80,14 @@ a:active {
     left: 1px
 }
 
+/* placeholder for the context thumbnail */
+#context_thumbnail_data {
+}
+
 /* container for the context field info */
 #context_field_data {
     padding-left: 8px;
-    padding-top: 0px;
-    text-align: left;
-    vertical-align: top;
-    width: 100%;
-    flex: 1;
-    display: inline-block;
+    padding-right: 8px;
 }
 
 /* table for field info */
@@ -96,17 +95,13 @@ a:active {
     vertical-align: top;
 }
 
-/* thumbnail td container */
-#context_thumbnail_data {
-    display: table-cell;
-    text-align: left;
-    vertical-align: top;
-}
-
 /* the thumbnail itself */
 #context_thumbnail {
     max-width: 178px;
     max-height: 100px;
+    float: left;
+    padding-right: 8px;
+    padding-bottom: 8px;
 }
 
 /* the first image that shows up when panel is loading */
@@ -183,6 +178,9 @@ div.sg_error {
 #sg_panel_favorites_header {
     color: #D7D7D7;
     padding-left: 20px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 #sg_panel_favorites_shelf {
@@ -240,6 +238,14 @@ div.sg_error {
     padding-right: 18px;
     padding-top: 5px;
     color: #D7D7D7;
+}
+
+.sg_panel_command_td {
+    padding-left: 8px;
+    max-width: 1px;  /* trick to elide text */
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .sg_panel_command img {
@@ -300,14 +306,13 @@ div.sg_error {
 
 /* the main context header section */
 .sg_context_header {
-    width: 100%;
     padding-left: 18px;
     padding-right: 8px;
     padding-top: 8px;
     padding-bottom: 8px;
     border-bottom: 2px solid #373737;
     background-color: #424242;
-
+    min-height: 100px;
 }
 
 /* general styling for labels (less emphasis) */

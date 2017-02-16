@@ -122,16 +122,15 @@ sg_panel.Panel = new function() {
 
         _set_bg_color("#4D4D4D");
 
-        var header_html = `<table class='sg_context_header'>
-                            <tr style='display:flex; align-items:stretch'>
-                              <td id='context_thumbnail_data'>
+        var header_html = `<div class='sg_context_header'>
+                              <div id='context_thumbnail_data'>
                                 <img id='context_thumbnail' src='../images/default_Site_thumb_dark.png'>
-                              </td>
-                              <td id='context_field_data'>
+                              </div>
+                              <div id='context_field_data'>
                                 Loading context...
-                              </td>
+                              </div>
                             </tr>
-                          </table>`;
+                          </div>`;
 
         _set_header(header_html);
         _show_header(true);
@@ -340,16 +339,15 @@ sg_panel.Panel = new function() {
             context_thumb = `<img id='context_thumbnail' src='${thumb_path}'>`;
         }
 
-        var header_html = `<table class='sg_context_header'>
-                             <tr style='display:flex; align-items:stretch'>
-                              <td id='context_thumbnail_data'>
+        var header_html = `<div class='sg_context_header'>
+                              <div id='context_thumbnail_data'>
                                 ${context_thumb}
-                              </td>
-                              <td id='context_field_data'>
+                              </div>
+                              <div id='context_field_data'>
                                 ${context_display}
-                              </td>
+                              </div>
                             </tr>
-                          </table>`;
+                          </div>`;
 
         _set_header(header_html);
         _show_header(true);
@@ -425,11 +423,16 @@ sg_panel.Panel = new function() {
                             onmouseover='sg_panel.Panel.show_command_help(\"\", \"${description}\", false)'
                             onmouseout='sg_panel.Panel.hide_command_help()'>
                         <table>
+                          <!-- trick to allow text elide within td -->
+                          <colgroup>
+                            <col width="0%" />
+                            <col width="100%" />
+                          </colgroup>
                           <tr>
-                            <td>
+                            <td style='white-space: nowrap;'>
                                 <img class='sg_panel_command_other_img' src='${icon_path}'>
                             </td>
-                            <td style='padding-left:8px'>
+                            <td class='sg_panel_command_td'>
                                 ${display_name}
                             </td>
                           </tr>
