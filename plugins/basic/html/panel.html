@@ -62,21 +62,22 @@ are reserved by Shotgun Software Inc.
     <!-- console -->
     <div id="sg_panel_console">
 
-      <!-- console header -->
-      <div id="sg_panel_console_header">
+      <!-- console logs -->
+      <div id="sg_panel_console_log">
+      </div>
+      <div id="sg_panel_console_footer">
         <table width="100%">
           <tr>
-            <td>
-              Console:
+            <td align="left">
+              <button class="sg_panel_console_button" onclick="sg_panel.Panel.select_text('sg_panel_console_log')">Select All</button>
+              <button class="sg_panel_console_button" onclick="sg_panel.Panel.selection_to_clipboard()">Copy Selected to Clipboard</button>
             </td>
             <td align="right">
-              <a class="sg_small_link" href="#" onclick="sg_panel.Panel.show_console(false)">[close]</a>
+              <button class="sg_panel_console_button" onclick="sg_panel.Panel.show_console(false)">Close</button>
+              &nbsp;&nbsp;
             </td>
           </tr>
         </table>
-      </div>
-      <!-- console logs -->
-      <div id="sg_panel_console_log">
       </div>
 
     </div>

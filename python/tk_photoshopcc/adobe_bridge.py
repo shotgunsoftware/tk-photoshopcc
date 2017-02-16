@@ -225,6 +225,17 @@ class AdobeBridge(Communicator):
         self.logger.debug("Sending context thumb path: %s" % json_context_thumbnail)
         self._io.emit("set_context_thumbnail", json_context_thumbnail)
 
+    def send_log_file_path(self, log_file):
+        """
+        Responsible for forwarding the current log file path to js.
+
+        The path is displayed in errors to help facilitate getting the log to
+        support teams when problems occur.
+        """
+        json_file_path = json.dumps(log_file)
+        self.logger.debug("Sending log file path: %s" % json_file_path)
+        self._io.emit("set_log_file_path", json_file_path)
+
     def send_unknown_context(self):
         """
         Sent when a context can not be determined for the current file.

@@ -45,6 +45,8 @@ sg_panel.Panel = new function() {
 
     var _previous_log_level = "debug";
 
+    var _log_file_path = undefined;
+
     // ---- public methods
 
     this.clear = function() {
@@ -272,6 +274,39 @@ sg_panel.Panel = new function() {
         sg_panel.REQUEST_MANAGER_RELOAD.emit();
         _cs_interface.closeExtension();
     };
+
+    // Copy selection to the clipboard
+    this.selection_to_clipboard = function() {
+        var selected_text = "";
+        if (window.getSelection){
+            selected_text = window.getSelection().toString()
+        }
+
+        if (!selected_text) {
+            sg_logging.warn("Nothing selected to copy.")
+        }
+
+        try{
+            document.execCommand("copy");
+        } catch(e){
+            sg_logging.error(`Failed to copy selection to clipboard!\n${e}`);
+        }
+    };
+
+    // Select all the text within the provided div
+    this.select_text = function(div_id) {
+
+        if (document.selection) {
+            const range = document.body.createTextRange();
+            range.moveToElementText(document.getElementById(div_id));
+            range.select();
+        } else if (window.getSelection) {
+            const range = document.createRange();
+            range.selectNode(document.getElementById(div_id));
+            window.getSelection().addRange(range);
+        }
+    };
+
 
     // Given thumbnail from python, display it in the header
     this.set_context_thumbnail = function(context_thumbnail_data) {
@@ -626,6 +661,16 @@ sg_panel.Panel = new function() {
                   </a>.`;
         }
 
+        if (typeof _log_file_path !== "undefined") {
+            contents_html +=
+                `<br><br>
+                Please attach a copy of the this log file when emailing the
+                support team:<br><br>
+                <tt><a href='#' onClick='sg_panel.Panel.open_external_url(\"file://${_log_file_path}\")'>${_log_file_path}</a></tt>
+                <br>
+                `
+        }
+
         contents_html = `<div class='sg_container'>${contents_html}</div>`;
 
         _set_contents(contents_html);
@@ -823,11 +868,7 @@ sg_panel.Panel = new function() {
             // (javascript or python) when looking in the panel console.
             const tag = document.createElement("pre");
             tag.setAttribute("id", "sg_panel_console_tag");
-            if (log_source == "js") {
-                tag.appendChild(document.createTextNode("js"))
-            } else {
-                tag.appendChild(document.createTextNode("py"))
-            }
+            tag.appendChild(document.createTextNode(log_source + " "));
 
             // create a <pre> element and insert the msg
             const node = document.createElement("pre");
@@ -951,20 +992,6 @@ sg_panel.Panel = new function() {
                 (point.y >= rect.top)  && (point.y <= rect.bottom));
     };
 
-    // Select all the text within the provided div
-    const _select_text = function(div_id) {
-
-        if (document.selection) {
-            const range = document.body.createTextRange();
-            range.moveToElementText(document.getElementById(div_id));
-            range.select();
-        } else if (window.getSelection) {
-            const range = document.createRange();
-            range.selectNode(document.getElementById(div_id));
-            window.getSelection().addRange(range);
-        }
-    };
-
     // Sets up all the event handling callbacks.
     const _setup_event_listeners = function() {
 
@@ -999,6 +1026,13 @@ sg_panel.Panel = new function() {
             function(event) {
                 this.set_context_thumbnail(event.data);
             }.bind(this)
+        );
+
+        // Updates the panel with the current log file path
+        sg_manager.UPDATE_LOG_FILE_PATH.connect(
+            function(event) {
+                _log_file_path = event.data;
+            }
         );
 
         // Sets the panel into a state where the context is not known

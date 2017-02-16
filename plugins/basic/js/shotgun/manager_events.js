@@ -22,6 +22,9 @@ sg_event.create_event(sg_manager, "UPDATE_CONTEXT_DISPLAY");
 // typically as an async response to a REQUEST_STATE event from the panel
 sg_event.create_event(sg_manager, "UPDATE_CONTEXT_THUMBNAIL");
 
+// provides the toolkit log file path for display in panel
+sg_event.create_event(sg_manager, "UPDATE_LOG_FILE_PATH");
+
 // sent when the python side cannot determine a context for the current document
 sg_event.create_event(sg_manager, "UNKNOWN_CONTEXT");
 
