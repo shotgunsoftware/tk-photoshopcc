@@ -195,12 +195,12 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
                 doc_path = self.adobe.app.activeDocument.fullName.fsName
                 if doc_path != self._ACTIVE_DOCUMENT_PATH:
                     # This is admittedly questionable. Setting the current
-                    # is a public function, but we're jumping the gun here,
-                    # because this is typically set after the engine init
-                    # process is complete. We're not done, though, and we
+                    # engine is a public function, but we're jumping the gun
+                    # here, because this is typically set after the engine init
+                    # process is completed. We're not done, though, and we
                     # have detected a situation where we need to change our
                     # context to match that of the DCC's current document,
-                    # and so we need to make sure that Core knows that we
+                    # and so we need to make sure that core knows that we
                     # are the current engine.
                     sgtk.platform.engine.set_current_engine(self)
                     self._handle_active_document_change(doc_path)
