@@ -427,8 +427,8 @@ div.sg_error {
 #sg_panel_console_log {
     position: fixed;
     top: 0px;
-    bottom: calc(100% - 35px);
-    height: calc(100% - 35px);
+    bottom: calc(100% - 40px);
+    height: calc(100% - 40px);
     width: calc(100% - 4px);
     padding-left: 4px;
     padding-right: 0px;
@@ -441,17 +441,19 @@ div.sg_error {
 
 #sg_panel_console_footer {
     position: fixed;
-    top: calc(100% - 35px);
+    top: calc(100% - 40px);
     left: 0px;
     width: 100%;
-    height: 35px;
+    height: 40px;
     color: #D7D7D7;
     background-color: #4A4A4A;
-    padding-left: 8px;
-    padding-right: 8px;
-    padding-top: 2px;
-    padding-bottom: 2px;
+    padding-left: 5px;
+    padding-right: 0px;
+    padding-top: 0px;
+    padding-bottom: 0px;
     border-top: 1px solid #222222;
+    overflow-y:hidden;
+    overflow-x:auto;
 }
 
 

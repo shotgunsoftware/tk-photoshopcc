@@ -295,14 +295,18 @@ sg_panel.Panel = new function() {
     // Select all the text within the provided div
     this.select_text = function(div_id) {
 
+        document.getElementById(div_id).focus();
+
         if (document.selection) {
             const range = document.body.createTextRange();
             range.moveToElementText(document.getElementById(div_id));
             range.select();
         } else if (window.getSelection) {
             const range = document.createRange();
-            range.selectNode(document.getElementById(div_id));
-            window.getSelection().addRange(range);
+            range.selectNodeContents(document.getElementById(div_id));
+            const selection = window.getSelection();
+            selection.removeAllRanges();
+            selection.addRange(range);
         }
     };
 
