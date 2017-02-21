@@ -13,16 +13,16 @@ import sys
 import re
 import glob
 
-import sgtk
-from sgtk import TankError
 from sgtk.platform import SoftwareLauncher, SoftwareVersion, LaunchInformation
 
 class PhotoshopLauncher(SoftwareLauncher):
     """
-    Handles launching Maya executables. Automatically starts up
-    a tk-maya engine with the current context in the new session
-    of Maya.
+    Handles the launching of Photoshop. Contains the logic for
+    scanning for installed versions of Photoshop and
+    how to correctly set up a launch environment for the photoshop
+    engine.
     """
+
     def scan_software(self, versions=None, display_name=None, icon=None):
         """
         Performs a scan for software installations.
@@ -76,11 +76,26 @@ class PhotoshopLauncher(SoftwareLauncher):
 
             match = version_regex.match(path)
             if match:
-                dcc_version = match.group(1)  # extract first group
-                display_name = "CC %s" % dcc_version
-                software_version = SoftwareVersion(dcc_version, display_name, path, icon_path)
-                self.logger.debug("Generated %s" % software_version)
-                software_versions.append(software_version)
+                # extract first group to get version string
+                dcc_version = match.group(1)
+                self.logger.debug("This is version '%s'" % dcc_version)
+
+                # see if we have a version filter
+                if versions and dcc_version in versions:
+                    self.logger.debug(
+                        "Skipping this version since it does not match version filter %s" % versions
+                    )
+                elif dcc_version == "2014" or dcc_version == "2015":
+                    # only support 2015.5+
+                    self.logger.info(
+                        "Found photoshop install in '%s' but only versions 2015.5 "
+                        "and above are supported" % path
+                    )
+                else:
+                    # all good
+                    display_name = "CC %s" % dcc_version
+                    software_version = SoftwareVersion(dcc_version, display_name, path, icon_path)
+                    software_versions.append(software_version)
             else:
                 self.logger.warning("Could not extract version number from path '%s'" % path)
 
@@ -89,47 +104,32 @@ class PhotoshopLauncher(SoftwareLauncher):
 
     def prepare_launch(self, exec_path, args, file_to_open=None):
         """
-        Prepares an environment to launch Maya in that will automatically
-        load Toolkit and the tk-maya engine when Maya starts.
+        Prepares an environment to launch Photoshop so that will automatically
+        load Toolkit after startup.
 
         :param str exec_path: Path to Maya executable to launch.
         :param str args: Command line arguments as strings.
         :param str file_to_open: (optional) Full path name of a file to open on launch.
         :returns: :class:`LaunchInformation` instance
         """
-
         # todo - add support for the file_to_open parameter.
 
-        # find the bootstrap script and import it
+        # find the bootstrap script and import it.
+        # note: all the business logic for how to launch is
+        #       located in the python/startup folder to be compatible
+        #       with older versions of the launch workflow
         bootstrap_python_path = os.path.join(self.disk_location, "python", "startup")
         sys.path.insert(0, bootstrap_python_path)
         import bootstrap
 
+        # determine all environment variables
         required_env = bootstrap.compute_environment()
+        # copy the extension across to the deploy folder
         bootstrap.ensure_extension_up_to_date()
+
+        # Add std context and site info to the env
+        std_env = self.get_standard_plugin_environment()
+        required_env.update(std_env)
 
         return LaunchInformation(exec_path, args, required_env)
 
-
-# def _extract_entity_from_context(context):
-#     """
-#     Extract an entity type and id from the context.
-#
-#     :param context:
-#     :returns: Tuple (entity_type_str, entity_id_int)
-#     """
-#     # Use the Project by default
-#     entity_type = context.project["type"]
-#     entity_id = context.project["id"]
-#
-#     # if there is an entity then that takes precedence
-#     if context.entity:
-#         entity_type = context.entity["type"]
-#         entity_id = context.entity["id"]
-#
-#     # and if there is a Task that is even better
-#     if context.task:
-#         entity_type = context.task["type"]
-#         entity_id = context.task["id"]
-#
-#     return (entity_type, entity_id)
