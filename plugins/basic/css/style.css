@@ -139,6 +139,10 @@ div.sg_error {
     height: 8px;
 }
 
+::-webkit-scrollbar-track:horizontal {
+    border-top: 1px solid #222222;
+}
+
 ::-webkit-scrollbar {
     width: 10px;
     height: 10px;
@@ -427,8 +431,8 @@ div.sg_error {
 #sg_panel_console_log {
     position: fixed;
     top: 0px;
-    bottom: calc(100% - 40px);
-    height: calc(100% - 40px);
+    bottom: calc(100% - 44px);
+    height: calc(100% - 44px);
     width: calc(100% - 4px);
     padding-left: 4px;
     padding-right: 0px;
@@ -441,10 +445,10 @@ div.sg_error {
 
 #sg_panel_console_footer {
     position: fixed;
-    top: calc(100% - 40px);
+    top: calc(100% - 44px);
     left: 0px;
     width: 100%;
-    height: 40px;
+    height: 44px;
     color: #D7D7D7;
     background-color: #4A4A4A;
     padding-left: 5px;
@@ -453,7 +457,7 @@ div.sg_error {
     padding-bottom: 0px;
     border-top: 1px solid #222222;
     overflow-y:hidden;
-    overflow-x:auto;
+    overflow-x:scroll;
 }
 
 
