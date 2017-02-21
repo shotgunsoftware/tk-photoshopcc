@@ -23,7 +23,7 @@ class PhotoshopLauncher(SoftwareLauncher):
     engine.
     """
 
-    def scan_software(self, versions=None, display_name=None, icon=None):
+    def scan_software(self, versions=None):
         """
         Performs a scan for software installations.
 
@@ -32,12 +32,6 @@ class PhotoshopLauncher(SoftwareLauncher):
                               for all versions. A version string is
                               DCC-specific but could be something
                               like "2017", "6.3v7" or "1.2.3.52".
-        :param str display_name : (optional) Name to use in graphical
-                                  displays to describe the
-                                  SoftwareVersions that were found.
-        :param icon: (optional) Path to a 256x256 (or smaller) png file
-                     to use in graphical displays for every SoftwareVersion
-                     found.
         :returns: List of :class:`SoftwareVersion` instances
         """
         self.logger.debug(
