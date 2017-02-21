@@ -8,14 +8,5 @@
 # agreement to the Shotgun Pipeline Toolkit Source Code License. All rights
 # not expressly granted therein are reserved by Shotgun Software Inc.
 
-# this file defines all the different disk locations that this config uses.
-# these paths can be altered at project creation time to ensure that they map
-# to the correct location.
-
-
-# this configuration currently doesn't define any storages.
-#primary:
-#    description: ""
-#    mac_path:
-#    linux_path:
-#    windows_path:
+from .classic_init import toolkit_classic_bootstrap
+from .plugin_init import toolkit_plugin_bootstrap

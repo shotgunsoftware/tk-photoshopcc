@@ -1,4 +1,4 @@
-# Copyright (c) 2013 Shotgun Software Inc.
+# Copyright (c) 2017 Shotgun Software Inc.
 #
 # CONFIDENTIAL AND PROPRIETARY
 #
@@ -8,12 +8,12 @@
 # agreement to the Shotgun Pipeline Toolkit Source Code License. All rights
 # not expressly granted therein are reserved by Shotgun Software Inc.
 
-# Metadata defining the behavior and requirements for this configuration
+# the constants associated with this plugin
 
-# More verbose description of this item
-display_name: "Toolkit Zero Config"
-description: "Configuration for Toolkit based workflows."
+# the plugin id to identify this plugin with at bootstrap
+PLUGIN_ID = "basic.photoshopcc"
+# the configuration to fall back on if no customization has been provided
+BASE_CONFIGURATION = {"type": "app_store", "name": "tk-config-basic"}
 
-# Required minimum versions for this item to run
-requires_shotgun_version: "v6.3.0"
-requires_core_version: "v0.18.0"
+
+
