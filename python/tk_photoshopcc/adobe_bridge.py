@@ -172,6 +172,22 @@ class AdobeBridge(Communicator):
         """
         super(AdobeBridge, self).ping()
 
+    def get_active_document_path(self):
+        """
+        Gets the path to the currently-active document. This will do so
+        without raising a RuntimeError if the active document is a "new"
+        document that has not been saved. In that case, a None will be
+        returned instead.
+
+        :returns: The active document's file path on disk as a str, or
+                  None if the document has never been saved.
+        """
+        with self.response_logging_silenced():
+            try:
+                return self.app.activeDocument.fullName.fsName
+            except RuntimeError:
+                return None
+
     def log_message(self, level, msg):
         """
         Log a message from python so that it is visible on js side.

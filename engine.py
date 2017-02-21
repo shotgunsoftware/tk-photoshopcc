@@ -70,7 +70,6 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
     _HEARTBEAT_DISABLED = False
     _PROJECT_CONTEXT = None
     _ACTIVE_DOCUMENT_PATH = None
-    _SEND_STATE_DISABLED = False
 
     ############################################################################
     # context changing
@@ -193,31 +192,24 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
 
         # This will ensure that we're in the correct context. If it fails, then
         # it's most likely just because there isn't a saved active document for
-        # us to process. In that case, our current context is just fine. We
-        # are disabling state sending because the context change that might
-        # occur will try to trigger sending the state. Since we're definitely
-        # going to do exactly the same after this, we can just have it skip
-        # that part of the post context change routine.
-        with self.send_state_disabled():
-            try:
-                doc_path = self.adobe.app.activeDocument.fullName.fsName
-                if doc_path != self._ACTIVE_DOCUMENT_PATH:
-                    # This is admittedly questionable. Setting the current
-                    # engine is a public function, but we're jumping the gun
-                    # here, because this is typically set after the engine init
-                    # process is completed. We're not done, though, and we
-                    # have detected a situation where we need to change our
-                    # context to match that of the DCC's current document,
-                    # and so we need to make sure that core knows that we
-                    # are the current engine.
-                    sgtk.platform.engine.set_current_engine(self)
-                    self._handle_active_document_change(doc_path)
-            except RuntimeError:
-                pass
+        # us to process. In that case, our current context is just fine.
+        doc_path = self.adobe.get_active_document_path()
 
-        # now that qt is setup and the engine is ready to go, forward the
-        # current state back to the adobe side.
-        self.__send_state()
+        if doc_path and doc_path != self._ACTIVE_DOCUMENT_PATH:
+            # This is admittedly questionable. Setting the current
+            # engine is a public function, but we're jumping the gun
+            # here, because this is typically set after the engine init
+            # process is completed. We're not done, though, and we
+            # have detected a situation where we need to change our
+            # context to match that of the DCC's current document,
+            # and so we need to make sure that core knows that we
+            # are the current engine.
+            sgtk.platform.engine.set_current_engine(self)
+            self._handle_active_document_change(doc_path)
+        else:
+            # Now that qt is setup and the engine is ready to go, forward the
+            # current state back to the Adobe side.
+            self.__send_state()
 
         # forward the log file path back to the js side. this is used to direct
         # clients to the file in the event of an error
@@ -593,18 +585,6 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
         self._HEARTBEAT_DISABLED = False
         self.logger.debug("Heartbeat restarted.")
 
-    @contextmanager
-    def send_state_disabled(self):
-        """
-        A context manager that disables the ability to send state to the
-        remote server. This is useful if you're forcing a context change
-        but know that you're going to be sending the state yourself later
-        on.
-        """
-        self._SEND_STATE_DISABLED = True
-        yield
-        self._SEND_STATE_DISABLED = False
-
     ############################################################################
     # UI
 
@@ -918,10 +898,6 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
         """
         Sends information back to javascript representing the current context.
         """
-        if self._SEND_STATE_DISABLED:
-            self.logger.debug("State sending has been disabled. Not sending.")
-            return
-
         # alert js that the state is about to change. this allows the panel to
         # clear its current state and display a loading message.
         self.adobe.context_about_to_change()
