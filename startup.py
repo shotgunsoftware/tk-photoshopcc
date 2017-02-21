@@ -34,12 +34,6 @@ class PhotoshopLauncher(SoftwareLauncher):
                               like "2017", "6.3v7" or "1.2.3.52".
         :returns: List of :class:`SoftwareVersion` instances
         """
-        self.logger.debug(
-            "Scanning for photoshop versions. Versions=%s. Override display name:%s, override icon: %s" % (versions, display_name, icon)
-        )
-
-        software_versions = []
-
         icon_path = os.path.join(self.disk_location, "resources", "ps_2017_icon_256.png")
 
         if sys.platform == "darwin":
@@ -64,6 +58,7 @@ class PhotoshopLauncher(SoftwareLauncher):
         self.logger.debug("Scanning for photoshop installations in '%s'..." % glob_pattern)
         paths = glob.glob(glob_pattern)
 
+        software_versions = []
         for path in paths:
             # extract version number
             self.logger.debug("Found photoshop install in '%s'" % path)
