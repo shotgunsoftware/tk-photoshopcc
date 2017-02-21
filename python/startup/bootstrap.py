@@ -28,7 +28,11 @@ def bootstrap(engine_name, context, app_path, app_args, **kwargs):
     """
     Interface for older versions of tk-multi-launchapp.
 
-    Prepares the environment for a tk-photoshopcc bootstrap.
+    This is deprecated and now replaced with the ``startup.py`` file
+    and ``SoftwareLauncher`` interface.
+
+    Prepares the environment for a tk-photoshopcc bootstrap. This method
+    is called directly from the tk-multi-launchapp.
 
     :param str engine_name: The name of the engine being used -- "tk-photoshopcc"
     :param context: The context to use when bootstrapping.
@@ -40,16 +44,23 @@ def bootstrap(engine_name, context, app_path, app_args, **kwargs):
     """
     # get the necessary environment variable for launch
     env = compute_environment()
-    # set them
+    # set the environment
     os.environ.update(env)
     # make sure the extension is properly installed
     ensure_extension_up_to_date()
-    # go!
+    # all good to go
     return (app_path, app_args)
 
 
 def compute_environment():
+    """
+    Return the env vars needed to launch the photoshop plugin.
 
+    This will generate a dictionary of environment variables
+    needed in order to launch the photoshop plugin.
+
+    :returns: dictionary of env var string key/value pairs.
+    """
     env = {}
 
     # set the interpreter with which to launch the CC integration
@@ -72,6 +83,13 @@ def compute_environment():
 
 
 def ensure_extension_up_to_date():
+    """
+    Carry out the necessary operations needed in order for the
+    photoshop extension to be recognized.
+
+    This inlcudes copying the extension from the engine location
+    to a OS-specific location.
+    """
 
     # the basic plugin needs to be installed in order to launch the adobe
     # engine. we need to make sure the plugin is installed and up-to-date.
