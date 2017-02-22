@@ -10,7 +10,7 @@
 
 import sys
 import os
-from . import logging
+from . import log
 
 def toolkit_classic_bootstrap():
     """
@@ -20,7 +20,7 @@ def toolkit_classic_bootstrap():
     logger = sgtk.LogManager.get_logger(__name__)
 
     # ---- setup logging
-    log_handler = logging.get_sgtk_logger(sgtk)
+    log_handler = log.get_sgtk_logger(sgtk)
     logger.info("Launching Toolkit in classic mode.")
     logger.debug("TANK_CONTEXT and TANK_ENGINE variables found.")
 

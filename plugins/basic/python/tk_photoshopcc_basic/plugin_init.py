@@ -10,7 +10,7 @@
 
 import sys
 import os
-from . import logging
+from . import log
 from . import constants
 
 
@@ -127,7 +127,7 @@ def toolkit_plugin_bootstrap(plugin_root_path):
     logger = sgtk.LogManager.get_logger(__name__)
 
     # ---- setup logging
-    log_handler = logging.get_sgtk_logger(sgtk)
+    log_handler = log.get_sgtk_logger(sgtk)
     logger.debug("Added bootstrap log hander to root logger...")
 
     # set up the toolkit bootstrap manager
@@ -157,8 +157,8 @@ def toolkit_plugin_bootstrap(plugin_root_path):
 
     # ---- tear down logging
     sgtk.LogManager().root_logger.removeHandler(log_handler)
-    entity.debug("Removed bootstrap log handler from root logger...")
+    logger.debug("Removed bootstrap log handler from root logger...")
 
-    entity.info("Toolkit Bootstrapped!")
+    logger.info("Toolkit Bootstrapped!")
 
 
