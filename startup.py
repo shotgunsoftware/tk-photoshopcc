@@ -18,8 +18,8 @@ from sgtk.platform import SoftwareLauncher, SoftwareVersion, LaunchInformation
 class PhotoshopLauncher(SoftwareLauncher):
     """
     Handles the launching of Photoshop. Contains the logic for
-    scanning for installed versions of Photoshop and
-    how to correctly set up a launch environment for the photoshop
+    scanning for installed versions of the software and
+    how to correctly set up a launch environment for the tk-photoshopcc
     engine.
     """
 
@@ -37,13 +37,16 @@ class PhotoshopLauncher(SoftwareLauncher):
         icon_path = os.path.join(self.disk_location, "resources", "ps_2017_icon_256.png")
 
         if sys.platform == "darwin":
+            # Default installs are located here:
             # /Applications/Adobe Photoshop CC 2017/Adobe Photoshop CC 2017.app
             glob_pattern = "/Applications/Adobe Photoshop CC [0-9][0-9][0-9][0-9]/Adobe Photoshop CC [0-9][0-9][0-9][0-9].app"
             version_regex = re.compile(
-                "^/Applications/Adobe Photoshop CC ([0-9]{4})/Adobe Photoshop CC ([0-9]{4})\.app$"
+                "^/Applications/Adobe Photoshop CC ([0-9]{4})/Adobe Photoshop CC ([0-9]{4})\.app$",
+                re.IGNORECASE
             )
 
         elif sys.platform == "win32":
+            # Default installs are located here:
             # C:\program files\Adobe\Adobe Photoshop CC 2017\Photoshop.exe
             glob_pattern = "C:\\Program Files\\Adobe\\Adobe Photoshop CC [0-9][0-9][0-9][0-9]\\Photoshop.exe"
             version_regex = re.compile(
@@ -77,7 +80,7 @@ class PhotoshopLauncher(SoftwareLauncher):
                 elif dcc_version == "2014" or dcc_version == "2015":
                     # only support 2015.5+
                     self.logger.info(
-                        "Found photoshop install in '%s' but only versions 2015.5 "
+                        "Found Photoshop install in '%s' but only versions 2015.5 "
                         "and above are supported" % path
                     )
                 else:

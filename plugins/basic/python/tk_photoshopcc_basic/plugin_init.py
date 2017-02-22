@@ -11,7 +11,10 @@
 import sys
 import os
 from . import log
-from . import constants
+
+# Note: the sgtk_plugin_basic_photoshopcc module is created
+# as part of the plugin build process.
+from sgtk_plugin_basic_photoshopcc import manifest
 
 
 def _progress_handler(value, message):
@@ -28,51 +31,6 @@ def _progress_handler(value, message):
     # to the display.
     sys.stdout.write("|PLUGIN_BOOTSTRAP_PROGRESS,%s,%s|" % (value, message))
     sys.stdout.flush()
-
-
-def _init_core(plugin_root_path):
-    """
-    Handles import of core for plugins that are either
-    distributed with the engine itself and running as part of
-    a larger workflow (basic configuration) where the toolkit core
-    is located externally to the plugin, or alternatively workflows
-    where the plugin has been built in a fully standalone mode
-    where it has no external dependencies and comes bundled with all the things
-    it needs.
-
-    :param plugin_root_path: Path to the root of the plugin
-    """
-
-    # --- Import Core ---
-    #
-    # - If we are running the plugin built as a stand-alone unit,
-    #   try to retrieve the path to sgtk core and add that to the pythonpath.
-    #   When the plugin has been built, there is a sgtk_plugin_basic_photoshopcc
-    #   module which we can use to retrieve the location of core and add it
-    #   to the pythonpath.
-    # - If we are running toolkit as part of a larger zero config workflow
-    #   and not from a standalone workflow, we are running the plugin code
-    #   directly from the engine folder without a bundle cache and with this
-    #   configuration, core already exists in the pythonpath.
-
-    try:
-        from sgtk_plugin_basic_photoshopcc import manifest
-        running_as_standalone_plugin = True
-    except ImportError:
-        running_as_standalone_plugin = False
-
-    if running_as_standalone_plugin:
-        # Retrieve the Shotgun toolkit core included with the plug-in and
-        # prepend its python package path to the python module search path.
-        tkcore_python_path = manifest.get_sgtk_pythonpath(plugin_root_path)
-        sys.path.insert(0, tkcore_python_path)
-        import sgtk
-
-    else:
-        # Running as part of the the launch process and as part of zero
-        # config. The launch logic that started maya has already
-        # added sgtk to the pythonpath.
-        import sgtk
 
 
 def _get_entity_from_environment():
@@ -118,13 +76,13 @@ def toolkit_plugin_bootstrap(plugin_root_path):
     :param plugin_root_path: Path to the root of the plugin
     """
 
-    # import sgtk and handle cases both when the plugin
-    # is running as part of a larger zero config workflow
-    # and when it is running completely standalone
-    _init_core(plugin_root_path)
-
+    # import sgtk
+    tkcore_python_path = manifest.get_sgtk_pythonpath(plugin_root_path)
+    sys.path.insert(0, tkcore_python_path)
     import sgtk
+
     logger = sgtk.LogManager.get_logger(__name__)
+    logger.debug("Imported sgtk core from '%s'" % tkcore_python_path)
 
     # ---- setup logging
     log_handler = log.get_sgtk_logger(sgtk)
@@ -139,13 +97,10 @@ def toolkit_plugin_bootstrap(plugin_root_path):
     #       the currently logged in site.
 
     toolkit_mgr = sgtk.bootstrap.ToolkitManager()
-    toolkit_mgr.plugin_id = constants.PLUGIN_ID
-    toolkit_mgr.base_configuration = constants.BASE_CONFIGURATION
+    # run the default init which sets plugin id, base config and bundle cache path
+    manifest.initialize_manager(toolkit_mgr, plugin_root_path)
 
-    # when we have a plugin that was built for standalone use, it will contain
-    # a complete set of apps in the bundle cache
-    toolkit_mgr.bundle_cache_fallback_paths = [os.path.join(plugin_root_path, "bundle_cache")]
-
+    # set up progress reporting
     toolkit_mgr.progress_callback = _progress_handler
     logger.debug("Toolkit Manager: %s" % toolkit_mgr)
 
