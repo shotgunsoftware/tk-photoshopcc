@@ -73,7 +73,7 @@ class PhotoshopLauncher(SoftwareLauncher):
                 self.logger.debug("This is version '%s'" % dcc_version)
 
                 # see if we have a version filter
-                if versions and dcc_version in versions:
+                if versions and dcc_version not in versions:
                     self.logger.debug(
                         "Skipping this version since it does not match version filter %s" % versions
                     )
@@ -117,7 +117,7 @@ class PhotoshopLauncher(SoftwareLauncher):
         # determine all environment variables
         required_env = bootstrap.compute_environment()
         # copy the extension across to the deploy folder
-        bootstrap.ensure_extension_up_to_date()
+        #bootstrap.ensure_extension_up_to_date()
 
         # Add std context and site info to the env
         std_env = self.get_standard_plugin_environment()
