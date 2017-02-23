@@ -87,7 +87,7 @@ class PhotoshopLauncher(SoftwareLauncher):
                     self.logger.debug(
                         "Skipping this version since it does not match version filter %s" % versions
                     )
-                elif self.is_version_supported(dcc_version):
+                elif not self.is_version_supported(dcc_version):
                     self.logger.info(
                         "Found Photoshop install in '%s' but only versions %s "
                         "and above are supported" % (path, self.minimum_supported_version)
