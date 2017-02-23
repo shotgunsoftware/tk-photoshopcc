@@ -205,7 +205,13 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
             # and so we need to make sure that core knows that we
             # are the current engine.
             sgtk.platform.engine.set_current_engine(self)
-            self._handle_active_document_change(doc_path)
+            context_changed = self._handle_active_document_change(doc_path)
+
+            # If the context didn't change then we need to trigger the send
+            # state ourselves. If it did change, then the post context change
+            # routine will have already taken care of it.
+            if not context_changed:
+                self.__send_state()
         else:
             # Now that qt is setup and the engine is ready to go, forward the
             # current state back to the Adobe side.
@@ -353,6 +359,8 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
         context it belongs to, and changes to that context.
 
         :param str active_document_path: The path to the new active document.
+
+        :returns: True if the context changed, False if it did not.
         """
         # This will be True if the context_changes_disabled context manager is
         # used. We're just in a temporary state of not allowing context changes,
@@ -364,7 +372,7 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
                 self.logger.debug(
                     "Engine is in 'no context changes' mode. Not changing context."
                 )
-                return
+                return False
 
             if active_document_path:
                 self.logger.debug("New active document is %s" % active_document_path)
@@ -374,7 +382,7 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
                     "New active document check failed. This is likely due to the "
                     "new active document being in an unsaved state."
                 )
-                return
+                return False
 
             if active_document_path in self._CONTEXT_CACHE:
                 context = self._CONTEXT_CACHE[active_document_path]
@@ -386,7 +394,7 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
                     )
                 except Exception:
                     self.logger.debug(
-                        "Unable to determine context from path. Not changing context."
+                        "Unable to determine context from path. Setting the Project context."
                     )
                     # clear the context finding task ids so that any tasks that
                     # finish won't send data to js.
@@ -408,13 +416,16 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
                         "New context doesn't have a Project entity. Not changing "
                         "context."
                     )
-                    return
+                    return False
 
                 self._CONTEXT_CACHE[active_document_path] = context
 
-            if context != self.context:
+            if context and context != self.context:
                 self.adobe.context_about_to_change()
                 sgtk.platform.change_context(context)
+                return True
+
+            return False
 
     def _handle_command(self, uid):
         """
