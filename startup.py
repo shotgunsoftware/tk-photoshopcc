@@ -23,14 +23,12 @@ class PhotoshopLauncher(SoftwareLauncher):
     engine.
     """
 
-    def __init__(self, *args, **kwargs):
+    @property
+    def minimum_supported_version(self):
         """
-        Constructor
+        The minimum software version that is supported by the launcher.
         """
-        # init base class
-        super(PhotoshopLauncher, self).__init__(*args, **kwargs)
-        # define our minimum supported version
-        self.minimum_supported_version = "2015.5"
+        return "2015.5"
 
     def scan_software(self, versions=None):
         """
