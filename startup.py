@@ -23,6 +23,15 @@ class PhotoshopLauncher(SoftwareLauncher):
     engine.
     """
 
+    def __init__(self, *args, **kwargs):
+        """
+        Constructor
+        """
+        # init base class
+        super(PhotoshopLauncher, self).__init__(*args, **kwargs)
+        # define our minimum supported version
+        self.minimum_supported_version = "2015.5"
+
     def scan_software(self, versions=None):
         """
         Performs a scan for software installations.
@@ -34,23 +43,24 @@ class PhotoshopLauncher(SoftwareLauncher):
                               like "2017", "6.3v7" or "1.2.3.52".
         :returns: List of :class:`SoftwareVersion` instances
         """
+
         icon_path = os.path.join(self.disk_location, "resources", "ps_2017_icon_256.png")
 
         if sys.platform == "darwin":
             # Default installs are located here:
             # /Applications/Adobe Photoshop CC 2017/Adobe Photoshop CC 2017.app
-            glob_pattern = "/Applications/Adobe Photoshop CC [0-9][0-9][0-9][0-9]/Adobe Photoshop CC [0-9][0-9][0-9][0-9].app"
+            glob_pattern = "/Applications/Adobe Photoshop CC */Adobe Photoshop CC *.app"
             version_regex = re.compile(
-                "^/Applications/Adobe Photoshop CC ([0-9]{4})/Adobe Photoshop CC ([0-9]{4})\.app$",
+                "^/Applications/Adobe Photoshop CC (.+)/Adobe Photoshop CC (.+)\.app$",
                 re.IGNORECASE
             )
 
         elif sys.platform == "win32":
             # Default installs are located here:
             # C:\program files\Adobe\Adobe Photoshop CC 2017\Photoshop.exe
-            glob_pattern = "C:\\Program Files\\Adobe\\Adobe Photoshop CC [0-9][0-9][0-9][0-9]\\Photoshop.exe"
+            glob_pattern = r"C:\Program Files\Adobe\Adobe Photoshop CC *\Photoshop.exe"
             version_regex = re.compile(
-                "^C:\\\\Program Files\\\\Adobe\\\\Adobe Photoshop CC ([0-9]{4})\\\\Photoshop.exe$",
+                r"^C:\\Program Files\\Adobe\\Adobe Photoshop CC (.+)\\Photoshop.exe$",
                 re.IGNORECASE
             )
 
@@ -77,11 +87,10 @@ class PhotoshopLauncher(SoftwareLauncher):
                     self.logger.debug(
                         "Skipping this version since it does not match version filter %s" % versions
                     )
-                elif dcc_version == "2014" or dcc_version == "2015":
-                    # only support 2015.5+
+                elif self.is_version_supported(dcc_version):
                     self.logger.info(
-                        "Found Photoshop install in '%s' but only versions 2015.5 "
-                        "and above are supported" % path
+                        "Found Photoshop install in '%s' but only versions %s "
+                        "and above are supported" % (path, self.minimum_supported_version)
                     )
                 else:
                     # all good
@@ -117,7 +126,7 @@ class PhotoshopLauncher(SoftwareLauncher):
         # determine all environment variables
         required_env = bootstrap.compute_environment()
         # copy the extension across to the deploy folder
-        #bootstrap.ensure_extension_up_to_date()
+        bootstrap.ensure_extension_up_to_date()
 
         # Add std context and site info to the env
         std_env = self.get_standard_plugin_environment()
