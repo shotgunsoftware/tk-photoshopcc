@@ -26,7 +26,13 @@ logger = sgtk.LogManager.get_logger(__name__)
 
 def bootstrap(engine_name, context, app_path, app_args, **kwargs):
     """
-    Prepares the environment for a tk-photoshopcc bootstrap.
+    Interface for older versions of tk-multi-launchapp.
+
+    This is deprecated and now replaced with the ``startup.py`` file
+    and ``SoftwareLauncher`` interface.
+
+    Prepares the environment for a tk-photoshopcc bootstrap. This method
+    is called directly from the tk-multi-launchapp.
 
     :param str engine_name: The name of the engine being used -- "tk-photoshopcc"
     :param context: The context to use when bootstrapping.
@@ -36,7 +42,29 @@ def bootstrap(engine_name, context, app_path, app_args, **kwargs):
 
     :returns: The host application path and arguments.
     """
-    os.environ["SHOTGUN_ADOBE_PYTHON"] = sys.executable
+    # get the necessary environment variable for launch
+    env = compute_environment()
+    # set the environment
+    os.environ.update(env)
+    # make sure the extension is properly installed
+    ensure_extension_up_to_date()
+    # all good to go
+    return (app_path, app_args)
+
+
+def compute_environment():
+    """
+    Return the env vars needed to launch the photoshop plugin.
+
+    This will generate a dictionary of environment variables
+    needed in order to launch the photoshop plugin.
+
+    :returns: dictionary of env var string key/value pairs.
+    """
+    env = {}
+
+    # set the interpreter with which to launch the CC integration
+    env["SHOTGUN_ADOBE_PYTHON"] = sys.executable
 
     # We're going to append all of this Python process's sys.path to the
     # PYTHONPATH environment variable. This will ensure that we have access
@@ -49,6 +77,19 @@ def bootstrap(engine_name, context, app_path, app_args, **kwargs):
         "PYTHONPATH",
         os.pathsep.join(sys.path),
     )
+    env["PYTHONPATH"] = os.environ["PYTHONPATH"]
+
+    return env
+
+
+def ensure_extension_up_to_date():
+    """
+    Carry out the necessary operations needed in order for the
+    photoshop extension to be recognized.
+
+    This inlcudes copying the extension from the engine location
+    to a OS-specific location.
+    """
 
     # the basic plugin needs to be installed in order to launch the adobe
     # engine. we need to make sure the plugin is installed and up-to-date.
@@ -56,7 +97,7 @@ def bootstrap(engine_name, context, app_path, app_args, **kwargs):
     if not "SHOTGUN_ADOBE_DISABLE_AUTO_INSTALL" in os.environ:
         logger.debug("Ensuring adobe extension is up-to-date...")
         try:
-            _ensure_extension_up_to_date(context)
+            _ensure_extension_up_to_date()
         except Exception, e:
             import traceback
             exc = traceback.format_exc()
@@ -67,15 +108,13 @@ def bootstrap(engine_name, context, app_path, app_args, **kwargs):
                 "The specific error message encountered was:\n'%s'." % (exc,)
             )
 
-    return (app_path, app_args)
 
 
-def _ensure_extension_up_to_date(context):
+
+def _ensure_extension_up_to_date():
     """
     Ensure the basic adobe extension is installed in the OS-specific location
     and that it matches the extension bundled with the installed engine.
-
-    :param context:  The context to use when bootstrapping.
     """
 
     extension_name = "com.sg.basic.ps"

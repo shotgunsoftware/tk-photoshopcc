@@ -11,12 +11,8 @@
 import sys
 sys.dont_write_bytecode = True
 
-import logging
 import os
 import traceback
-
-# NOTE: this module becomes available once the plugin is built
-from sgtk_plugin_basic_photoshopcc import manifest
 
 # exit status codes used when the python process dies. these are known by the
 # js process that spawned python so they can be used as a primitive form of
@@ -25,74 +21,22 @@ EXIT_STATUS_CLEAN = 0
 EXIT_STATUS_ERROR = 100
 EXIT_STATUS_NO_PYSIDE = 101
 
-class _BootstrapLogHandler(logging.StreamHandler):
-    """
-    Manually flushes emitted records for js to pickup.
-    """
-
-    def emit(self, record):
-        """
-        Forwards the record back to to js via the engine communicator.
-
-        :param record: The record to log.
-        """
-        super(_BootstrapLogHandler, self).emit(record)
-
-        # always flush to ensure its seen by the js process
-        self.flush()
-
-
-def get_sgtk_logger(sgtk):
-    """
-    Sets up a log handler and logger.
-
-    :param sgtk: An sgtk module reference.
-
-    :returns: A logger and log handler.
-    """
-
-    # add a custom handler to the root logger so that all toolkit log messages
-    # are forwarded back to python via the communicator
-    bootstrap_log_formatter = logging.Formatter("[%(levelname)s]: %(message)s")
-    bootstrap_log_handler = _BootstrapLogHandler()
-    bootstrap_log_handler.setFormatter(bootstrap_log_formatter)
-
-    if manifest.debug_logging:
-        bootstrap_log_handler.setLevel(logging.DEBUG)
-    else:
-        bootstrap_log_handler.setLevel(logging.INFO)
-
-    # now get a logger to use during bootstrap
-    sgtk_logger = sgtk.LogManager.get_logger("%s.%s" % (engine_name, "bootstrap"))
-    sgtk.LogManager().initialize_custom_handler(bootstrap_log_handler)
-
-    # allows for debugging to be turned on by the plugin build process
-    sgtk.LogManager().global_debug = manifest.debug_logging
-
-    # initializes the file where logging output will go
-    sgtk.LogManager().initialize_base_file_handler(engine_name)
-    sgtk_logger.debug("Log dir: %s" % (sgtk.LogManager().log_folder))
-
-    return sgtk_logger, bootstrap_log_handler
-
-
-def progress_handler(value, message):
-    """
-    Writes the progress values in a special format that can be intercepted by
-    the panel during load.
-
-    :param value: A float (0-1) value representing startup progress percentage.
-    :param message: A message that indicates what is happening during startup.
-    """
-
-    # A three part message separated by "|" to help indicate boundaries. The
-    # panel will intercept logged strings of this format and translate them
-    # to the display.
-    sys.stdout.write("|PLUGIN_BOOTSTRAP_PROGRESS,%s,%s|" % (value, message))
-    sys.stdout.flush()
-
 
 def bootstrap(root_path, port, engine_name, app_id):
+    """
+    Main entry point for photoshop python process.
+
+    Blocking method. Launches a QT Application event loop.
+
+    :param root_path: The path to the plugin on disk
+    :param port: The communication port to use
+    :param engine_name: The engine instance name <--- @todo - not needed?
+    :param app_id: The application id
+    """
+    # first add our plugin python logic sys.path
+    plugin_python_path = os.path.join(root_path, "python")
+    sys.path.insert(0, plugin_python_path)
+    import tk_photoshopcc_basic
 
     # set the port in the env so that the engine can pick it up. this also
     # allows engine restarts to find the proper port.
@@ -106,9 +50,10 @@ def bootstrap(root_path, port, engine_name, app_id):
     # sys path with the one specified via the resolved config. it will startup
     # the engine and make Qt available to us.
     if os.environ.get("TANK_CONTEXT") and os.environ.get("TANK_ENGINE"):
-        toolkit_traditional_bootstrap()
+        tk_photoshopcc_basic.toolkit_classic_bootstrap()
+
     else:
-        toolkit_plugin_bootstrap(root_path, engine_name)
+        tk_photoshopcc_basic.toolkit_plugin_bootstrap(root_path)
 
     # core may have been swapped. import sgtk
     import sgtk
@@ -118,7 +63,7 @@ def bootstrap(root_path, port, engine_name, app_id):
 
     from sgtk.platform.qt import QtGui
 
-    app_name = 'Shotgun Engine for Photoshop CC'
+    app_name = "Shotgun Engine for Photoshop CC"
 
     # create and set up the Qt app. we don't want the app to close when the
     # last window is shut down since it's running in parallel to the CC product.
@@ -146,84 +91,11 @@ def bootstrap(root_path, port, engine_name, app_id):
     engine.logger.debug("Adobe CC Product: %s" % engine.adobe.app.name)
     engine.logger.debug("Adobe CC Version: %s" % engine.adobe.app.version)
 
-    # log the build date of the plugin itself
-    engine.logger.debug("Shotgun plugin build date: %s" % manifest.BUILD_DATE)
-
     # once the event loop starts, the bootstrap process is complete and
     # everything should be connected. this is a blocking call, so nothing else
     # can happen afterward.
     print "Starting Qt event loop..."
     sys.exit(app.exec_())
-
-
-def toolkit_plugin_bootstrap(root_path, engine_name):
-    """
-    Business logic for bootstrapping toolkit as a plugin.
-    """
-    # setup the path to make toolkit importable
-    tk_core_path = manifest.get_sgtk_pythonpath(root_path)
-    sys.path.append(tk_core_path)
-
-    # once the path is setup, this should be valid
-    import sgtk
-
-    # ---- setup logging
-
-    sgtk_logger, log_handler = get_sgtk_logger(sgtk)
-
-    sgtk_logger.debug("Toolkit core path: %s" % (tk_core_path,))
-    sgtk_logger.debug("Added bootstrap log hander to root logger...")
-
-    # set up the toolkit boostrap manager
-    toolkit_mgr = sgtk.bootstrap.ToolkitManager()
-    toolkit_mgr.plugin_id = manifest.plugin_id
-    toolkit_mgr.base_configuration = manifest.base_configuration
-    toolkit_mgr.bundle_cache_fallback_paths = [os.path.join(root_path, "bundle_cache")]
-    toolkit_mgr.progress_callback = progress_handler
-    sgtk_logger.debug("Toolkit Manager: " + str(toolkit_mgr))
-
-    # the engine name comes from the adobe side. it will be tk-<name> where
-    # <name> is the name of the CC product in use. ex: tk-photoshop,
-    # tk-aftereffects, etc. The manager uses the engine name to locate the
-    # engine/app configuration to bootstrap into within the current context.
-    sgtk_logger.info("Bootstrapping toolkit...")
-    toolkit_mgr.bootstrap_engine(engine_name, entity=None)
-
-    # ---- tear down logging
-
-    sgtk.LogManager().root_logger.removeHandler(log_handler)
-    sgtk_logger.debug("Removed bootstrap log handler from root logger...")
-
-    sgtk_logger.info("Toolkit Bootstrapped!")
-
-
-def toolkit_traditional_bootstrap():
-    """
-    Business logic for bootstrapping toolkit as a traditional setup..
-    """
-    import sgtk
-
-    # ---- setup logging
-
-    sgtk_logger, log_handler = get_sgtk_logger(sgtk)
-    sgtk_logger.info("TANK_CONTEXT and TANK_ENGINE variables found.")
-
-    # Deserialize the Context object and use that when starting
-    # the engine.
-    context = sgtk.context.deserialize(os.environ["TANK_CONTEXT"])
-    engine_name = os.environ["TANK_ENGINE"]
-
-    sgtk_logger.info(
-        "Starting %s using context %s..." % (engine_name, context)
-    )
-    engine = sgtk.platform.start_engine(engine_name, context.tank, context)
-
-    # ---- tear down logging
-
-    sgtk.LogManager().root_logger.removeHandler(log_handler)
-    sgtk_logger.debug("Removed bootstrap log handler from root logger...")
-
-    sgtk_logger.info("Toolkit Bootstrapped!")
 
 
 # executed from javascript
