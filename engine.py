@@ -190,31 +190,22 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
 
         self.__setup_connection_timer()
 
-        # This will ensure that we're in the correct context. If it fails, then
-        # it's most likely just because there isn't a saved active document for
-        # us to process. In that case, our current context is just fine.
+        # This is admittedly questionable. Setting the current
+        # engine is a public function, but we're jumping the gun
+        # here, because this is typically set after the engine init
+        # process is completed. We're not done, though, and we
+        # have detected a situation where we need to change our
+        # context to match that of the DCC's current document,
+        # and so we need to make sure that core knows that we
+        # are the current engine.
         doc_path = self.adobe.get_active_document_path()
+        sgtk.platform.engine.set_current_engine(self)
+        context_changed = self._handle_active_document_change(doc_path)
 
-        if doc_path and doc_path != self._ACTIVE_DOCUMENT_PATH:
-            # This is admittedly questionable. Setting the current
-            # engine is a public function, but we're jumping the gun
-            # here, because this is typically set after the engine init
-            # process is completed. We're not done, though, and we
-            # have detected a situation where we need to change our
-            # context to match that of the DCC's current document,
-            # and so we need to make sure that core knows that we
-            # are the current engine.
-            sgtk.platform.engine.set_current_engine(self)
-            context_changed = self._handle_active_document_change(doc_path)
-
-            # If the context didn't change then we need to trigger the send
-            # state ourselves. If it did change, then the post context change
-            # routine will have already taken care of it.
-            if not context_changed:
-                self.__send_state()
-        else:
-            # Now that qt is setup and the engine is ready to go, forward the
-            # current state back to the Adobe side.
+        # If the context didn't change then we need to trigger the send
+        # state ourselves. If it did change, then the post context change
+        # routine will have already taken care of it.
+        if not context_changed:
             self.__send_state()
 
         # forward the log file path back to the js side. this is used to direct
@@ -390,7 +381,7 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
                 try:
                     context = sgtk.sgtk_from_path(active_document_path).context_from_path(
                         active_document_path,
-                        previous_context=self.context,
+                        # previous_context=self.context,
                     )
                 except Exception:
                     self.logger.debug(
