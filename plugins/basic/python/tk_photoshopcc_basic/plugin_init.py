@@ -33,41 +33,6 @@ def _progress_handler(value, message):
     sys.stdout.flush()
 
 
-def _get_entity_from_environment():
-    """
-    Look for the standard environment variables SHOTGUN_ENTITY_TYPE
-    and SHOTGUN_ENTITY_ID and attempt to extract and validate them.
-
-    :returns: entity dictionary or None to indicate the site config
-    """
-    import sgtk
-    logger = sgtk.LogManager.get_logger(__name__)
-
-    # Retrieve the Shotgun entity type and id when they exist in the environment.
-    entity_type = os.environ.get("SHOTGUN_ENTITY_TYPE")
-    entity_id = os.environ.get("SHOTGUN_ENTITY_ID")
-
-    if entity_type is None and entity_id is None:
-        # nothing here - assume site context
-        return None
-
-    if (entity_type and not entity_id) or (not entity_type and entity_id):
-        logger.error(
-            "Both environment variables SHOTGUN_ENTITY_TYPE and SHOTGUN_ENTITY_ID must be provided "
-            "to set a context entity. Shotgun will be initialized in site context."
-        )
-        return None
-
-    # The entity id must be an integer number.
-    try:
-        entity_id = int(entity_id)
-    except ValueError:
-        logger.error("Environment variable SHOTGUN_ENTITY_ID value '%s' is not an integer number. "
-                     "Shotgun will be initialized in site context." % entity_id)
-        return None
-
-    return {"type": entity_type, "id": entity_id}
-
 
 def toolkit_plugin_bootstrap(plugin_root_path):
     """
@@ -104,7 +69,7 @@ def toolkit_plugin_bootstrap(plugin_root_path):
     toolkit_mgr.progress_callback = _progress_handler
     logger.debug("Toolkit Manager: %s" % toolkit_mgr)
 
-    entity = _get_entity_from_environment()
+    entity = toolkit_mgr.get_entity_from_environment()
     logger.debug("Will launch the engine with entity: %s" % entity)
 
     logger.info("Bootstrapping toolkit...")
