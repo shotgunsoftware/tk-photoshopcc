@@ -77,12 +77,12 @@ def toolkit_plugin_bootstrap(plugin_root_path):
     """
 
     # import sgtk
-    tkcore_python_path = manifest.get_sgtk_pythonpath(plugin_root_path)
-    sys.path.insert(0, tkcore_python_path)
+    tk_core_python_path = manifest.get_sgtk_pythonpath(plugin_root_path)
+    sys.path.insert(0, tk_core_python_path)
     import sgtk
 
     logger = sgtk.LogManager.get_logger(__name__)
-    logger.debug("Imported sgtk core from '%s'" % tkcore_python_path)
+    logger.debug("Imported sgtk core from '%s'" % tk_core_python_path)
 
     # ---- setup logging
     log_handler = log.get_sgtk_logger(sgtk)
