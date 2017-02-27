@@ -30,7 +30,7 @@ class PhotoshopLauncher(SoftwareLauncher):
         """
         return "2015.5"
 
-    def scan_software(self, versions=None):
+    def scan_software(self, versions=None, products=None):
         """
         Performs a scan for software installations.
 
@@ -39,6 +39,13 @@ class PhotoshopLauncher(SoftwareLauncher):
                               for all versions. A version string is
                               DCC-specific but could be something
                               like "2017", "6.3v7" or "1.2.3.52".
+
+        :param list versions: List of strings representing products
+                              to search for. If set to None, search
+                              for all maya products. Currently unused
+                              since there is a single executable for
+                              Photoshop.
+
         :returns: List of :class:`SoftwareVersion` instances
         """
 
@@ -93,7 +100,13 @@ class PhotoshopLauncher(SoftwareLauncher):
                 else:
                     # all good
                     display_name = "CC %s" % dcc_version
-                    software_version = SoftwareVersion(dcc_version, display_name, path, icon_path)
+                    software_version = SoftwareVersion(
+                        dcc_version,
+                        "Photoshop",  # hardcoded product name
+                        display_name,
+                        path,
+                        icon_path
+                    )
                     software_versions.append(software_version)
             else:
                 self.logger.warning("Could not extract version number from path '%s'" % path)
