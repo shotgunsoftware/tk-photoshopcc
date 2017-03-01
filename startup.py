@@ -23,6 +23,42 @@ class PhotoshopLauncher(SoftwareLauncher):
     engine.
     """
 
+    # Glob strings to insert into the executable template paths when globbing
+    # for executables and bundles on disk. Globbing is admittedly limited in
+    # terms of specific match strings, but if we need to introduce more precise
+    # match strings later, we can do it in one place rather than each of the
+    # template paths defined below.
+    COMPONENT_GLOB_LOOKUP = {
+        "version": "*",
+        "version_back": "*",
+    }
+
+    # Named regex strings to insert into the executable template paths when
+    # matching against supplied versions and products. Similar to the glob
+    # strings, these allow us to alter the regex matching for any of the
+    # variable components of the path in one place
+    COMPONENT_REGEX_LOOKUP = {
+        "version": "(?P<version>[\d.]+)",
+        "version_back": "(?P=version)",  # backreference to ensure same version
+    }
+
+    # This dictionary defines a list of executable template strings for each
+    # of the supported operating systems. The templates are used for both
+    # globbing and regex matches by replacing the named format placeholders
+    # with an appropriate glob or regex string. As Adobe adds modifies the
+    # install path on a given OS for a new release, a new template will need
+    # to be added here.
+    EXECUTABLE_MATCH_TEMPLATES = {
+        "darwin": [
+            # /Applications/Adobe Photoshop CC 2017/Adobe Photoshop CC 2017.app
+            "/Applications/Adobe Photoshop CC {version}/Adobe Photoshop CC {version_back}.app"
+        ],
+        "win32": [
+            # C:\program files\Adobe\Adobe Photoshop CC 2017\Photoshop.exe
+            "C:/Program Files/Adobe/Adobe Photoshop CC {version}/Photoshop.exe",
+        ],
+    }
+
     @property
     def minimum_supported_version(self):
         """
@@ -30,89 +66,110 @@ class PhotoshopLauncher(SoftwareLauncher):
         """
         return "2015.5"
 
-    def scan_software(self, versions=None, products=None):
+    def scan_software(self):
         """
         Performs a scan for software installations.
-
-        :param list versions: List of strings representing versions
-                              to search for. If set to None, search
-                              for all versions. A version string is
-                              DCC-specific but could be something
-                              like "2017", "6.3v7" or "1.2.3.52".
-
-        :param list versions: List of strings representing products
-                              to search for. If set to None, search
-                              for all maya products. Currently unused
-                              since there is a single executable for
-                              Photoshop.
 
         :returns: List of :class:`SoftwareVersion` instances
         """
 
-        icon_path = os.path.join(self.disk_location, "resources", "ps_2017_icon_256.png")
-
-        if sys.platform == "darwin":
-            # Default installs are located here:
-            # /Applications/Adobe Photoshop CC 2017/Adobe Photoshop CC 2017.app
-            glob_pattern = "/Applications/Adobe Photoshop CC */Adobe Photoshop CC *.app"
-            version_regex = re.compile(
-                "^/Applications/Adobe Photoshop CC (.+)/Adobe Photoshop CC (.+)\.app$",
-                re.IGNORECASE
-            )
-
-        elif sys.platform == "win32":
-            # Default installs are located here:
-            # C:\program files\Adobe\Adobe Photoshop CC 2017\Photoshop.exe
-            glob_pattern = r"C:\Program Files\Adobe\Adobe Photoshop CC *\Photoshop.exe"
-            version_regex = re.compile(
-                r"^C:\\Program Files\\Adobe\\Adobe Photoshop CC (.+)\\Photoshop.exe$",
-                re.IGNORECASE
-            )
-
-        else:
-            self.logger.debug("Photoshop not supported on this platform.")
-            return []
-
-        self.logger.debug("Scanning for photoshop installations in '%s'..." % glob_pattern)
-        paths = glob.glob(glob_pattern)
-
         software_versions = []
-        for path in paths:
-            # extract version number
-            self.logger.debug("Found photoshop install in '%s'" % path)
 
-            match = version_regex.match(path)
-            if match:
-                # extract first group to get version string
-                dcc_version = match.group(1)
-                self.logger.debug("This is version '%s'" % dcc_version)
-
-                # see if we have a version filter
-                if versions and dcc_version not in versions:
-                    self.logger.debug(
-                        "Skipping this version since it does not match version filter %s" % versions
-                    )
-                elif not self.is_version_supported(dcc_version):
-                    self.logger.info(
-                        "Found Photoshop install in '%s' but only versions %s "
-                        "and above are supported" % (path, self.minimum_supported_version)
-                    )
-                else:
-                    # all good
-                    display_name = "CC %s" % dcc_version
-                    software_version = SoftwareVersion(
-                        dcc_version,
-                        "Photoshop",  # hardcoded product name
-                        display_name,
-                        path,
-                        icon_path
-                    )
-                    software_versions.append(software_version)
+        for sw_version in self._find_software_versions():
+            if self.is_version_supported(sw_version):
+                self.logger.debug("Accepting %s", sw_version)
+                software_versions.append(sw_version)
             else:
-                self.logger.warning("Could not extract version number from path '%s'" % path)
+                self.logger.debug("Rejecting %s", sw_version)
+                continue
 
         return software_versions
 
+    def _find_software_versions(self):
+        """
+        Scan the filesystem for all photoshop executables.
+
+        :return: A list of :class:`SoftwareVersion` objects.
+        """
+
+        self.logger.debug("Scanning for photoshop executables...")
+
+        # use the bundled icon
+        icon_path = os.path.join(
+            self.disk_location,
+            "resources",
+            "ps_2017_icon_256.png"
+        )
+        self.logger.debug("Using icon path: %s" % (icon_path,))
+
+        if sys.platform not in self.EXECUTABLE_MATCH_TEMPLATES:
+            self.logger.debug("Photoshop not supported on this platform.")
+            return []
+
+        # all the executable templates for the current OS
+        match_templates = self.EXECUTABLE_MATCH_TEMPLATES[sys.platform]
+
+        # all the discovered executables
+        all_sw_versions = []
+
+        for match_template in match_templates:
+
+            # build the glob pattern by formatting the template for globbing
+            glob_pattern = match_template.format(**self.COMPONENT_GLOB_LOOKUP)
+            self.logger.debug(
+                "Globbing for executable matching: %s ..." % (glob_pattern,)
+            )
+
+            # now match against files on disk
+            executable_paths = glob.glob(glob_pattern)
+
+            self.logger.debug("Found %s matches" % (len(executable_paths),))
+
+            if not executable_paths:
+                # no matches. move on to the next template
+                continue
+
+            # construct the regex string to extract the components
+            regex_pattern = match_template.format(**self.COMPONENT_REGEX_LOOKUP)
+
+            # accumulate the software version objects to return. this will
+            # include the head/tail anchors in the regex
+            regex_pattern = "^%s$" % (regex_pattern,)
+
+            self.logger.debug(
+                "Matching components against regex: %s" % (regex_pattern,))
+
+            # compile the regex
+            executable_regex = re.compile(regex_pattern, re.IGNORECASE)
+
+            # now that we have a list of matching executables on disk we can
+            # extract the component pieces. iterate over each executable found
+            # for the glob pattern and find matched components via the regex
+            for executable_path in executable_paths:
+
+                self.logger.debug("Processing path: %s" % (executable_path,))
+
+                match = executable_regex.match(executable_path)
+
+                if not match:
+                    self.logger.debug("Path did not match regex.")
+                    continue
+
+                # extract the components (default to None if not included). but
+                # version is in all templates, so should be there.
+                executable_version = match.groupdict().get("version")
+
+                display_name = executable_version
+                sw_version = SoftwareVersion(
+                    executable_version,
+                    "Photoshop CC",
+                    display_name,
+                    executable_path,
+                    icon_path
+                )
+                all_sw_versions.append(sw_version)
+
+        return all_sw_versions
 
     def prepare_launch(self, exec_path, args, file_to_open=None):
         """
