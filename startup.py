@@ -66,26 +66,38 @@ class PhotoshopLauncher(SoftwareLauncher):
         """
         return "2015.5"
 
-    def scan_software(self):
+    def prepare_launch(self, exec_path, args, file_to_open=None):
         """
-        Performs a scan for software installations.
+        Prepares an environment to launch Photoshop so that will automatically
+        load Toolkit after startup.
 
-        :returns: List of :class:`SoftwareVersion` instances
+        :param str exec_path: Path to Maya executable to launch.
+        :param str args: Command line arguments as strings.
+        :param str file_to_open: (optional) Full path name of a file to open on launch.
+        :returns: :class:`LaunchInformation` instance
         """
+        # todo - add support for the file_to_open parameter.
 
-        software_versions = []
+        # find the bootstrap script and import it.
+        # note: all the business logic for how to launch is
+        #       located in the python/startup folder to be compatible
+        #       with older versions of the launch workflow
+        bootstrap_python_path = os.path.join(self.disk_location, "python", "startup")
+        sys.path.insert(0, bootstrap_python_path)
+        import bootstrap
 
-        for sw_version in self._find_software_versions():
-            if self.is_version_supported(sw_version):
-                self.logger.debug("Accepting %s", sw_version)
-                software_versions.append(sw_version)
-            else:
-                self.logger.debug("Rejecting %s", sw_version)
-                continue
+        # determine all environment variables
+        required_env = bootstrap.compute_environment()
+        # copy the extension across to the deploy folder
+        bootstrap.ensure_extension_up_to_date()
 
-        return software_versions
+        # Add std context and site info to the env
+        std_env = self.get_standard_plugin_environment()
+        required_env.update(std_env)
 
-    def _find_software_versions(self):
+        return LaunchInformation(exec_path, args, required_env)
+
+    def _scan_software(self):
         """
         Scan the filesystem for all photoshop executables.
 
@@ -159,46 +171,13 @@ class PhotoshopLauncher(SoftwareLauncher):
                 # version is in all templates, so should be there.
                 executable_version = match.groupdict().get("version")
 
-                display_name = executable_version
                 sw_version = SoftwareVersion(
                     executable_version,
                     "Photoshop CC",
-                    display_name,
                     executable_path,
                     icon_path
                 )
                 all_sw_versions.append(sw_version)
 
         return all_sw_versions
-
-    def prepare_launch(self, exec_path, args, file_to_open=None):
-        """
-        Prepares an environment to launch Photoshop so that will automatically
-        load Toolkit after startup.
-
-        :param str exec_path: Path to Maya executable to launch.
-        :param str args: Command line arguments as strings.
-        :param str file_to_open: (optional) Full path name of a file to open on launch.
-        :returns: :class:`LaunchInformation` instance
-        """
-        # todo - add support for the file_to_open parameter.
-
-        # find the bootstrap script and import it.
-        # note: all the business logic for how to launch is
-        #       located in the python/startup folder to be compatible
-        #       with older versions of the launch workflow
-        bootstrap_python_path = os.path.join(self.disk_location, "python", "startup")
-        sys.path.insert(0, bootstrap_python_path)
-        import bootstrap
-
-        # determine all environment variables
-        required_env = bootstrap.compute_environment()
-        # copy the extension across to the deploy folder
-        bootstrap.ensure_extension_up_to_date()
-
-        # Add std context and site info to the env
-        std_env = self.get_standard_plugin_environment()
-        required_env.update(std_env)
-
-        return LaunchInformation(exec_path, args, required_env)
 
