@@ -69,7 +69,6 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
     _PROXY_WIN_HWND = None
     _HEARTBEAT_DISABLED = False
     _PROJECT_CONTEXT = None
-    _ACTIVE_DOCUMENT_PATH = None
 
     ############################################################################
     # context changing
@@ -107,6 +106,15 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
 
         # go ahead and start the process of sending the current state back to js
         self.__send_state()
+
+        # If the context is set in the environment, then we'll update it with
+        # the new one. This will mean that a CEP extension restart will come
+        # back up with the same context that it went down with. We have to set
+        # this in ExtendScript, because it's the parent process of any CEP and
+        # Python processes that get spawned. By setting it at the top, it'll be
+        # propagated down to any of Photoshop's subprocesses.
+        if "TANK_CONTEXT" in os.environ:
+            self.adobe.dollar.setenv("TANK_CONTEXT", self.context.serialize())
 
     ############################################################################
     # engine initialization
@@ -189,24 +197,7 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
                 pass
 
         self.__setup_connection_timer()
-
-        # This is admittedly questionable. Setting the current
-        # engine is a public function, but we're jumping the gun
-        # here, because this is typically set after the engine init
-        # process is completed. We're not done, though, and we
-        # have detected a situation where we need to change our
-        # context to match that of the DCC's current document,
-        # and so we need to make sure that core knows that we
-        # are the current engine.
-        doc_path = self.adobe.get_active_document_path()
-        sgtk.platform.engine.set_current_engine(self)
-        context_changed = self._handle_active_document_change(doc_path)
-
-        # If the context didn't change then we need to trigger the send
-        # state ourselves. If it did change, then the post context change
-        # routine will have already taken care of it.
-        if not context_changed:
-            self.__send_state()
+        self.__send_state()
 
         # forward the log file path back to the js side. this is used to direct
         # clients to the file in the event of an error
@@ -367,7 +358,6 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
 
             if active_document_path:
                 self.logger.debug("New active document is %s" % active_document_path)
-                self._ACTIVE_DOCUMENT_PATH = active_document_path
             else:
                 self.logger.debug(
                     "New active document check failed. This is likely due to the "
@@ -381,7 +371,7 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
                 try:
                     context = sgtk.sgtk_from_path(active_document_path).context_from_path(
                         active_document_path,
-                        # previous_context=self.context,
+                        previous_context=self.context,
                     )
                 except Exception:
                     self.logger.debug(
@@ -993,14 +983,14 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
 
         # ---- include the "jump to" commands that are common to all engines
 
+        jump_commands = []
+
         # the icon to use for the command. bundled with the engine
         sg_icon = os.path.join(
             self.disk_location,
             "resources",
             "shotgun_logo.png"
         )
-
-        jump_commands = []
 
         jump_commands.append(
             dict(
@@ -1012,22 +1002,24 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
             )
         )
 
-        # the icon to use for the command. bundled with the engine
-        fs_icon = os.path.join(
-            self.disk_location,
-            "resources",
-            "shotgun_folder.png"
-        )
+        if self.context.filesystem_locations:
 
-        jump_commands.append(
-            dict(
-                uid=self.__jump_to_fs_command_id,
-                display_name="Jump to File System",
-                icon_path=fs_icon,
-                description="Open the current context in a file browser.",
-                type="context_menu",
+            # the icon to use for the command. bundled with the engine
+            fs_icon = os.path.join(
+                self.disk_location,
+                "resources",
+                "shotgun_folder.png"
             )
-        )
+
+            jump_commands.append(
+                dict(
+                    uid=self.__jump_to_fs_command_id,
+                    display_name="Jump to File System",
+                    icon_path=fs_icon,
+                    description="Open the current context in a file browser.",
+                    type="context_menu",
+                )
+            )
 
         # sort the favorites based on their index
         favorites = sorted(favorites, key=lambda d: d["fav_index"])
