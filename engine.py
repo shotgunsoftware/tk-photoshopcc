@@ -983,14 +983,14 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
 
         # ---- include the "jump to" commands that are common to all engines
 
+        jump_commands = []
+
         # the icon to use for the command. bundled with the engine
         sg_icon = os.path.join(
             self.disk_location,
             "resources",
             "shotgun_logo.png"
         )
-
-        jump_commands = []
 
         jump_commands.append(
             dict(
@@ -1002,22 +1002,24 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
             )
         )
 
-        # the icon to use for the command. bundled with the engine
-        fs_icon = os.path.join(
-            self.disk_location,
-            "resources",
-            "shotgun_folder.png"
-        )
+        if self.context.filesystem_locations:
 
-        jump_commands.append(
-            dict(
-                uid=self.__jump_to_fs_command_id,
-                display_name="Jump to File System",
-                icon_path=fs_icon,
-                description="Open the current context in a file browser.",
-                type="context_menu",
+            # the icon to use for the command. bundled with the engine
+            fs_icon = os.path.join(
+                self.disk_location,
+                "resources",
+                "shotgun_folder.png"
             )
-        )
+
+            jump_commands.append(
+                dict(
+                    uid=self.__jump_to_fs_command_id,
+                    display_name="Jump to File System",
+                    icon_path=fs_icon,
+                    description="Open the current context in a file browser.",
+                    type="context_menu",
+                )
+            )
 
         # sort the favorites based on their index
         favorites = sorted(favorites, key=lambda d: d["fav_index"])
