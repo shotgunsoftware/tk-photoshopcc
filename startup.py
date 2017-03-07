@@ -42,7 +42,7 @@ class PhotoshopLauncher(SoftwareLauncher):
         :returns: List of :class:`SoftwareVersion` instances
         """
 
-        icon_path = os.path.join(self.disk_location, "resources", "ps_2017_icon_256.png")
+        icon_path = os.path.join(self.disk_location, "icon_256.png")
 
         if sys.platform == "darwin":
             # Default installs are located here:
