@@ -10,10 +10,9 @@
 
 import os
 import sys
-import re
-import glob
 
 from sgtk.platform import SoftwareLauncher, SoftwareVersion, LaunchInformation
+
 
 class PhotoshopLauncher(SoftwareLauncher):
     """
@@ -23,83 +22,34 @@ class PhotoshopLauncher(SoftwareLauncher):
     engine.
     """
 
+    # Named regex strings to insert into the executable template paths when
+    # matching against supplied versions and products. Similar to the glob
+    # strings, these allow us to alter the regex matching for any of the
+    # variable components of the path in one place
+    COMPONENT_REGEX_LOOKUP = {
+        "version": "(?P<version>[\d.]+)",
+        "version_back": "(?P=version)",  # backreference to ensure same version
+    }
+
+    # This dictionary defines a list of executable template strings for each
+    # of the supported operating systems. The templates are used for both
+    # globbing and regex matches by replacing the named format placeholders
+    # with an appropriate glob or regex string. As Adobe adds modifies the
+    # install path on a given OS for a new release, a new template will need
+    # to be added here.
+    EXECUTABLE_MATCH_TEMPLATES = {
+        # /Applications/Adobe Photoshop CC 2017/Adobe Photoshop CC 2017.app
+        "darwin": "/Applications/Adobe Photoshop CC {version}/Adobe Photoshop CC {version_back}.app",
+        # C:\program files\Adobe\Adobe Photoshop CC 2017\Photoshop.exe
+        "win32": "C:/Program Files/Adobe/Adobe Photoshop CC {version}/Photoshop.exe"
+    }
+
     @property
     def minimum_supported_version(self):
         """
         The minimum software version that is supported by the launcher.
         """
         return "2015.5"
-
-    def scan_software(self, versions=None):
-        """
-        Performs a scan for software installations.
-
-        :param list versions: List of strings representing versions
-                              to search for. If set to None, search
-                              for all versions. A version string is
-                              DCC-specific but could be something
-                              like "2017", "6.3v7" or "1.2.3.52".
-        :returns: List of :class:`SoftwareVersion` instances
-        """
-
-        icon_path = os.path.join(self.disk_location, "icon_256.png")
-
-        if sys.platform == "darwin":
-            # Default installs are located here:
-            # /Applications/Adobe Photoshop CC 2017/Adobe Photoshop CC 2017.app
-            glob_pattern = "/Applications/Adobe Photoshop CC */Adobe Photoshop CC *.app"
-            version_regex = re.compile(
-                "^/Applications/Adobe Photoshop CC (.+)/Adobe Photoshop CC (.+)\.app$",
-                re.IGNORECASE
-            )
-
-        elif sys.platform == "win32":
-            # Default installs are located here:
-            # C:\program files\Adobe\Adobe Photoshop CC 2017\Photoshop.exe
-            glob_pattern = r"C:\Program Files\Adobe\Adobe Photoshop CC *\Photoshop.exe"
-            version_regex = re.compile(
-                r"^C:\\Program Files\\Adobe\\Adobe Photoshop CC (.+)\\Photoshop.exe$",
-                re.IGNORECASE
-            )
-
-        else:
-            self.logger.debug("Photoshop not supported on this platform.")
-            return []
-
-        self.logger.debug("Scanning for photoshop installations in '%s'..." % glob_pattern)
-        paths = glob.glob(glob_pattern)
-
-        software_versions = []
-        for path in paths:
-            # extract version number
-            self.logger.debug("Found photoshop install in '%s'" % path)
-
-            match = version_regex.match(path)
-            if match:
-                # extract first group to get version string
-                dcc_version = match.group(1)
-                self.logger.debug("This is version '%s'" % dcc_version)
-
-                # see if we have a version filter
-                if versions and dcc_version not in versions:
-                    self.logger.debug(
-                        "Skipping this version since it does not match version filter %s" % versions
-                    )
-                elif not self.is_version_supported(dcc_version):
-                    self.logger.info(
-                        "Found Photoshop install in '%s' but only versions %s "
-                        "and above are supported" % (path, self.minimum_supported_version)
-                    )
-                else:
-                    # all good
-                    display_name = "CC %s" % dcc_version
-                    software_version = SoftwareVersion(dcc_version, display_name, path, icon_path)
-                    software_versions.append(software_version)
-            else:
-                self.logger.warning("Could not extract version number from path '%s'" % path)
-
-        return software_versions
-
 
     def prepare_launch(self, exec_path, args, file_to_open=None):
         """
@@ -132,3 +82,46 @@ class PhotoshopLauncher(SoftwareLauncher):
 
         return LaunchInformation(exec_path, args, required_env)
 
+    def scan_software(self):
+        """
+        Scan the filesystem for all photoshop executables.
+
+        :return: A list of :class:`SoftwareVersion` objects.
+        """
+
+        self.logger.debug("Scanning for photoshop executables...")
+
+        # use the bundled icon
+        icon_path = os.path.join(
+            self.disk_location,
+            "icon_256.png"
+        )
+        self.logger.debug("Using icon path: %s" % (icon_path,))
+
+        if sys.platform not in self.EXECUTABLE_MATCH_TEMPLATES:
+            self.logger.debug("Photoshop not supported on this platform.")
+            return []
+
+        all_sw_versions = []
+
+        for executable_path, _, tokens in self._glob_and_match(
+            self.EXECUTABLE_MATCH_TEMPLATES[sys.platform], self.COMPONENT_REGEX_LOOKUP
+        ):
+            self.logger.debug("Processing %s with tokens %s", executable_path, tokens)
+            # extract the components (default to None if not included). but
+            # version is in all templates, so should be there.
+            executable_version = tokens.get("version")
+
+            sw_version = SoftwareVersion(
+                executable_version,
+                "Photoshop CC",
+                executable_path,
+                icon_path
+            )
+            supported, reason = self._is_supported(sw_version)
+            if supported:
+                all_sw_versions.append(sw_version)
+            else:
+                self.logger.debug(reason)
+
+        return all_sw_versions
