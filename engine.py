@@ -117,19 +117,13 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
         if "TANK_CONTEXT" in os.environ:
             self.adobe.dollar.setenv("TANK_CONTEXT", new_context.serialize())
 
-        # If there's an active document and it isn't already recorded in the
-        # context cache, go ahead and add it.
-        active_doc = self.adobe.get_active_document_path()
-
-        if active_doc and active_doc not in self._CONTEXT_CACHE:
-            self._CONTEXT_CACHE[active_doc] = new_context
-
         # We're storing the context cache in a sgtk user setting at the project
         # level. This will ensure that when we read the cache back, we'll only
         # be getting contexts in our current project. Anything outside of that
         # scope would be unusable, as we don't allow context changing across
         # project boundaries.
         serial_cache = {k: v.serialize() for k, v in self._CONTEXT_CACHE.iteritems()}
+        self.logger.debug("Storing context cache: %s" % serial_cache)
         self.__settings_manager.store(
             self._CONTEXT_CACHE_KEY,
             serial_cache,
@@ -228,17 +222,34 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
         log_file = sgtk.LogManager().base_file_handler.baseFilename
         self.adobe.send_log_file_path(log_file)
 
-        # If we have some contexts cached in user settings at the project level,
-        # then we can retrieve those and deserialize them into our in-memory
-        # context cache.
-        serial_cache = self.__settings_manager.retrieve(
-            self._CONTEXT_CACHE_KEY,
-            dict(),
-            self.__settings_manager.SCOPE_PROJECT,
-        )
+        # If there's more than one document open at the time that the engine is
+        # started up, then we're in a situation where we very likely were restarted.
+        # In that case, we need to try to retrieve a stored cache of serialized
+        # context objects from our settings manager. This will allow us to
+        # prepopulate our in-memory context cache with the contexts that were
+        # known prior to the extension restart.
+        if len(list(self.adobe.app.documents)) > 1:
+            self.logger.debug("Multiple documents found, loading stored context cache.")
 
-        for key, value in serial_cache.iteritems():
-            self._CONTEXT_CACHE[key] = sgtk.Context.deserialize(value)
+            serial_cache = self.__settings_manager.retrieve(
+                self._CONTEXT_CACHE_KEY,
+                dict(),
+                self.__settings_manager.SCOPE_PROJECT,
+            )
+
+            for key, value in serial_cache.iteritems():
+                self._CONTEXT_CACHE[key] = sgtk.Context.deserialize(value)
+        else:
+            # If there are fewer than 2 documents open, we don't need the stored
+            # cache, regardless of whether this is a restart situation or a fresh
+            # launch of PS. In that case, we take the opportunity to clear anything
+            # that might exist in the stored cache, as it's data we don't need.
+            self.logger.debug("Single document found, clearing stored context cache.")
+
+            self.__settings_manager.store(
+                self._CONTEXT_CACHE_KEY,
+                dict(),
+            )
 
     def destroy_engine(self):
         """
@@ -403,12 +414,15 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
 
             if active_document_path in self._CONTEXT_CACHE:
                 context = self._CONTEXT_CACHE[active_document_path]
+                self.logger.debug("Document found in context cache: %r" % context)
             else:
                 try:
                     context = sgtk.sgtk_from_path(active_document_path).context_from_path(
                         active_document_path,
                         previous_context=self.context,
                     )
+
+                    self._CONTEXT_CACHE[active_document_path] = context
                 except Exception:
                     self.logger.debug(
                         "Unable to determine context from path. Setting the Project context."
@@ -428,14 +442,12 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
 
                     context = self._PROJECT_CONTEXT
 
-                if not context.project:
-                    self.logger.debug(
-                        "New context doesn't have a Project entity. Not changing "
-                        "context."
-                    )
-                    return False
-
-                self._CONTEXT_CACHE[active_document_path] = context
+            if not context.project:
+                self.logger.debug(
+                    "New context doesn't have a Project entity. Not changing "
+                    "context."
+                )
+                return False
 
             if context and context != self.context:
                 self.adobe.context_about_to_change()
