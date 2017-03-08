@@ -94,8 +94,7 @@ class PhotoshopLauncher(SoftwareLauncher):
         # use the bundled icon
         icon_path = os.path.join(
             self.disk_location,
-            "resources",
-            "ps_2017_icon_256.png"
+            "icon_256.png"
         )
         self.logger.debug("Using icon path: %s" % (icon_path,))
 
