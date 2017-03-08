@@ -10,10 +10,9 @@
 
 import os
 import sys
-import re
-import glob
 
 from sgtk.platform import SoftwareLauncher, SoftwareVersion, LaunchInformation
+
 
 class PhotoshopLauncher(SoftwareLauncher):
     """
@@ -22,16 +21,6 @@ class PhotoshopLauncher(SoftwareLauncher):
     how to correctly set up a launch environment for the tk-photoshopcc
     engine.
     """
-
-    # Glob strings to insert into the executable template paths when globbing
-    # for executables and bundles on disk. Globbing is admittedly limited in
-    # terms of specific match strings, but if we need to introduce more precise
-    # match strings later, we can do it in one place rather than each of the
-    # template paths defined below.
-    COMPONENT_GLOB_LOOKUP = {
-        "version": "*",
-        "version_back": "*",
-    }
 
     # Named regex strings to insert into the executable template paths when
     # matching against supplied versions and products. Similar to the glob
@@ -49,14 +38,10 @@ class PhotoshopLauncher(SoftwareLauncher):
     # install path on a given OS for a new release, a new template will need
     # to be added here.
     EXECUTABLE_MATCH_TEMPLATES = {
-        "darwin": [
-            # /Applications/Adobe Photoshop CC 2017/Adobe Photoshop CC 2017.app
-            "/Applications/Adobe Photoshop CC {version}/Adobe Photoshop CC {version_back}.app"
-        ],
-        "win32": [
-            # C:\program files\Adobe\Adobe Photoshop CC 2017\Photoshop.exe
-            "C:/Program Files/Adobe/Adobe Photoshop CC {version}/Photoshop.exe",
-        ],
+        # /Applications/Adobe Photoshop CC 2017/Adobe Photoshop CC 2017.app
+        "darwin": "/Applications/Adobe Photoshop CC {version}/Adobe Photoshop CC {version_back}.app",
+        # C:\program files\Adobe\Adobe Photoshop CC 2017\Photoshop.exe
+        "win32": "C:/Program Files/Adobe/Adobe Photoshop CC {version}/Photoshop.exe"
     }
 
     @property
@@ -97,7 +82,7 @@ class PhotoshopLauncher(SoftwareLauncher):
 
         return LaunchInformation(exec_path, args, required_env)
 
-    def _scan_software(self):
+    def scan_software(self):
         """
         Scan the filesystem for all photoshop executables.
 
@@ -118,66 +103,26 @@ class PhotoshopLauncher(SoftwareLauncher):
             self.logger.debug("Photoshop not supported on this platform.")
             return []
 
-        # all the executable templates for the current OS
-        match_templates = self.EXECUTABLE_MATCH_TEMPLATES[sys.platform]
-
-        # all the discovered executables
         all_sw_versions = []
 
-        for match_template in match_templates:
+        for executable_path, _, tokens in self._glob_and_match(
+            self.EXECUTABLE_MATCH_TEMPLATES[sys.platform], self.COMPONENT_REGEX_LOOKUP
+        ):
+            self.logger.debug("Processing %s with tokens %s", executable_path, tokens)
+            # extract the components (default to None if not included). but
+            # version is in all templates, so should be there.
+            executable_version = tokens.get("version")
 
-            # build the glob pattern by formatting the template for globbing
-            glob_pattern = match_template.format(**self.COMPONENT_GLOB_LOOKUP)
-            self.logger.debug(
-                "Globbing for executable matching: %s ..." % (glob_pattern,)
+            sw_version = SoftwareVersion(
+                executable_version,
+                "Photoshop CC",
+                executable_path,
+                icon_path
             )
-
-            # now match against files on disk
-            executable_paths = glob.glob(glob_pattern)
-
-            self.logger.debug("Found %s matches" % (len(executable_paths),))
-
-            if not executable_paths:
-                # no matches. move on to the next template
-                continue
-
-            # construct the regex string to extract the components
-            regex_pattern = match_template.format(**self.COMPONENT_REGEX_LOOKUP)
-
-            # accumulate the software version objects to return. this will
-            # include the head/tail anchors in the regex
-            regex_pattern = "^%s$" % (regex_pattern,)
-
-            self.logger.debug(
-                "Matching components against regex: %s" % (regex_pattern,))
-
-            # compile the regex
-            executable_regex = re.compile(regex_pattern, re.IGNORECASE)
-
-            # now that we have a list of matching executables on disk we can
-            # extract the component pieces. iterate over each executable found
-            # for the glob pattern and find matched components via the regex
-            for executable_path in executable_paths:
-
-                self.logger.debug("Processing path: %s" % (executable_path,))
-
-                match = executable_regex.match(executable_path)
-
-                if not match:
-                    self.logger.debug("Path did not match regex.")
-                    continue
-
-                # extract the components (default to None if not included). but
-                # version is in all templates, so should be there.
-                executable_version = match.groupdict().get("version")
-
-                sw_version = SoftwareVersion(
-                    executable_version,
-                    "Photoshop CC",
-                    executable_path,
-                    icon_path
-                )
+            supported, reason = self._is_supported(sw_version)
+            if supported:
                 all_sw_versions.append(sw_version)
+            else:
+                self.logger.debug(reason)
 
         return all_sw_versions
-
