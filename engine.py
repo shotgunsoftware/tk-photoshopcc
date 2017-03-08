@@ -69,6 +69,7 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
     _PROXY_WIN_HWND = None
     _HEARTBEAT_DISABLED = False
     _PROJECT_CONTEXT = None
+    _CONTEXT_CACHE_KEY = "photoshopcc_context_cache"
 
     ############################################################################
     # context changing
@@ -114,7 +115,26 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
         # Python processes that get spawned. By setting it at the top, it'll be
         # propagated down to any of Photoshop's subprocesses.
         if "TANK_CONTEXT" in os.environ:
-            self.adobe.dollar.setenv("TANK_CONTEXT", self.context.serialize())
+            self.adobe.dollar.setenv("TANK_CONTEXT", new_context.serialize())
+
+        # If there's an active document and it isn't already recorded in the
+        # context cache, go ahead and add it.
+        active_doc = self.adobe.get_active_document_path()
+
+        if active_doc and active_doc not in self._CONTEXT_CACHE:
+            self._CONTEXT_CACHE[active_doc] = new_context
+
+        # We're storing the context cache in a sgtk user setting at the project
+        # level. This will ensure that when we read the cache back, we'll only
+        # be getting contexts in our current project. Anything outside of that
+        # scope would be unusable, as we don't allow context changing across
+        # project boundaries.
+        serial_cache = {k: v.serialize() for k, v in self._CONTEXT_CACHE.iteritems()}
+        self.__settings_manager.store(
+            self._CONTEXT_CACHE_KEY,
+            serial_cache,
+            self.__settings_manager.SCOPE_PROJECT,
+        )
 
     ############################################################################
     # engine initialization
@@ -158,6 +178,7 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
         # on them for reuse.
         self.__shotgun_data = self.__tk_photoshopcc.shotgunutils.shotgun_data
         self.__shotgun_globals = self.__tk_photoshopcc.shotgunutils.shotgun_globals
+        self.__settings = self.__tk_photoshopcc.shotgunutils.settings
 
         # import here since the engine is responsible for defining Qt.
         from sgtk.platform.qt import QtCore
@@ -166,6 +187,9 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
         self.__sg_data = self.__shotgun_data.ShotgunDataRetriever(
             QtCore.QCoreApplication.instance()
         )
+
+        # get outselves a settings manager where we can store metadata.
+        self.__settings_manager = self.__settings.UserSettings(self)
 
         # connect the retriever signals
         self.__sg_data.work_completed.connect( self.__on_worker_signal)
@@ -203,6 +227,18 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
         # clients to the file in the event of an error
         log_file = sgtk.LogManager().base_file_handler.baseFilename
         self.adobe.send_log_file_path(log_file)
+
+        # If we have some contexts cached in user settings at the project level,
+        # then we can retrieve those and deserialize them into our in-memory
+        # context cache.
+        serial_cache = self.__settings_manager.retrieve(
+            self._CONTEXT_CACHE_KEY,
+            dict(),
+            self.__settings_manager.SCOPE_PROJECT,
+        )
+
+        for key, value in serial_cache.iteritems():
+            self._CONTEXT_CACHE[key] = sgtk.Context.deserialize(value)
 
     def destroy_engine(self):
         """
