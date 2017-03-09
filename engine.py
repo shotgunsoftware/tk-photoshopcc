@@ -117,19 +117,6 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
         if "TANK_CONTEXT" in os.environ:
             self.adobe.dollar.setenv("TANK_CONTEXT", new_context.serialize())
 
-        # We're storing the context cache in a sgtk user setting at the project
-        # level. This will ensure that when we read the cache back, we'll only
-        # be getting contexts in our current project. Anything outside of that
-        # scope would be unusable, as we don't allow context changing across
-        # project boundaries.
-        serial_cache = {k: v.serialize() for k, v in self._CONTEXT_CACHE.iteritems()}
-        self.logger.debug("Storing context cache: %s" % serial_cache)
-        self.__settings_manager.store(
-            self._CONTEXT_CACHE_KEY,
-            serial_cache,
-            self.__settings_manager.SCOPE_PROJECT,
-        )
-
     ############################################################################
     # engine initialization
 
@@ -412,8 +399,10 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
                 )
                 return False
 
-            if active_document_path in self._CONTEXT_CACHE:
-                context = self._CONTEXT_CACHE[active_document_path]
+            cached_context = self.__get_from_context_cache(active_document_path)
+
+            if cached_context:
+                context = cached_context
                 self.logger.debug("Document found in context cache: %r" % context)
             else:
                 try:
@@ -421,8 +410,7 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
                         active_document_path,
                         previous_context=self.context,
                     )
-
-                    self._CONTEXT_CACHE[active_document_path] = context
+                    self.__add_to_context_cache(active_document_path, context)
                 except Exception:
                     self.logger.debug(
                         "Unable to determine context from path. Setting the Project context."
@@ -1171,6 +1159,40 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
 
     ##########################################################################################
     # context data methods
+
+    def __add_to_context_cache(self, path, context):
+        """
+        Adds the given active document path to the context cache, associating
+        it with the given context object. This will trigger the storing of a
+        serialized cache as a user setting for use during panel extension
+        restarts.
+
+        :param str path: The document path to add to the cache.
+        :param context: The context object to associate with the document.
+        """
+        if path not in self._CONTEXT_CACHE:
+            # We're storing the context cache in a sgtk user setting at the project
+            # level. This will ensure that when we read the cache back, we'll only
+            # be getting contexts in our current project. Anything outside of that
+            # scope would be unusable, as we don't allow context changing across
+            # project boundaries.
+            self._CONTEXT_CACHE[path] = context
+
+            serial_cache = {k: v.serialize() for k, v in self._CONTEXT_CACHE.iteritems()}
+            self.logger.debug("Storing context cache: %s" % serial_cache)
+            self.__settings_manager.store(
+                self._CONTEXT_CACHE_KEY,
+                serial_cache,
+                self.__settings_manager.SCOPE_PROJECT,
+            )
+
+    def __get_from_context_cache(self, path):
+        """
+        Gets the document path's associated context object, if one has been cached.
+
+        :returns: Context object, or None
+        """
+        return self._CONTEXT_CACHE.get(path)
 
     def __request_context_display(self, entity):
         """
