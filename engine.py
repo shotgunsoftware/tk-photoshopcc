@@ -238,6 +238,20 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
                 dict(),
             )
 
+        active_document_path = self.adobe.get_active_document_path()
+
+        if active_document_path:
+            try:
+                context = sgtk.sgtk_from_path(active_document_path).context_from_path(
+                    active_document_path,
+                    previous_context=self.context,
+                )
+                self.__add_to_context_cache(active_document_path, context)
+            except Exception:
+                self.logger.debug(
+                    "Active document isn't known to SGTK, not adding to context cache."
+                )
+
     def destroy_engine(self):
         """
         Called when the engine should tear down itself and all its apps.
