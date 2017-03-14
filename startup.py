@@ -27,8 +27,8 @@ class PhotoshopLauncher(SoftwareLauncher):
     # strings, these allow us to alter the regex matching for any of the
     # variable components of the path in one place
     COMPONENT_REGEX_LOOKUP = {
-        "version": "(?P<version>[\d.]+)",
-        "version_back": "(?P=version)",  # backreference to ensure same version
+        "version": "[\d.]+",
+        "version_back": "[\d.]+",  # backreference to ensure same version
     }
 
     # This dictionary defines a list of executable template strings for each
@@ -104,7 +104,7 @@ class PhotoshopLauncher(SoftwareLauncher):
 
         all_sw_versions = []
 
-        for executable_path, _, tokens in self._glob_and_match(
+        for executable_path, tokens in self._glob_and_match(
             self.EXECUTABLE_MATCH_TEMPLATES[sys.platform], self.COMPONENT_REGEX_LOOKUP
         ):
             self.logger.debug("Processing %s with tokens %s", executable_path, tokens)
