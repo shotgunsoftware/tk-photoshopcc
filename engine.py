@@ -392,6 +392,14 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
 
         :returns: True if the context changed, False if it did not.
         """
+        # If the config says to not change context on active document change, then
+        # we don't do anything here.
+        if not self.get_setting("context_follows_document"):
+            self.logger.debug(
+                "Engine setting context_follows_document is false. Not changing context."
+            )
+            return
+
         # This will be True if the context_changes_disabled context manager is
         # used. We're just in a temporary state of not allowing context changes,
         # which is useful when an app is doing a lot of Photoshop work that
