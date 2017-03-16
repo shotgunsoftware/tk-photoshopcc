@@ -394,9 +394,9 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
         """
         # If the config says to not change context on active document change, then
         # we don't do anything here.
-        if not self.get_setting("context_follows_document"):
+        if not self.get_setting("automatic_context_switch"):
             self.logger.debug(
-                "Engine setting context_follows_document is false. Not changing context."
+                "Engine setting automatic_context_switch is false. Not changing context."
             )
             return
 

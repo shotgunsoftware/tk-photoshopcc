@@ -13,7 +13,7 @@
 # expected fields in the configuration file for this engine
 configuration:
 
-    context_follows_document:
+    automatic_context_switch:
       type: bool
       description: Controls whether an active document change causes a context change.
       default_value: true
