@@ -400,6 +400,12 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
             )
             return
 
+        # Make sure we have a properly-encoded string for the path. We can
+        # possibly get a file path/name that contains unicode, and we don't
+        # want to deal with that later on.
+        if isinstance(active_document_path, unicode):
+            active_document_path = active_document_path.encode("utf-8")
+
         # This will be True if the context_changes_disabled context manager is
         # used. We're just in a temporary state of not allowing context changes,
         # which is useful when an app is doing a lot of Photoshop work that
