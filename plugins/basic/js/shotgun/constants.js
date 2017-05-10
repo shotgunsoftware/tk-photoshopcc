@@ -36,14 +36,14 @@ sg_constants.product_info = {
     // Photoshop
     PHSP: {
         display_name: "Photoshop",
-        tk_engine_name: "tk-photoshop",
+        tk_engine_name: "tk-photoshopcc",
         debug_url: "http://localhost:45216"
     },
 
     // Photoshop alt
     PHXS: {
         display_name: "Photoshop",
-        tk_engine_name: "tk-photoshop",
+        tk_engine_name: "tk-photoshopcc",
         debug_url: "http://localhost:45217"
     }
 

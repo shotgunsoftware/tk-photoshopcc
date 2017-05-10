@@ -54,7 +54,7 @@ sg_panel.Panel = new function() {
 
         _context_thumbnail_data = undefined;
         _build_flyout_menu([]);
-
+        _clear_messages();
     };
 
     // Clears the panel's contents and resets it to the loading state.
@@ -1094,12 +1094,18 @@ sg_panel.Panel = new function() {
 
     // Update the progress section with a % and a message.
     const _set_progress_info = function(progress, message) {
-        _show_progress(true);
-        _show_info(true);
-        var elem = document.getElementById(
-            sg_constants.panel_div_ids["progress_bar"]);
-        elem.style.width = progress + '%';
-        _set_info(message);
+
+        if (progress == 100) {
+            // progress is complete. nothing to do
+            _clear_info();
+        } else {
+            _show_progress(true);
+            _show_info(true);
+            var elem = document.getElementById(
+                sg_constants.panel_div_ids["progress_bar"]);
+            elem.style.width = progress + '%';
+            _set_info(message);
+        }
     };
 
     // Show or hide a div

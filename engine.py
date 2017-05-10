@@ -10,9 +10,12 @@
 
 import logging
 import os
+import re
 import subprocess
 import sys
+import tempfile
 import threading
+import uuid
 
 from contextlib import contextmanager
 
@@ -23,6 +26,9 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
     """
     A Photoshop CC engine for Shotgun Toolkit.
     """
+
+    # the maximum size for a generated thumbnail
+    MAX_THUMB_SIZE = 512
 
     SHOTGUN_ADOBE_PORT = os.environ.get("SHOTGUN_ADOBE_PORT")
     SHOTGUN_ADOBE_APPID = os.environ.get("SHOTGUN_ADOBE_APPID")
@@ -320,6 +326,138 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
             callback,
             properties,
         )
+
+    def generate_thumbnail(self, document=None, output_path=None):
+        """
+        Try to generate a thumbnail for an open document.
+
+        If a thumbnail can be generated, the output path will be returned. If
+        no thumbnail can be created, ``None`` will be returned.
+
+        :param document: The document to generate a thumbnail for. Assumes the
+            active document if ``None`` is supplied.
+        :param output_path: The output file path to write the thumbnail. If
+            ``None`` supplied, the method will write to a temp file.
+        :return:
+        """
+
+        # set unit system to pixels:
+        original_ruler_units = self.adobe.app.preferences.rulerUnits
+        pixel_units = self.adobe.Units.PIXELS
+
+        self.adobe.app.preferences.rulerUnits = pixel_units
+
+        with self.context_changes_disabled():
+
+            # we need to set the units back no matter what
+            try:
+
+                # make sure we have a document
+                if not document:
+                    try:
+                        document = self.adobe.app.activeDocument
+                    except RuntimeError:
+                        raise Exception("There is no active document!")
+
+                orig_name = document.name
+                width_str = str(document.width)
+                height_str = str(document.height)
+
+                # build temp name for the thumbnail doc (just in case we fail to
+                # close it!):
+                name, sfx = os.path.splitext(orig_name)
+                thumb_name = "%s_sg_thumb.%s" % (name, sfx)
+
+                # find the doc size in pixels
+                # Note: this doesn't handle measurements other than pixels.
+                doc_width = doc_height = 0
+                exp = re.compile("^(?P<value>[0-9]+) px$")
+                mo = exp.match(width_str)
+                if mo:
+                    doc_width = int(mo.group("value"))
+                mo = exp.match(height_str)
+                if mo:
+                    doc_height = int(mo.group("value"))
+
+                thumb_width = thumb_height = 0
+                if doc_width and doc_height:
+                    max_sz = max(doc_width, doc_height)
+                    if max_sz > self.MAX_THUMB_SIZE:
+                        scale = min(float(self.MAX_THUMB_SIZE) / float(max_sz), 1.0)
+                        thumb_width = max(min(int(doc_width * scale), doc_width), 1)
+                        thumb_height = max(min(int(doc_height * scale), doc_height), 1)
+
+                if not output_path:
+                    # get a path in the temp dir to use for the thumbnail:
+                    output_path = os.path.join(
+                        tempfile.gettempdir(),
+                        "%s_sgtk.jpg" % uuid.uuid4().hex
+                    )
+
+                # get a file object from Photoshop for this path and the current
+                # jpeg save options:
+                thumbnail_file = self.adobe.File(output_path)
+                jpg_options = self.adobe.JPEGSaveOptions
+
+                # duplicate the original doc:
+                save_options = self.adobe.SaveOptions.DONOTSAVECHANGES
+                thumb_doc = document.duplicate(thumb_name)
+
+                try:
+                    # flatten image:
+                    thumb_doc.flatten()
+
+                    # resize if needed:
+                    if thumb_width and thumb_height:
+                        thumb_doc.resizeImage("%d px" % thumb_width,
+                                              "%d px" % thumb_height)
+
+                        # save:
+                    thumb_doc.saveAs(thumbnail_file, jpg_options, True)
+
+                finally:
+                    # close the doc:
+                    thumb_doc.close(save_options)
+            except Exception:
+                # some error occurred. assume nothing was written
+                output_path = None
+            finally:
+                # set units back to original
+                self.adobe.app.preferences.rulerUnits = original_ruler_units
+
+            return output_path
+
+    def save_as(self, document):
+        """
+        Launch a Qt file browser to select a file, then save the supplied
+        document to that path.
+
+        :param document: The document to save.
+        """
+
+        from sgtk.platform.qt import QtGui
+
+        try:
+            doc_path = document.fullName.fsName
+        except RuntimeError:
+            doc_path = None
+
+        # photoshop doesn't appear to have a "save as" dialog accessible via
+        # python. so open our own Qt file dialog.
+        file_dialog = QtGui.QFileDialog(
+            parent=self._get_dialog_parent(),
+            caption="Save As",
+            directory=doc_path,
+            filter="Photoshop Documents (*.psd)"
+        )
+        file_dialog.setLabelText(QtGui.QFileDialog.Accept, "Save")
+        file_dialog.setLabelText(QtGui.QFileDialog.Reject, "Cancel")
+        file_dialog.setOption(QtGui.QFileDialog.DontResolveSymlinks)
+        file_dialog.setOption(QtGui.QFileDialog.DontUseNativeDialog)
+        if not file_dialog.exec_():
+            return
+        path = file_dialog.selectedFiles()[0]
+        document.saveAs(self.adobe.File(path))
 
     ############################################################################
     # RPC
