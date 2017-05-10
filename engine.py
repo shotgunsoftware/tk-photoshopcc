@@ -379,6 +379,38 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
 
             return output_path
 
+    def save_as(self, document):
+        """
+        Launch a Qt file browser to select a file, then save the supplied
+        document to that path.
+
+        :param document: The document to save.
+        """
+
+        from sgtk.platform.qt import QtGui
+
+        try:
+            doc_path = document.fullName.fsName
+        except RuntimeError:
+            doc_path = None
+
+        # photoshop doesn't appear to have a "save as" dialog accessible via
+        # python. so open our own Qt file dialog.
+        file_dialog = QtGui.QFileDialog(
+            parent=self._get_dialog_parent(),
+            caption="Save As",
+            directory=doc_path,
+            filter="Photoshop Documents (*.psd)"
+        )
+        file_dialog.setLabelText(QtGui.QFileDialog.Accept, "Save")
+        file_dialog.setLabelText(QtGui.QFileDialog.Reject, "Cancel")
+        file_dialog.setOption(QtGui.QFileDialog.DontResolveSymlinks)
+        file_dialog.setOption(QtGui.QFileDialog.DontUseNativeDialog)
+        if not file_dialog.exec_():
+            return
+        path = file_dialog.selectedFiles()[0]
+        document.saveAs(self.adobe.File(path))
+
     ############################################################################
     # RPC
 
