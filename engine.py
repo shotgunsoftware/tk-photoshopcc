@@ -75,6 +75,7 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
     _PROXY_WIN_HWND = None
     _HEARTBEAT_DISABLED = False
     _PROJECT_CONTEXT = None
+    _CONTEXT_CACHE_KEY = "photoshopcc_context_cache"
 
     ############################################################################
     # context changing
@@ -120,7 +121,7 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
         # Python processes that get spawned. By setting it at the top, it'll be
         # propagated down to any of Photoshop's subprocesses.
         if "TANK_CONTEXT" in os.environ:
-            self.adobe.dollar.setenv("TANK_CONTEXT", self.context.serialize())
+            self.adobe.dollar.setenv("TANK_CONTEXT", new_context.serialize())
 
     ############################################################################
     # engine initialization
@@ -164,6 +165,7 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
         # on them for reuse.
         self.__shotgun_data = self.__tk_photoshopcc.shotgunutils.shotgun_data
         self.__shotgun_globals = self.__tk_photoshopcc.shotgunutils.shotgun_globals
+        self.__settings = self.__tk_photoshopcc.shotgunutils.settings
 
         # import here since the engine is responsible for defining Qt.
         from sgtk.platform.qt import QtCore
@@ -172,6 +174,9 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
         self.__sg_data = self.__shotgun_data.ShotgunDataRetriever(
             QtCore.QCoreApplication.instance()
         )
+
+        # get outselves a settings manager where we can store metadata.
+        self.__settings_manager = self.__settings.UserSettings(self)
 
         # connect the retriever signals
         self.__sg_data.work_completed.connect( self.__on_worker_signal)
@@ -209,6 +214,49 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
         # clients to the file in the event of an error
         log_file = sgtk.LogManager().base_file_handler.baseFilename
         self.adobe.send_log_file_path(log_file)
+
+        # If there's more than one document open at the time that the engine is
+        # started up, then we're in a situation where we very likely were restarted.
+        # In that case, we need to try to retrieve a stored cache of serialized
+        # context objects from our settings manager. This will allow us to
+        # prepopulate our in-memory context cache with the contexts that were
+        # known prior to the extension restart.
+        if len(list(self.adobe.app.documents)) > 1:
+            self.logger.debug("Multiple documents found, loading stored context cache.")
+
+            serial_cache = self.__settings_manager.retrieve(
+                self._CONTEXT_CACHE_KEY,
+                dict(),
+                self.__settings_manager.SCOPE_PROJECT,
+            )
+
+            for key, value in serial_cache.iteritems():
+                self._CONTEXT_CACHE[key] = sgtk.Context.deserialize(value)
+        else:
+            # If there are fewer than 2 documents open, we don't need the stored
+            # cache, regardless of whether this is a restart situation or a fresh
+            # launch of PS. In that case, we take the opportunity to clear anything
+            # that might exist in the stored cache, as it's data we don't need.
+            self.logger.debug("Single document found, clearing stored context cache.")
+
+            self.__settings_manager.store(
+                self._CONTEXT_CACHE_KEY,
+                dict(),
+            )
+
+        active_document_path = self.adobe.get_active_document_path()
+
+        if active_document_path:
+            try:
+                context = sgtk.sgtk_from_path(active_document_path).context_from_path(
+                    active_document_path,
+                    previous_context=self.context,
+                )
+                self.__add_to_context_cache(active_document_path, context)
+            except Exception:
+                self.logger.debug(
+                    "Active document isn't known to SGTK, not adding to context cache."
+                )
 
     def destroy_engine(self):
         """
@@ -482,6 +530,20 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
 
         :returns: True if the context changed, False if it did not.
         """
+        # If the config says to not change context on active document change, then
+        # we don't do anything here.
+        if not self.get_setting("automatic_context_switch"):
+            self.logger.debug(
+                "Engine setting automatic_context_switch is false. Not changing context."
+            )
+            return
+
+        # Make sure we have a properly-encoded string for the path. We can
+        # possibly get a file path/name that contains unicode, and we don't
+        # want to deal with that later on.
+        if isinstance(active_document_path, unicode):
+            active_document_path = active_document_path.encode("utf-8")
+
         # This will be True if the context_changes_disabled context manager is
         # used. We're just in a temporary state of not allowing context changes,
         # which is useful when an app is doing a lot of Photoshop work that
@@ -503,14 +565,18 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
                 )
                 return False
 
-            if active_document_path in self._CONTEXT_CACHE:
-                context = self._CONTEXT_CACHE[active_document_path]
+            cached_context = self.__get_from_context_cache(active_document_path)
+
+            if cached_context:
+                context = cached_context
+                self.logger.debug("Document found in context cache: %r" % context)
             else:
                 try:
                     context = sgtk.sgtk_from_path(active_document_path).context_from_path(
                         active_document_path,
                         previous_context=self.context,
                     )
+                    self.__add_to_context_cache(active_document_path, context)
                 except Exception:
                     self.logger.debug(
                         "Unable to determine context from path. Setting the Project context."
@@ -530,14 +596,12 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
 
                     context = self._PROJECT_CONTEXT
 
-                if not context.project:
-                    self.logger.debug(
-                        "New context doesn't have a Project entity. Not changing "
-                        "context."
-                    )
-                    return False
-
-                self._CONTEXT_CACHE[active_document_path] = context
+            if not context.project:
+                self.logger.debug(
+                    "New context doesn't have a Project entity. Not changing "
+                    "context."
+                )
+                return False
 
             if context and context != self.context:
                 self.adobe.context_about_to_change()
@@ -1261,6 +1325,40 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
 
     ##########################################################################################
     # context data methods
+
+    def __add_to_context_cache(self, path, context):
+        """
+        Adds the given active document path to the context cache, associating
+        it with the given context object. This will trigger the storing of a
+        serialized cache as a user setting for use during panel extension
+        restarts.
+
+        :param str path: The document path to add to the cache.
+        :param context: The context object to associate with the document.
+        """
+        if path not in self._CONTEXT_CACHE:
+            # We're storing the context cache in a sgtk user setting at the project
+            # level. This will ensure that when we read the cache back, we'll only
+            # be getting contexts in our current project. Anything outside of that
+            # scope would be unusable, as we don't allow context changing across
+            # project boundaries.
+            self._CONTEXT_CACHE[path] = context
+
+            serial_cache = {k: v.serialize() for k, v in self._CONTEXT_CACHE.iteritems()}
+            self.logger.debug("Storing context cache: %s" % serial_cache)
+            self.__settings_manager.store(
+                self._CONTEXT_CACHE_KEY,
+                serial_cache,
+                self.__settings_manager.SCOPE_PROJECT,
+            )
+
+    def __get_from_context_cache(self, path):
+        """
+        Gets the document path's associated context object, if one has been cached.
+
+        :returns: Context object, or None
+        """
+        return self._CONTEXT_CACHE.get(path)
 
     def __request_context_display(self, entity):
         """

@@ -184,9 +184,14 @@ class AdobeBridge(Communicator):
         """
         with self.response_logging_silenced():
             try:
-                return self.app.activeDocument.fullName.fsName
+                path = self.app.activeDocument.fullName.fsName
             except RuntimeError:
-                return None
+                path = None
+
+            if isinstance(path, unicode):
+                path = path.encode("utf-8")
+
+        return path
 
     def log_message(self, level, msg):
         """

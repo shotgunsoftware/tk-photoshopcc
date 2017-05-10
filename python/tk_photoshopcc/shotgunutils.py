@@ -19,3 +19,8 @@ shotgun_globals = sgtk.platform.import_framework(
     "tk-framework-shotgunutils",
     "shotgun_globals"
 )
+
+settings = sgtk.platform.import_framework(
+    "tk-framework-shotgunutils",
+    "settings",
+)
