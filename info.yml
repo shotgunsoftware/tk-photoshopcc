@@ -56,7 +56,7 @@ description: "Shotgun Integration for Photoshop CC"
 
 # Required minimum versions for this item to run
 requires_shotgun_version:
-requires_core_version: "v0.18.18"
+requires_core_version: "v0.18.45"
 
 frameworks:
   - {"name": "tk-framework-shotgunutils", "version": "v4.x.x"}
