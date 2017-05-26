@@ -457,7 +457,19 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
         if not file_dialog.exec_():
             return
         path = file_dialog.selectedFiles()[0]
-        document.saveAs(self.adobe.File(path))
+
+        with self.context_changes_disabled():
+
+            # remember the active document so that we can restore it.
+            previous_active_document = self.adobe.app.activeDocument
+
+            # make the document being processed the active document
+            self.adobe.app.activeDocument = document
+
+            document.saveAs(self.adobe.File(path))
+
+            # restore the active document
+            self.adobe.app.activeDocument = previous_active_document
 
     ############################################################################
     # RPC
