@@ -427,6 +427,46 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
 
             return output_path
 
+    def save(self, document):
+        """
+        Save the document in place
+        """
+
+        with self.context_changes_disabled():
+
+            # remember the active document so that we can restore it.
+            previous_active_document = self.adobe.app.activeDocument
+
+            # make the document being processed the active document
+            self.adobe.app.activeDocument = document
+
+            document.save()
+
+            # restore the active document
+            self.adobe.app.activeDocument = previous_active_document
+
+    def save_to_path(self, document, path):
+        """
+        Save the document to the supplied path.
+        """
+
+        # TODO: more logic is needed here to save account for different file
+        # options. By default, the file will always be saved to a PDF.
+
+        with self.context_changes_disabled():
+
+            # remember the active document so that we can restore it.
+            previous_active_document = self.adobe.app.activeDocument
+
+            # make the document being processed the active document
+            self.adobe.app.activeDocument = document
+
+            # TODO need to use appropriate save options here (jpg, tiff, etc)
+            document.save(self.adobe.File(path))
+
+            # restore the active document
+            self.adobe.app.activeDocument = previous_active_document
+
     def save_as(self, document):
         """
         Launch a Qt file browser to select a file, then save the supplied
@@ -458,18 +498,8 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
             return
         path = file_dialog.selectedFiles()[0]
 
-        with self.context_changes_disabled():
-
-            # remember the active document so that we can restore it.
-            previous_active_document = self.adobe.app.activeDocument
-
-            # make the document being processed the active document
-            self.adobe.app.activeDocument = document
-
-            document.saveAs(self.adobe.File(path))
-
-            # restore the active document
-            self.adobe.app.activeDocument = previous_active_document
+        if path:
+            self.save_to_path(document, path)
 
     ############################################################################
     # RPC
