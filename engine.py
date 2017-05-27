@@ -462,7 +462,7 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
             self.adobe.app.activeDocument = document
 
             # TODO need to use appropriate save options here (jpg, tiff, etc)
-            document.save(self.adobe.File(path))
+            document.saveAs(self.adobe.File(path))
 
             # restore the active document
             self.adobe.app.activeDocument = previous_active_document
