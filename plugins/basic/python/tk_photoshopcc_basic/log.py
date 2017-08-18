@@ -22,7 +22,10 @@ class BootstrapLogHandler(logging.StreamHandler):
 
         :param record: The record to log.
         """
-        super(BootstrapLogHandler, self).emit(record)
+
+        # can't use super here because in python 2.6, logging.StreamHandler is
+        # not a new style class.
+        BootstrapLogHandler.emit(self, record)
 
         # always flush to ensure its seen by the js process
         self.flush()
