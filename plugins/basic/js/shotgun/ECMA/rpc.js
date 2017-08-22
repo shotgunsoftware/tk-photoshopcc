@@ -331,7 +331,7 @@ function wrap_item(item, name) {
         var wrappers = [];
 
         for (i in item) {
-            wrappers.append(wrap_item(item[i], item[i].reflect.name));
+            wrappers.push(wrap_item(item[i], item[i].reflect.name));
         }
 
         return wrappers;
