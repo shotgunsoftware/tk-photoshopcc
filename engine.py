@@ -327,6 +327,108 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
             properties,
         )
 
+    def export_as_jpeg(self, document=None, output_path=None, max_size=2048, quality=12):
+        """
+        Export a Jpeg image from the given document or from the current document.
+        
+        :param document: The document to generate a thumbnail for. Assumes the
+                         active document if ``None`` is supplied.
+        :param output_path: The output file path to write the thumbnail. If
+                            ``None`` is supplied, the method will write to a temp file.
+        :param int max_size: The maximum width and height of the exported image.
+        :param int quality: The Jpeg quality of the exported image.
+        :returns: The full path to the exported image.
+        :raises: RuntimeError if the document or its size can't be retrieved.
+        """
+        adobe = self.adobe
+
+        # Get some current values so we can restore them.
+        original_ruler_units = adobe.app.preferences.rulerUnits
+        original_dialog_mode = adobe.app.displayDialogs
+
+        # If no output_path was given, use a temp file.
+        jpeg_pub_path = output_path or os.path.join(
+            tempfile.gettempdir(), "%s_sgtk.jpg" % uuid.uuid4().hex
+        )
+
+        with self.context_changes_disabled():
+            try:
+                # Set unit system to pixels:
+                adobe.app.preferences.rulerUnits = adobe.Units.PIXELS
+                # Disable dialogs.
+                adobe.app.displayDialogs = adobe.DialogModes.NO
+
+                active_doc = document or adobe.app.activeDocument
+                orig_name = active_doc.name
+                width_str = str(active_doc.width.value)
+                height_str = str(active_doc.height.value)
+                
+                # Get a temp document name so we can manipulate the document without
+                # affecting the original docuement.
+                name, sfx = os.path.splitext(orig_name)
+                # a "." is included in the extension returned by splitext
+                jpeg_name = "%s_tkjpeg%s" % (name, sfx)
+                
+                # Find the doc size in pixels
+                # Note: this doesn't handle measurements other than pixels.
+                doc_width = doc_height = 0
+                # It seems we used to get back "<size> px" but now we receive back
+                # just a number, so let's have the " px" bit optional.
+                exp = re.compile("^(?P<value>[0-9]+)( px)?$")
+                mo = exp.match(width_str)
+                if mo:
+                    doc_width = int(mo.group("value"))
+                mo = exp.match(height_str)
+                if mo:
+                    doc_height = int(mo.group("value"))
+        
+                jpeg_width = jpeg_height = 0
+                if doc_width and doc_height:
+                    max_sz = max(doc_width, doc_height)
+                    if max_sz > max_size:
+                        scale = min(float(max_size)/float(max_sz), 1.0)
+                        jpeg_width = max(min(int(doc_width * scale), doc_width), 1)
+                        jpeg_height = max(min(int(doc_height * scale), doc_height), 1)
+                else:
+                    raise RuntimeError("Unable to retrieve document size from %s x %s " % (
+                        width_str, height_str,
+                    ))
+
+                # Get a file object from Photoshop for this path and the current
+                # jpg save options:
+                jpeg_file = adobe.File(jpeg_pub_path)
+                jpeg_options = adobe.JPEGSaveOptions
+                jpeg_options.quality = quality
+
+                # duplicate the original doc:
+                save_options = adobe.SaveOptions.DONOTSAVECHANGES     
+                jpeg_doc = active_doc.duplicate(jpeg_name)
+        
+                try:
+                    # Flatten image:
+                    jpeg_doc.flatten()
+                    # Convert to eight bits
+                    jpeg_doc.bitsPerChannel = adobe.BitsPerChannelType.EIGHT
+                    # Resize if needed:
+                    if jpeg_width and jpeg_height:
+                        jpeg_doc.resizeImage(
+                            "%d px" % jpeg_width,
+                            "%d px" % jpeg_height
+                        )
+                    # Save:
+                    jpeg_doc.saveAs(jpeg_file, jpeg_options, True)
+        
+                finally:
+                    # Close the doc:
+                    jpeg_doc.close(save_options)
+
+            finally:
+                # Set units back to original
+                adobe.app.preferences.rulerUnits = original_ruler_units
+                # Set dialog mode back to original.
+                adobe.app.displayDialogs = original_dialog_mode
+        return jpeg_pub_path
+
     def generate_thumbnail(self, document=None, output_path=None):
         """
         Try to generate a thumbnail for an open document.
@@ -338,94 +440,21 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
             active document if ``None`` is supplied.
         :param output_path: The output file path to write the thumbnail. If
             ``None`` supplied, the method will write to a temp file.
-        :return:
+        :returns: Full path the thumbnail file, or None.
         """
 
-        # set unit system to pixels:
-        original_ruler_units = self.adobe.app.preferences.rulerUnits
-        pixel_units = self.adobe.Units.PIXELS
-
-        self.adobe.app.preferences.rulerUnits = pixel_units
-
-        with self.context_changes_disabled():
-
-            # we need to set the units back no matter what
-            try:
-
-                # make sure we have a document
-                if not document:
-                    try:
-                        document = self.adobe.app.activeDocument
-                    except RuntimeError:
-                        raise Exception("There is no active document!")
-
-                orig_name = document.name
-                width_str = str(document.width)
-                height_str = str(document.height)
-
-                # build temp name for the thumbnail doc (just in case we fail to
-                # close it!):
-                name, sfx = os.path.splitext(orig_name)
-                thumb_name = "%s_sg_thumb.%s" % (name, sfx)
-
-                # find the doc size in pixels
-                # Note: this doesn't handle measurements other than pixels.
-                doc_width = doc_height = 0
-                exp = re.compile("^(?P<value>[0-9]+) px$")
-                mo = exp.match(width_str)
-                if mo:
-                    doc_width = int(mo.group("value"))
-                mo = exp.match(height_str)
-                if mo:
-                    doc_height = int(mo.group("value"))
-
-                thumb_width = thumb_height = 0
-                if doc_width and doc_height:
-                    max_sz = max(doc_width, doc_height)
-                    if max_sz > self.MAX_THUMB_SIZE:
-                        scale = min(float(self.MAX_THUMB_SIZE) / float(max_sz), 1.0)
-                        thumb_width = max(min(int(doc_width * scale), doc_width), 1)
-                        thumb_height = max(min(int(doc_height * scale), doc_height), 1)
-
-                if not output_path:
-                    # get a path in the temp dir to use for the thumbnail:
-                    output_path = os.path.join(
-                        tempfile.gettempdir(),
-                        "%s_sgtk.jpg" % uuid.uuid4().hex
-                    )
-
-                # get a file object from Photoshop for this path and the current
-                # jpeg save options:
-                thumbnail_file = self.adobe.File(output_path)
-                jpg_options = self.adobe.JPEGSaveOptions
-
-                # duplicate the original doc:
-                save_options = self.adobe.SaveOptions.DONOTSAVECHANGES
-                thumb_doc = document.duplicate(thumb_name)
-
-                try:
-                    # flatten image:
-                    thumb_doc.flatten()
-
-                    # resize if needed:
-                    if thumb_width and thumb_height:
-                        thumb_doc.resizeImage("%d px" % thumb_width,
-                                              "%d px" % thumb_height)
-
-                        # save:
-                    thumb_doc.saveAs(thumbnail_file, jpg_options, True)
-
-                finally:
-                    # close the doc:
-                    thumb_doc.close(save_options)
-            except Exception:
-                # some error occurred. assume nothing was written
-                output_path = None
-            finally:
-                # set units back to original
-                self.adobe.app.preferences.rulerUnits = original_ruler_units
-
-            return output_path
+        jpeg_path = None
+        try:
+            jpeg_path = self.export_as_jpeg(
+                document,
+                output_path,
+                max_size=self.MAX_THUMB_SIZE,
+                quality=3, # Default quality value for Photoshop Jpeg option
+            )
+        except Exception, e:
+            # Log the error for debug purpose.
+            self.logger.warning("Couldn't generate thumbnail: %s" % e)
+        return jpeg_path
 
     def save(self, document):
         """
