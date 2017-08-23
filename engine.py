@@ -358,7 +358,18 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
                 # Disable dialogs.
                 adobe.app.displayDialogs = adobe.DialogModes.NO
 
-                active_doc = document or adobe.app.activeDocument
+                try:
+                    active_doc = document or adobe.app.activeDocument
+                except RuntimeError, e:
+                    # Exceptions reported by Photoshop CEP through the RPC API
+                    # are pretty useless, so catch the error, raise our own exception
+                    # but still log the original exception for debug purpose.
+                    self.logger.debug(
+                        "Unable to retrieve a document: %s" % e,
+                        exc_info=True, # Get traceback automatically
+                    )
+                    raise RuntimeError("Unable to retrieve a document")
+
                 orig_name = active_doc.name
                 width_str = str(active_doc.width.value)
                 height_str = str(active_doc.height.value)
@@ -453,7 +464,10 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
             )
         except Exception, e:
             # Log the error for debug purpose.
-            self.logger.warning("Couldn't generate thumbnail: %s" % e)
+            self.logger.warning(
+                "Couldn't generate thumbnail: %s" % e,
+                exc_info=True, # include traceback
+            )
         return jpeg_path
 
     def save(self, document):
