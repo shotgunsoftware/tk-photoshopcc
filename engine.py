@@ -550,7 +550,8 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
         """
         Returns information about the application hosting this engine.
         
-        :returns: A (host application name, release string) tuple.
+        :returns: A {"name": application name, "version": application version}
+                  dictionary. 
         """
         if not self.adobe:
             # Don't error out if the bridge was not yet started
@@ -565,10 +566,10 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
         m = re.search("Version:\s+([\.0-9]+)", self.adobe.app.systemInformation)
         if m:
             version = m.group(1)
-        return (
-            self.adobe.app.name,
-            version,
-        )
+        return {
+            "name": self.adobe.app.name,
+            "version": version,
+        }
 
     ############################################################################
     # RPC
