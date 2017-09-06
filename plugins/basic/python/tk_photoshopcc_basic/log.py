@@ -25,7 +25,7 @@ class BootstrapLogHandler(logging.StreamHandler):
 
         # can't use super here because in python 2.6, logging.StreamHandler is
         # not a new style class.
-        BootstrapLogHandler.emit(self, record)
+        logging.StreamHandler.emit(self, record)
 
         # always flush to ensure its seen by the js process
         self.flush()

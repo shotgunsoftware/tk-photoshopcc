@@ -1429,7 +1429,10 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
             # project boundaries.
             self._CONTEXT_CACHE[path] = context
 
-            serial_cache = {k: v.serialize() for k, v in self._CONTEXT_CACHE.iteritems()}
+            serial_cache = dict()
+            for k, v in self._CONTEXT_CACHE.iteritems():
+                serial_cache[k] = v.serialize()
+
             self.logger.debug("Storing context cache: %s" % serial_cache)
             self.__settings_manager.store(
                 self._CONTEXT_CACHE_KEY,

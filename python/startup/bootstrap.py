@@ -8,6 +8,7 @@
 # agreement to the Shotgun Pipeline Toolkit Source Code License. All rights 
 # not expressly granted therein are reserved by Shotgun Software Inc.
 
+import contextlib
 import os
 import shutil
 import sys
@@ -289,6 +290,6 @@ def _install_extension(ext_path, dest_dir):
         )
 
     # extract the .zxp file into the destination dir
-    with zipfile.ZipFile(ext_path, 'r') as ext_zxp:
+    with contextlib.closing(zipfile.ZipFile(ext_path, 'r')) as ext_zxp:
         ext_zxp.extractall(dest_dir)
 
