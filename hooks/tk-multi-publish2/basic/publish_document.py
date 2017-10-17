@@ -339,7 +339,9 @@ class PhotoshopCCDocumentPublishPlugin(HookBaseClass):
         document = item.properties.get("document")
         path = item.properties["path"]
 
-        save_callback = engine.save
+        # we need the path to be saved for this document. ensure the document
+        # is provided and allow the base method to supply the new path
+        save_callback = lambda path, d=document: engine.save_to_path(d, path)
 
         # bump the document path to the next version
         self._save_to_next_version(path, item, save_callback)
