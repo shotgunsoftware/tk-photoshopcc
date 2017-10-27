@@ -163,7 +163,7 @@ class PhotoshopCCDocumentPublishPlugin(HookBaseClass):
         # if a publish template is configured, disable context change. This
         # is a temporary measure until the publisher handles context switching
         # natively.
-        if settings.get("Publish Template"):
+        if settings.get("Publish Template").value:
             item.context_change_allowed = False
 
         path = _document_path(document)
