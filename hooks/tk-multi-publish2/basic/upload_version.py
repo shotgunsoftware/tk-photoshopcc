@@ -172,12 +172,13 @@ class PhotoshopUploadVersionPlugin(HookBaseClass):
         if not path:
             # the document still requires saving. provide a save button.
             # validation fails.
+            error_msg = "The Photoshop document '%s' has not been saved." % \
+                        (document.name,)
             self.logger.error(
-                "The Photoshop document '%s' has not been saved." %
-                (document.name,),
+                error_msg,
                 extra=self._get_save_as_action(document)
             )
-            return False
+            raise Exception(error_msg)
 
         return True
 

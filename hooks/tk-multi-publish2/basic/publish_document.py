@@ -211,12 +211,13 @@ class PhotoshopCCDocumentPublishPlugin(HookBaseClass):
         if not path:
             # the document still requires saving. provide a save button.
             # validation fails.
+            error_msg = "The Photoshop document '%s' has not been saved." % \
+                        (document.name,)
             self.logger.error(
-                "The Photoshop document '%s' has not been saved." %
-                (document.name,),
+                error_msg,
                 extra=_get_save_as_action(document)
             )
-            return False
+            raise Exception(error_msg)
 
         # ---- check the document against any attached work template
 
@@ -265,8 +266,9 @@ class PhotoshopCCDocumentPublishPlugin(HookBaseClass):
                 (next_version_path, version) = self._get_next_version_info(
                     next_version_path, item)
 
+            error_msg = "The next version of this file already exists on disk."
             self.logger.error(
-                "The next version of this file already exists on disk.",
+                error_msg,
                 extra={
                     "action_button": {
                         "label": "Save to v%s" % (version,),
@@ -277,7 +279,7 @@ class PhotoshopCCDocumentPublishPlugin(HookBaseClass):
                     }
                 }
             )
-            return False
+            raise Exception(error_msg)
 
         # ---- populate the necessary properties and call base class validation
 
