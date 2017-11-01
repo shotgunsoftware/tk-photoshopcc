@@ -308,16 +308,25 @@ class PhotoshopStartVersionControlPlugin(HookBaseClass):
 
 def _get_save_as_action(document):
     """
-    Simple helper for returning a log action dict for saving the session
+    Simple helper for returning a log action dict for saving the document
     """
 
-    engine = sgtk.platform.current_engine
+    engine = sgtk.platform.current_engine()
+
+    # default save callback
+    callback = lambda: engine.save_as(document)
+
+    # if workfiles2 is configured, use that for file save
+    if "tk-multi-workfiles2" in engine.apps:
+        app = engine.apps["tk-multi-workfiles2"]
+        if hasattr(app, "show_file_save_dlg"):
+            callback = app.show_file_save_dlg
 
     return {
         "action_button": {
             "label": "Save As...",
-            "tooltip": "Save the current session",
-            "callback": lambda: engine.save_as(document)
+            "tooltip": "Save the current document",
+            "callback": callback
         }
     }
 

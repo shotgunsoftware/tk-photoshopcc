@@ -140,7 +140,7 @@ class PhotoshopUploadVersionPlugin(HookBaseClass):
             self.logger.warn(
                 "The Photoshop document '%s' has not been saved." %
                 (document.name,),
-                extra=self._get_save_as_action(document)
+                extra=_get_save_as_action(document)
             )
 
         self.logger.info(
@@ -176,7 +176,7 @@ class PhotoshopUploadVersionPlugin(HookBaseClass):
                         (document.name,)
             self.logger.error(
                 error_msg,
-                extra=self._get_save_as_action(document)
+                extra=_get_save_as_action(document)
             )
             raise Exception(error_msg)
 
@@ -343,20 +343,30 @@ class PhotoshopUploadVersionPlugin(HookBaseClass):
         else:
             return None
 
-    def _get_save_as_action(self, document):
-        """
-        Simple helper for returning a log action dict for saving the session
-        """
 
-        engine = self.parent.engine
+def _get_save_as_action(document):
+    """
+    Simple helper for returning a log action dict for saving the document
+    """
 
-        return {
-            "action_button": {
-                "label": "Save As...",
-                "tooltip": "Save the current session",
-                "callback": lambda: engine.save_as(document)
-            }
+    engine = sgtk.platform.current_engine()
+
+    # default save callback
+    callback = lambda: engine.save_as(document)
+
+    # if workfiles2 is configured, use that for file save
+    if "tk-multi-workfiles2" in engine.apps:
+        app = engine.apps["tk-multi-workfiles2"]
+        if hasattr(app, "show_file_save_dlg"):
+            callback = app.show_file_save_dlg
+
+    return {
+        "action_button": {
+            "label": "Save As...",
+            "tooltip": "Save the current document",
+            "callback": callback
         }
+    }
 
 
 def _document_path(document):
