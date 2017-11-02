@@ -89,6 +89,11 @@ class PhotoshopCCSceneCollector(HookBaseClass):
             engine.logger.debug("No active document found.")
             active_doc_name = None
 
+            # FIXME: returning 'None' for now since we're limiting the publisher
+            # to only handle the active document. remove this line when we have
+            # multi context support
+            return None
+
         # attempt to retrive a configured work template. we can attach
         # it to the collected project items
         work_template_setting = settings.get("Work Template")
@@ -97,8 +102,33 @@ class PhotoshopCCSceneCollector(HookBaseClass):
             work_template = publisher.engine.get_template_by_name(
                 work_template_setting.value)
 
+        # FIXME: we don't need to save/restore the active document while we're
+        # only handling the current one. uncomment below when we have multi
+        # context support.
+
+        # remember the current document. we need to switch documents while
+        # collecting in order to get the proper context associated with each
+        # item created.
+        #current_document = engine.adobe.app.activeDocument
+
         # iterate over all open documents and add them as publish items
         for document in engine.adobe.app.documents:
+
+            doc_name = document.name
+
+            # FIXME: temporarily only create an item for the current document.
+            # This buys us some time as we update the publish2 app to handle
+            # multi context scenarios in a robust way. remove these lines when
+            # we have multi context support.
+            if doc_name != active_doc_name:
+                continue
+
+            # FIXME: we don't need to save/restore the active document while
+            # we're only handling the current one. uncomment below when we have
+            # multi context support.
+
+            # ensure the document is the current one
+            #engine.adobe.app.activeDocument = document
 
             # create a publish item for the document
             document_item = parent_item.create_item(
@@ -118,20 +148,22 @@ class PhotoshopCCSceneCollector(HookBaseClass):
             # plugins know which open document to associate with this item
             document_item.properties["document"] = document
 
-            doc_name = document.name
-
             self.logger.info("Collected Photoshop document: %s" % (doc_name))
+
+            # FIXME: This following line are not needed while we're only
+            # creating items for the active document. Reevaluate once we have
+            # multi context support.
 
             # enable the active document and expand it. other documents are
             # collapsed and disabled.
-            if active_doc_name and doc_name == active_doc_name:
-                document_item.expanded = True
-                document_item.checked = True
-            elif active_doc_name:
-                # there is an active document, but this isn't it. collapse and
-                # disable this item
-                document_item.expanded = False
-                document_item.checked = False
+            #if active_doc_name and doc_name == active_doc_name:
+            #    document_item.expanded = True
+            #    document_item.checked = True
+            #elif active_doc_name:
+            #    # there is an active document, but this isn't it. collapse and
+            #    # disable this item
+            #    document_item.expanded = False
+            #    document_item.checked = False
 
             path = _document_path(document)
 
@@ -149,6 +181,13 @@ class PhotoshopCCSceneCollector(HookBaseClass):
                 document_item.properties["work_template"] = work_template
                 self.logger.debug(
                     "Work template defined for Photoshop collection.")
+
+        # FIXME: we don't need to save/restore the active document while we're
+        # only handling the current one. uncomment below when we have multi
+        # context support.
+
+        # reset the original document to restore the state for the user
+        #engine.adobe.app.activeDocument = current_document
 
 
 def _document_path(document):
