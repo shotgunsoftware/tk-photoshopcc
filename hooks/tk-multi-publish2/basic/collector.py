@@ -111,17 +111,13 @@ class PhotoshopCCSceneCollector(HookBaseClass):
         # item created.
         #current_document = engine.adobe.app.activeDocument
 
+        # FIXME: until we have multi context support, we're only processing the
+        # active document. we will need to switch back to iterating over all
+        # documents below once multi context support is available.
+
         # iterate over all open documents and add them as publish items
-        for document in engine.adobe.app.documents:
-
-            doc_name = document.name
-
-            # FIXME: temporarily only create an item for the current document.
-            # This buys us some time as we update the publish2 app to handle
-            # multi context scenarios in a robust way. remove these lines when
-            # we have multi context support.
-            if doc_name != active_doc_name:
-                continue
+        # for document in engine.adobe.app.documents:
+        for document in [engine.adobe.app.activeDocument]:
 
             # FIXME: we don't need to save/restore the active document while
             # we're only handling the current one. uncomment below when we have
@@ -148,6 +144,7 @@ class PhotoshopCCSceneCollector(HookBaseClass):
             # plugins know which open document to associate with this item
             document_item.properties["document"] = document
 
+            doc_name = document.name
             self.logger.info("Collected Photoshop document: %s" % (doc_name))
 
             # FIXME: This following line are not needed while we're only
