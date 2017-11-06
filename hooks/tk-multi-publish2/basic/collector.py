@@ -89,11 +89,6 @@ class PhotoshopCCSceneCollector(HookBaseClass):
             engine.logger.debug("No active document found.")
             active_doc_name = None
 
-            # FIXME: returning 'None' for now since we're limiting the publisher
-            # to only handle the active document. remove this line when we have
-            # multi context support
-            return None
-
         # attempt to retrive a configured work template. we can attach
         # it to the collected project items
         work_template_setting = settings.get("Work Template")
@@ -102,29 +97,45 @@ class PhotoshopCCSceneCollector(HookBaseClass):
             work_template = publisher.engine.get_template_by_name(
                 work_template_setting.value)
 
-        # FIXME: we don't need to save/restore the active document while we're
-        # only handling the current one. uncomment below when we have multi
-        # context support.
+        # FIXME: begin temporary workaround
+        # we use different logic here only because we don't have proper support
+        # for multi context workflows when templates are in play. So if we have
+        # a work template configured, for now we'll only collect the current,
+        # active document. Once we have proper multi context support, we can
+        # remove this.
+        if work_template:
+            # same logic as the loop below but only processing the active doc
+            document = engine.adobe.app.activeDocument
+            if not document:
+                return
+            document_item = parent_item.create_item(
+                "photoshop.document",
+                "Photoshop Image",
+                document.name
+            )
+            self.logger.info(
+                "Collected Photoshop document: %s" % (document.name))
+            document_item.set_icon_from_path(icon_path)
+            document_item.thumbnail_enabled = False
+            document_item.properties["document"] = document
+            path = _document_path(document)
+            if path:
+                document_item.set_thumbnail_from_path(path)
+            document_item.properties["work_template"] = work_template
+            self.logger.debug("Work template defined for Photoshop collection.")
+            return
+        # FIXME: end temporary workaround
 
         # remember the current document. we need to switch documents while
         # collecting in order to get the proper context associated with each
         # item created.
-        #current_document = engine.adobe.app.activeDocument
-
-        # FIXME: until we have multi context support, we're only processing the
-        # active document. we will need to switch back to iterating over all
-        # documents below once multi context support is available.
+        current_document = engine.adobe.app.activeDocument
 
         # iterate over all open documents and add them as publish items
-        # for document in engine.adobe.app.documents:
-        for document in [engine.adobe.app.activeDocument]:
-
-            # FIXME: we don't need to save/restore the active document while
-            # we're only handling the current one. uncomment below when we have
-            # multi context support.
+        for document in engine.adobe.app.documents:
 
             # ensure the document is the current one
-            #engine.adobe.app.activeDocument = document
+            engine.adobe.app.activeDocument = document
 
             # create a publish item for the document
             document_item = parent_item.create_item(
@@ -147,20 +158,16 @@ class PhotoshopCCSceneCollector(HookBaseClass):
             doc_name = document.name
             self.logger.info("Collected Photoshop document: %s" % (doc_name))
 
-            # FIXME: This following line are not needed while we're only
-            # creating items for the active document. Reevaluate once we have
-            # multi context support.
-
             # enable the active document and expand it. other documents are
             # collapsed and disabled.
-            #if active_doc_name and doc_name == active_doc_name:
-            #    document_item.expanded = True
-            #    document_item.checked = True
-            #elif active_doc_name:
-            #    # there is an active document, but this isn't it. collapse and
-            #    # disable this item
-            #    document_item.expanded = False
-            #    document_item.checked = False
+            if active_doc_name and doc_name == active_doc_name:
+                document_item.expanded = True
+                document_item.checked = True
+            elif active_doc_name:
+                # there is an active document, but this isn't it. collapse and
+                # disable this item
+                document_item.expanded = False
+                document_item.checked = False
 
             path = _document_path(document)
 
@@ -179,12 +186,8 @@ class PhotoshopCCSceneCollector(HookBaseClass):
                 self.logger.debug(
                     "Work template defined for Photoshop collection.")
 
-        # FIXME: we don't need to save/restore the active document while we're
-        # only handling the current one. uncomment below when we have multi
-        # context support.
-
         # reset the original document to restore the state for the user
-        #engine.adobe.app.activeDocument = current_document
+        engine.adobe.app.activeDocument = current_document
 
 
 def _document_path(document):
