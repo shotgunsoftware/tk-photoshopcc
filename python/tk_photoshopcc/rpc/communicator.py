@@ -250,6 +250,7 @@ class Communicator(object):
 
         :returns: The data returned by the callable when it is
                   called.
+        :raises: RuntimeError
         """
         self.log_network_debug("Sending a call message using rpc_call...")
 
@@ -260,12 +261,26 @@ class Communicator(object):
             self.log_network_debug("No parent given.")
             params.insert(0, None)
 
-        return self.__run_rpc_command(
-            method="call",
-            proxy_object=proxy_object,
-            params=params,
-            wrapper_class=ProxyWrapper,
-        )
+        try:
+            return self.__run_rpc_command(
+                method="call",
+                proxy_object=proxy_object,
+                params=params,
+                wrapper_class=ProxyWrapper,
+            )
+        except RuntimeError:
+            if parent:
+                msg = "Failed to call method %s bound to %s with arguments %s" % (
+                    proxy_object,
+                    parent,
+                    params[1:], # The first item is the UID, which isn't relevant.
+                )
+            else:
+                msg = "Failed to call function %s with arguments %s" % (
+                    proxy_object,
+                    params[1:], # The first item is the UID, which isn't relevant.
+                )
+            raise RuntimeError(msg)
 
     def rpc_eval(self, command):
         """
@@ -274,27 +289,32 @@ class Communicator(object):
         :param str command: The command to execute.
 
         :returns: The data returned by the evaluated command.
+        :raises: RuntimeError
         """
         self.log_network_debug("Sending an eval message using rpc_eval...")
         self.log_network_debug("Command is: %s" % command)
 
-        return self.__run_rpc_command(
-            method="eval",
-            proxy_object=None,
-            params=[command],
-            wrapper_class=ProxyWrapper,
-        )
+        try:
+            return self.__run_rpc_command(
+                method="eval",
+                proxy_object=None,
+                params=[command],
+                wrapper_class=ProxyWrapper,
+            )
+        except RuntimeError:
+            raise RuntimeError("Evaluation failed: %s" % command)
 
     def rpc_get(self, proxy_object, property_name):
         """
         Gets the value of the given property for the given proxy
-        proxy object.
+        object.
 
         :param proxy_object: The proxy object to get the property
                              value from.
         :param str property_name: The name of the property to get.
 
         :returns: The value of the property of the remote object.
+        :raises: AttributeError
         """
         self.log_network_debug("Sending a get message using rpc_get...")
         self.log_network_debug(
@@ -304,13 +324,21 @@ class Communicator(object):
             )
         )
 
-        return self.__run_rpc_command(
-            method="get",
-            proxy_object=proxy_object,
-            params=[property_name],
-            wrapper_class=ProxyWrapper,
-            attach_parent=proxy_object,
-        )
+        try:
+            return self.__run_rpc_command(
+                method="get",
+                proxy_object=proxy_object,
+                params=[property_name],
+                wrapper_class=ProxyWrapper,
+                attach_parent=proxy_object,
+            )
+        except RuntimeError:
+            raise AttributeError(
+                "Failed to get property %s of object %s" % (
+                    property_name,
+                    proxy_object,
+                )
+            )
 
     def rpc_get_index(self, proxy_object, index):
         """
@@ -320,6 +348,7 @@ class Communicator(object):
         :param int index: The index to get the value of.
 
         :returns: The value of the index of the remote object.
+        :raises: IndexError
         """
         self.log_network_debug("Sending a get_index message using rpc_get_index...")
         self.log_network_debug(
@@ -329,12 +358,20 @@ class Communicator(object):
             )
         )
 
-        return self.__run_rpc_command(
-            method="get_index",
-            proxy_object=proxy_object,
-            params=[index],
-            wrapper_class=ProxyWrapper,
-        )
+        try:
+            return self.__run_rpc_command(
+                method="get_index",
+                proxy_object=proxy_object,
+                params=[index],
+                wrapper_class=ProxyWrapper,
+            )
+        except RuntimeError:
+            raise IndexError(
+                "Failed to get index %d of list %s" % (
+                    index,
+                    proxy_object,
+                )
+            )
 
     def rpc_new(self, class_name):
         """
@@ -344,16 +381,20 @@ class Communicator(object):
 
         :returns: A proxy object pointing to the instantiated
                   remote object.
+        :raises: RuntimeError
         """
         self.log_network_debug("Sending a 'new' message using rpc_new...")
         self.log_network_debug("Instantiating class %s" % class_name)
 
-        return self.__run_rpc_command(
-            method="new",
-            proxy_object=None,
-            params=[class_name],
-            wrapper_class=ClassInstanceProxyWrapper,
-        )
+        try:
+            return self.__run_rpc_command(
+                method="new",
+                proxy_object=None,
+                params=[class_name],
+                wrapper_class=ClassInstanceProxyWrapper,
+            )
+        except RuntimeError:
+            raise RuntimeError("Failed to instantiate %s" % class_name)
 
     def rpc_set(self, proxy_object, property_name, value):
         """
@@ -363,6 +404,8 @@ class Communicator(object):
         :param proxy_object: The proxy object to set the property of.
         :param str property_name: The name of the property to set.
         :param value: The value to set the property to.
+
+        :raises: AttributeError
         """
         self.log_network_debug("Sending a set message using rpc_set...")
         self.log_network_debug(
@@ -373,12 +416,21 @@ class Communicator(object):
             )
         )
 
-        return self.__run_rpc_command(
-            method="set",
-            proxy_object=proxy_object,
-            params=[property_name, value],
-            wrapper_class=ProxyWrapper,
-        )
+        try:
+            return self.__run_rpc_command(
+                method="set",
+                proxy_object=proxy_object,
+                params=[property_name, value],
+                wrapper_class=ProxyWrapper,
+            )
+        except RuntimeError:
+            raise AttributeError(
+                "Unable to set property %s to value %s on object %s" % (
+                    property_name,
+                    value,
+                    proxy_object,
+                )
+            )
 
     def wait(self, timeout=0.1, single_loop=False, process_events=True):
         """
@@ -488,17 +540,28 @@ class Communicator(object):
         except KeyError:
             if not self._response_logging_silenced:
                 self.logger.error("RPC command (UID=%s) failed!" % uid)
-                self.logger.error("Failed command payload: %s" % self._COMMAND_REGISTRY[uid])
+                self.logger.debug("Failed command payload: %s" % self._COMMAND_REGISTRY[uid])
                 self.logger.debug("Failure raw response: %s" % response)
                 self.logger.debug("Failure results: %s" % result)
-            raise RuntimeError("RPC command (UID=%s) failed!" % uid)
+            # This is all happening with a deal of asynchronicity, so we
+            # don't want to raise here. We'll record that an error occurred,
+            # but let the listener decide how and when to raise.
+            self._RESULTS[uid] = RuntimeError()
 
         self.log_network_debug(
             "Processed response data: %s" % self._RESULTS[uid]
         )
 
     def _ensure_utf8(self, in_string):
+        """
+        If the given string is unicode, it will be returned as utf-8 encoded
+        string.
 
+        :param str in_string: The input string.
+
+        :returns: A utf-8 encoded string.
+        :rtype: str
+        """
         if isinstance(in_string, unicode):
             in_string = in_string.encode("utf-8")
 
@@ -592,6 +655,12 @@ class Communicator(object):
 
         self._io.emit(self._RPC_EXECUTE_COMMAND, payload)
         results = self._wait_for_response(payload["id"])
+
+        # If we got an error in the response, then we can now raise.
+        # We're in the main thread here, so this will be caught and
+        # handled properly by the rpc methods.
+        if isinstance(results, RuntimeError):
+            raise RuntimeError()
 
         return wrapper_class(results, self, parent=attach_parent)
 

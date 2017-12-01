@@ -193,7 +193,7 @@ class ProxyWrapper(object):
                 while True:
                     yield self[i]
                     i = i + 1
-            except RuntimeError:
+            except IndexError:
                 raise StopIteration
 
     def __getattr__(self, name):
@@ -212,7 +212,7 @@ class ProxyWrapper(object):
         if name in remote_names or self.data.get("instanceof") == "Enumerator":
             return self._communicator.rpc_get(self, name)
         else:
-            raise AttributeError("Attribute %s does not exist!" % name)
+            raise AttributeError("Attribute '%s' does not exist!" % name)
 
     def __getitem__(self, key):
         """
@@ -238,6 +238,18 @@ class ProxyWrapper(object):
             self._communicator.rpc_set(self, name, value)
         else:
             super(ProxyWrapper, self).__setattr__(name, value)
+
+    def __repr__(self):
+        """
+        Stringifies the proxy object.
+        """
+        concrete_name = self._data.get("name", "undefined")
+        concrete_type = self._data.get("instanceof", "undefined")
+        return "<%s for remote object: type=%s, name=%s>" % (
+            self.__class__.__name__,
+            concrete_type,
+            concrete_name,
+        )
 
 
 class ClassInstanceProxyWrapper(ProxyWrapper):
