@@ -241,11 +241,7 @@ class ProxyWrapper(object):
 
     def __repr__(self):
         """
-        Stringifies the proxy object. This attempts to retrieve the name of
-        the concrete object via RPC, and falls back on a default stringify
-        if that fails.
-
-        :rtype: str
+        Stringifies the proxy object.
         """
         concrete_name = self._data.get("name", "undefined")
         concrete_type = self._data.get("instanceof", "undefined")
