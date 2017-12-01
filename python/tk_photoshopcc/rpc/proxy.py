@@ -193,7 +193,7 @@ class ProxyWrapper(object):
                 while True:
                     yield self[i]
                     i = i + 1
-            except RuntimeError:
+            except IndexError:
                 raise StopIteration
 
     def __getattr__(self, name):
@@ -203,7 +203,10 @@ class ProxyWrapper(object):
 
         :param str name: The attribute name to get.
         """
-        remote_names = self.data["properties"] + self.data["methods"].keys()
+        # We always allow name and typename to be called. They will
+        # sometimes come back as "undefined", but for the purposes
+        # of this API that is acceptable.
+        remote_names = self.data["properties"] + self.data["methods"].keys() + ["name", "typename"]
 
         # TODO: Let's not hardcode this to Adobe-like behavior. We should
         # allow for type-specific handlers that can be registered with the
@@ -212,7 +215,7 @@ class ProxyWrapper(object):
         if name in remote_names or self.data.get("instanceof") == "Enumerator":
             return self._communicator.rpc_get(self, name)
         else:
-            raise AttributeError("Attribute %s does not exist!" % name)
+            raise AttributeError("Attribute '%s' does not exist!" % name)
 
     def __getitem__(self, key):
         """
@@ -238,6 +241,22 @@ class ProxyWrapper(object):
             self._communicator.rpc_set(self, name, value)
         else:
             super(ProxyWrapper, self).__setattr__(name, value)
+
+    def __repr__(self):
+        """
+        Stringifies the proxy object. This attempts to retrieve the name of
+        the concrete object via RPC, and falls back on a default stringify
+        if that fails.
+
+        :rtype: str
+        """
+        concrete_name = self._data.get("name", "undefined")
+        concrete_type = self._data.get("instanceof", "undefined")
+        return "<%s for remote object: type=%s, name=%s>" % (
+            self.__class__.__name__,
+            concrete_type,
+            concrete_name,
+        )
 
 
 class ClassInstanceProxyWrapper(ProxyWrapper):

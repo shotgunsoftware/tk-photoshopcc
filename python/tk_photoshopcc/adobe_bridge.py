@@ -185,7 +185,7 @@ class AdobeBridge(Communicator):
         with self.response_logging_silenced():
             try:
                 path = self.app.activeDocument.fullName.fsName
-            except RuntimeError:
+            except AttributeError:
                 path = None
 
             if isinstance(path, unicode):

@@ -131,7 +131,6 @@ be JSON encoded.
     interface.
 */
 function MethodDescriptor(method) {
-    this.name = method.name;
     this.dataType = method.dataType;
     this.defaultValue = method.defaultValue;
     this.description = method.description;
@@ -145,6 +144,7 @@ function MethodDescriptor(method) {
         }
     }
 
+    this.name = method.name;
     register_object(this, method);
 }
 
@@ -156,7 +156,6 @@ in such a way that it can be JSON encoded.
 :param obj: The concrete object to wrap.
 */
 function ObjectWrapper(obj) {
-    this.name = obj.reflect.name;
     this.description = obj.reflect.description;
     this.help = obj.reflect.help;
     this.instanceof = obj.constructor.name;
@@ -173,6 +172,7 @@ function ObjectWrapper(obj) {
         this.methods[method_info.name] = new MethodDescriptor(method_info);
     }
 
+    this.name = obj.name;
     register_object(this, obj);
 }
 
@@ -185,7 +185,6 @@ FunctionWrapper in such a way that it can be JSON encoded.
 :param name: The name of the function as defined in the global scope.
 */
 function FunctionWrapper(func, name) {
-    this.name = name;
     this.description = "";
     this.help = "";
     this.instanceof = "Function";
@@ -200,6 +199,7 @@ function FunctionWrapper(func, name) {
         }
     }
 
+    this.name = name;
     register_object(this, func);
 }
 
