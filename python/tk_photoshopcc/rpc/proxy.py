@@ -203,10 +203,7 @@ class ProxyWrapper(object):
 
         :param str name: The attribute name to get.
         """
-        # We always allow name and typename to be called. They will
-        # sometimes come back as "undefined", but for the purposes
-        # of this API that is acceptable.
-        remote_names = self.data["properties"] + self.data["methods"].keys() + ["name", "typename"]
+        remote_names = self.data["properties"] + self.data["methods"].keys()
 
         # TODO: Let's not hardcode this to Adobe-like behavior. We should
         # allow for type-specific handlers that can be registered with the
