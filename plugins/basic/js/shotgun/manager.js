@@ -26,8 +26,8 @@ sg_manager.Manager = new function() {
 
     // ---- private
 
-    // Half-second interval.
-    const active_document_interval = 500;
+    // One-second interval.
+    const active_document_interval = 1000;
 
     // adobe interface
     const _cs_interface = new CSInterface();
