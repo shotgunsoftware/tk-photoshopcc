@@ -543,6 +543,9 @@ class Communicator(object):
                 self.logger.debug("Failed command payload: %s" % self._COMMAND_REGISTRY[uid])
                 self.logger.debug("Failure raw response: %s" % response)
                 self.logger.debug("Failure results: %s" % result)
+            # This is all happening with a deal of asynchronicity, so we
+            # don't want to raise here. We'll record that an error occurred,
+            # but let the listener decide how and when to raise.
             self._RESULTS[uid] = RuntimeError()
 
         self.log_network_debug(
@@ -653,6 +656,9 @@ class Communicator(object):
         self._io.emit(self._RPC_EXECUTE_COMMAND, payload)
         results = self._wait_for_response(payload["id"])
 
+        # If we got an error in the response, then we can now raise.
+        # We're in the main thread here, so this will be caught and
+        # handled properly by the rpc methods.
         if isinstance(results, RuntimeError):
             raise RuntimeError()
 
