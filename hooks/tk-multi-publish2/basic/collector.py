@@ -81,11 +81,11 @@ class PhotoshopCCSceneCollector(HookBaseClass):
 
         publisher = self.parent
         engine = publisher.engine
+        document = engine.adobe.get_active_document()
 
-        # get the active document name
-        try:
-            active_doc_name = engine.adobe.app.activeDocument.name
-        except RuntimeError:
+        if document:
+            active_doc_name = document.name
+        else:
             engine.logger.debug("No active document found.")
             active_doc_name = None
 
@@ -105,7 +105,6 @@ class PhotoshopCCSceneCollector(HookBaseClass):
         # remove this.
         if work_template:
             # same logic as the loop below but only processing the active doc
-            document = engine.adobe.app.activeDocument
             if not document:
                 return
             document_item = parent_item.create_item(
@@ -129,7 +128,7 @@ class PhotoshopCCSceneCollector(HookBaseClass):
         # remember the current document. we need to switch documents while
         # collecting in order to get the proper context associated with each
         # item created.
-        current_document = engine.adobe.app.activeDocument
+        current_document = engine.adobe.get_active_document()
 
         # iterate over all open documents and add them as publish items
         for document in engine.adobe.app.documents:
