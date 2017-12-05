@@ -172,6 +172,20 @@ class AdobeBridge(Communicator):
         """
         super(AdobeBridge, self).ping()
 
+    def get_active_document(self):
+        """
+        Gets the active document in the current session.
+
+        :returns: The active document, or None.
+        """
+        with self.response_logging_silenced():
+            try:
+                doc = self.app.activeDocument
+            except Exception:
+                doc = None
+
+        return doc
+
     def get_active_document_path(self):
         """
         Gets the path to the currently-active document. This will do so
@@ -182,10 +196,15 @@ class AdobeBridge(Communicator):
         :returns: The active document's file path on disk as a str, or
                   None if the document has never been saved.
         """
+        doc = self.get_active_document()
+
+        if not doc:
+            return None
+
         with self.response_logging_silenced():
             try:
-                path = self.app.activeDocument.fullName.fsName
-            except AttributeError:
+                path = doc.fullName.fsName
+            except Exception:
                 path = None
 
             if isinstance(path, unicode):
