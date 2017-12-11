@@ -230,8 +230,9 @@ class PhotoshopUploadVersionPlugin(HookBaseClass):
                 # restore the active document
                 engine.adobe.app.activeDocument = previous_active_document
 
-        # use the original path for the version display name
-        publish_name = publisher.util.get_publish_name(path)
+        # use the path's filename as the publish name
+        path_components = publisher.util.get_file_path_components(path)
+        publish_name = path_components["filename"]
 
         # populate the version data to send to SG
         self.logger.info("Creating Version...")
