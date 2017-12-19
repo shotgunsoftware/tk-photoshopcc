@@ -197,7 +197,7 @@ def _document_path(document):
 
     try:
         path = document.fullName.fsName
-    except RuntimeError:
+    except Exception:
         path = None
 
     return path
