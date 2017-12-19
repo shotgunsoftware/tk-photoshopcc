@@ -285,7 +285,9 @@ class PhotoshopUploadVersionPlugin(HookBaseClass):
         )
         self.logger.info("Upload complete!")
 
+        # thumbnail to upload is the one stored in item
         thumb = item.get_thumbnail_as_path()
+        # if thumbnail not set, consider the one created from file path
         if not thumb:
            thumb = upload_path
 
