@@ -238,7 +238,7 @@ class PhotoshopStartVersionControlPlugin(HookBaseClass):
         with engine.context_changes_disabled():
 
             # remember the active document so that we can restore it.
-            previous_active_document = engine.adobe.app.activeDocument
+            previous_active_document = engine.adobe.get_active_document()
 
             # make the document being processed the active document
             engine.adobe.app.activeDocument = document
@@ -352,7 +352,7 @@ def _document_path(document):
 
     try:
         path = document.fullName.fsName
-    except RuntimeError:
+    except Exception:
         path = None
 
     return path

@@ -26,9 +26,6 @@ sg_manager.Manager = new function() {
 
     // ---- private
 
-    // Half-second interval.
-    const active_document_interval = 500;
-
     // adobe interface
     const _cs_interface = new CSInterface();
 
@@ -181,12 +178,17 @@ sg_manager.Manager = new function() {
             host_capabilities.SUPPORT_HTML_EXTENSIONS;
     };
 
-    const _active_document_check = function() {
+    const _active_document_check = function(event) {
         _cs_interface.evalScript(
             // NOTE: Hopefully this is the same across all Adobe CC
             // products. If it isn't, then we'll likely want to make
             // a manager method that abstracts it away and returns
             // the active document after checking which DCC we're in.
+            //
+            // UPDATE: It's not the same, at least not for AE. In that
+            // case you look up the current project and get the path
+            // from that. This is going to need to be abstracted
+            // somehow when we break this out of being PS only.
             "app.activeDocument.fullName.fsName",
             function(result) {
                 // If the above command fails, then it's because the
@@ -537,7 +539,15 @@ sg_manager.Manager = new function() {
         );
 
         // Keep an eye on the active document.
-        setInterval(_active_document_check, active_document_interval);
+        //
+        // NOTE: A useful answer from an Adobe employee in the below:
+        // https://forums.adobe.com/thread/1380138#
+        //
+        sg_logging.debug("Registering documentAfterActivate event...");
+        _cs_interface.addEventListener(
+            'documentAfterActivate',
+            _active_document_check
+        );
 
         sg_logging.debug("Event listeners created.");
     };
