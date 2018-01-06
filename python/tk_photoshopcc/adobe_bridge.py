@@ -207,9 +207,6 @@ class AdobeBridge(Communicator):
             except Exception:
                 path = None
 
-            if isinstance(path, unicode):
-                path = path.encode("utf-8")
-
         return path
 
     def log_message(self, level, msg):
