@@ -9,6 +9,7 @@
 # not expressly granted therein are reserved by Shotgun Software Inc.
 
 import os
+import sys
 import sgtk
 
 HookBaseClass = sgtk.get_hook_baseclass()
@@ -390,5 +391,16 @@ def _document_path(document):
         path = document.fullName.fsName
     except Exception:
         path = None
+
+    # The RPC API is always going to return a utf-8 encoded string
+    # here. This is fine (and correct) in almost all cases, but there
+    # are some situations on Windows where the encoded path, if it
+    # includes non-ascii characters, will test as false when checking
+    # existence. In that case, we're forced to decode the string to
+    # unicode.
+    #
+    # Note: This does not appear to be an issue on OS X.
+    if path and sys.platform.startswith("win") and not os.path.exists(path):
+        path = path.decode("utf-8")
 
     return path
