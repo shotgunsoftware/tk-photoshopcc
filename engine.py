@@ -505,8 +505,51 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
             # make the document being processed the active document
             self.adobe.app.activeDocument = document
 
-            # TODO need to use appropriate save options here (jpg, tiff, etc)
-            document.saveAs(self.adobe.File(path))
+            ## http://wwwimages.adobe.com/www.adobe.com/content/dam/acom/en/devnet/photoshop/pdfs/photoshop-cc-javascript-ref-2015.pdf
+            (_, ext) = os.path.splitext(path)
+           
+            valid_extensions = {
+                                 ".bmp" : self.adobe.BMPSaveOptions, 
+                                 # DCS1_saveOptions and DCS2_SaveOptions skipped
+                                 ".eps" : self.adobe.EPSSaveOptions,
+                                 ".gif" : self.adobe.GIFSaveOptions,
+
+                                 ".jpg" : self.adobe.JPEGSaveOptions,
+                                 ".jpeg" : self.adobe.JPEGSaveOptions,
+
+                                 ".pdf" : self.adobe.PDFSaveOptions,
+                                 ".psd" : self.adobe.PhotoshopSaveOptions,
+
+                                 ".pict" : self.adobe.PICTFileSaveOptions,
+                                 ".pct" : self.adobe.PICTFileSaveOptions,
+                                 ".pic" : self.adobe.PICTFileSaveOptions,
+                                 # PICTResourceSaveOptions skipped
+
+                                 ".pixar" : self.adobe.PixarSaveOptions,
+                                 ".png" : self.adobe.PNGSaveOptions,
+                                 ".raw"  : self.adobe.RawSaveOptions,
+
+                                 ".sgi"  : self.adobe.SGIRGBSaveOptions, 
+                                 ".rgb"  : self.adobe.SGIRGBSaveOptions, 
+                                 ".rgba"  : self.adobe.SGIRGBSaveOptions,
+                                 ".bw"  : self.adobe.SGIRGBSaveOptions,
+                                 ".int" : self.adobe.SGIRGBSaveOptions,
+                                 ".inta" : self.adobe.SGIRGBSaveOptions,
+
+                                 ".tga" : self.adobe.TargaSaveOptions,
+                                 ".targa" : self.adobe.TargaSaveOptions,
+
+                                 ".tif" : self.adobe.TiffSaveOptions,
+                                 ".tiff" : self.adobe.TiffSaveOptions
+ 
+                                 }
+           
+            if ext.lower() not in valid_extensions:
+                 save_options = self.adobe.PhotoshopSaveOptions
+            else:
+                 save_options = valid_extensions[ext.lower()]
+           
+            document.saveAs(self.adobe.File(path),save_options)
 
             # restore the active document
             self.adobe.app.activeDocument = previous_active_document
