@@ -504,10 +504,10 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
 
             # make the document being processed the active document
             self.adobe.app.activeDocument = document
-
-            ## http://wwwimages.adobe.com/www.adobe.com/content/dam/acom/en/devnet/photoshop/pdfs/photoshop-cc-javascript-ref-2015.pdf
+        
             (_, ext) = os.path.splitext(path)
-           
+
+            # valid file extensions and respective save option in photoshop 
             valid_extensions = {
                                  ".bmp" : self.adobe.BMPSaveOptions, 
                                  # DCS1_saveOptions and DCS2_SaveOptions skipped
@@ -544,6 +544,7 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
  
                                  }
            
+            # if extension not in list, save file as .psd
             if ext.lower() not in valid_extensions:
                  save_options = self.adobe.PhotoshopSaveOptions
             else:
