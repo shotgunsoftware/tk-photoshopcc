@@ -506,51 +506,46 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
             self.adobe.app.activeDocument = document
         
             (_, ext) = os.path.splitext(path)
+            ext = ext.lower()
 
-            # valid file extensions and respective save option in photoshop 
-            valid_extensions = {
-                                 ".bmp" : self.adobe.BMPSaveOptions, 
-                                 # DCS1_saveOptions and DCS2_SaveOptions skipped
-                                 ".eps" : self.adobe.EPSSaveOptions,
-                                 ".gif" : self.adobe.GIFSaveOptions,
-
-                                 ".jpg" : self.adobe.JPEGSaveOptions,
-                                 ".jpeg" : self.adobe.JPEGSaveOptions,
-
-                                 ".pdf" : self.adobe.PDFSaveOptions,
-                                 ".psd" : self.adobe.PhotoshopSaveOptions,
-
-                                 ".pict" : self.adobe.PICTFileSaveOptions,
-                                 ".pct" : self.adobe.PICTFileSaveOptions,
-                                 ".pic" : self.adobe.PICTFileSaveOptions,
-                                 # PICTResourceSaveOptions skipped
-
-                                 ".pixar" : self.adobe.PixarSaveOptions,
-                                 ".png" : self.adobe.PNGSaveOptions,
-                                 ".raw"  : self.adobe.RawSaveOptions,
-
-                                 ".sgi"  : self.adobe.SGIRGBSaveOptions, 
-                                 ".rgb"  : self.adobe.SGIRGBSaveOptions, 
-                                 ".rgba"  : self.adobe.SGIRGBSaveOptions,
-                                 ".bw"  : self.adobe.SGIRGBSaveOptions,
-                                 ".int" : self.adobe.SGIRGBSaveOptions,
-                                 ".inta" : self.adobe.SGIRGBSaveOptions,
-
-                                 ".tga" : self.adobe.TargaSaveOptions,
-                                 ".targa" : self.adobe.TargaSaveOptions,
-
-                                 ".tif" : self.adobe.TiffSaveOptions,
-                                 ".tiff" : self.adobe.TiffSaveOptions
- 
-                                 }
-           
-            # if extension not in list, save file as .psd
-            if ext.lower() not in valid_extensions:
-                 save_options = self.adobe.PhotoshopSaveOptions
+            # these extensions are supported by photoshop
+            # PICTResourceSaveOptions is skipped for now, need a way to differentiate PICT
+            # files from PICT resource files
+            # DCS1_SaveOptions is not used for ".dcs" files, DCS2_SaveOptions is used intead
+            if ext ==".bmp":
+                save_options = self.adobe.BMPSaveOptions
+            elif ext ==".dcs":
+                save_options = self.adobe.DCS2_SaveOptions
+            elif ext ==".eps":
+                save_options = self.adobe.EPSSaveOptions
+            elif ext ==".gif":
+                save_options = self.adobe.GIFSaveOptions
+            elif ext in [".jpg", ".jpeg"]:
+                save_options = self.adobe.JPEGSaveOptions;
+                save_options.quality = 12
+            elif ext ==".pdf":
+                save_options = self.adobe.PDFSaveOptions
+            elif ext in [".psd", ".psb"]:
+                save_options = self.adobe.PhotoshopSaveOptions
+            elif ext in [".pict", ".pct", ".pic"]:
+                save_options = self.adobe.PICTFileSaveOptions
+            elif ext ==".pixar":
+                save_options = self.adobe.PixarSaveOptions
+            elif ext ==".png":
+                save_options = self.adobe.PNGSaveOptions
+            elif ext ==".raw":
+                save_options = self.adobe.RawSaveOptions
+            elif ext in [".sgi", ".rgb", ".rgba", ".bw", ".int", ".inta"]:
+                save_options = self.adobe.SGIRGBSaveOptions
+            elif ext in [".tga", ".targa"]:
+                save_options = self.adobe.TargaSaveOptions
+            elif ext in [".tif", ".tiff"]:
+                save_options = self.adobe.TiffSaveOptions
             else:
-                 save_options = valid_extensions[ext.lower()]
+                # default value
+                save_options = self.adobe.PhotoshopSaveOptions
            
-            document.saveAs(self.adobe.File(path),save_options)
+            document.saveAs(self.adobe.File(path), save_options)
 
             # restore the active document
             self.adobe.app.activeDocument = previous_active_document
