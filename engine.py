@@ -511,7 +511,7 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
             # these extensions are supported by photoshop
             # PICTResourceSaveOptions is skipped for now, need a way to differentiate PICT
             # files from PICT resource files
-            # DCS1_SaveOptions is not used for ".dcs" files, DCS2_SaveOptions is used intead
+            # DCS1_SaveOptions is not used for ".dcs" files, DCS2_SaveOptions is used instead
             if ext ==".bmp":
                 save_options = self.adobe.BMPSaveOptions
             elif ext ==".dcs":
