@@ -508,26 +508,27 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
             (_, ext) = os.path.splitext(path)
             ext = ext.lower()
 
-            # these extensions are supported by photoshop
-            # PICTResourceSaveOptions is skipped for now, need a way to differentiate PICT
-            # files from PICT resource files
-            # DCS1_SaveOptions is not used for ".dcs" files, DCS2_SaveOptions is used instead
+            # these extensions are supported by photoshop      
             if ext ==".bmp":
                 save_options = self.adobe.BMPSaveOptions
             elif ext ==".dcs":
+                # DCS1_SaveOptions is not used for ".dcs" files, DCS2_SaveOptions is used instead
                 save_options = self.adobe.DCS2_SaveOptions
             elif ext ==".eps":
                 save_options = self.adobe.EPSSaveOptions
             elif ext ==".gif":
                 save_options = self.adobe.GIFSaveOptions
             elif ext in [".jpg", ".jpeg"]:
-                save_options = self.adobe.JPEGSaveOptions;
+                save_options = self.adobe.JPEGSaveOptions
+                # the default quality for jpg is 3, so we set it to the maximum: 12
                 save_options.quality = 12
             elif ext ==".pdf":
                 save_options = self.adobe.PDFSaveOptions
             elif ext in [".psd", ".psb"]:
                 save_options = self.adobe.PhotoshopSaveOptions
             elif ext in [".pict", ".pct", ".pic"]:
+                # PICTResourceSaveOptions is skipped for now, need a way to differentiate PICT
+                # files from PICT resource files
                 save_options = self.adobe.PICTFileSaveOptions
             elif ext ==".pixar":
                 save_options = self.adobe.PixarSaveOptions
