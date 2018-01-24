@@ -204,18 +204,24 @@ class PhotoshopCCSceneCollector(HookBaseClass):
                 # remember current document
                 current_document_cache = engine.adobe.get_active_document()
                 engine.adobe.app.activeDocument = document
-                # craete a temporary file to save document as .jpg
+
+                # create a temporary file to save document as .jpg
                 pathTemp = tempfile.NamedTemporaryFile(
                            suffix=".jpg",
                            prefix="sgtk_thumb_temp",
-                           delete=True
+                           delete=False
                            ).name
+
                 # save photoshop document as jpg (jpeg is supported by QPixmap).
                 # the "as copy" flag is set to true so that the temporary file won't
                 # be considererd officially as the saved version of the document to publish
                 # or to be edited by photoshop
                 document.saveAs(engine.adobe.File(pathTemp),engine.adobe.JPEGSaveOptions,True)
                 document_item.set_thumbnail_from_path(pathTemp)
+
+                # we do not need the temporary file anymore, so delete it
+                os.remove(pathTemp)
+
                 # restore active docuemnt
                 engine.adobe.app.activeDocument = current_document_cache
 
