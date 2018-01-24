@@ -504,9 +504,49 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
 
             # make the document being processed the active document
             self.adobe.app.activeDocument = document
+        
+            (_, ext) = os.path.splitext(path)
+            ext = ext.lower()
 
-            # TODO need to use appropriate save options here (jpg, tiff, etc)
-            document.saveAs(self.adobe.File(path))
+            # these extensions are supported by photoshop      
+            if ext ==".bmp":
+                save_options = self.adobe.BMPSaveOptions
+            elif ext ==".dcs":
+                # DCS1_SaveOptions is not used for ".dcs" files, DCS2_SaveOptions is used instead
+                save_options = self.adobe.DCS2_SaveOptions
+            elif ext ==".eps":
+                save_options = self.adobe.EPSSaveOptions
+            elif ext ==".gif":
+                save_options = self.adobe.GIFSaveOptions
+            elif ext in [".jpg", ".jpeg"]:
+                save_options = self.adobe.JPEGSaveOptions
+                # the default quality for jpg is 3, so we set it to the maximum: 12
+                save_options.quality = 12
+            elif ext ==".pdf":
+                save_options = self.adobe.PDFSaveOptions
+            elif ext in [".psd", ".psb"]:
+                save_options = self.adobe.PhotoshopSaveOptions
+            elif ext in [".pict", ".pct", ".pic"]:
+                # PICTResourceSaveOptions is skipped for now, need a way to differentiate PICT
+                # files from PICT resource files
+                save_options = self.adobe.PICTFileSaveOptions
+            elif ext ==".pixar":
+                save_options = self.adobe.PixarSaveOptions
+            elif ext ==".png":
+                save_options = self.adobe.PNGSaveOptions
+            elif ext ==".raw":
+                save_options = self.adobe.RawSaveOptions
+            elif ext in [".sgi", ".rgb", ".rgba", ".bw", ".int", ".inta"]:
+                save_options = self.adobe.SGIRGBSaveOptions
+            elif ext in [".tga", ".targa"]:
+                save_options = self.adobe.TargaSaveOptions
+            elif ext in [".tif", ".tiff"]:
+                save_options = self.adobe.TiffSaveOptions
+            else:
+                # default value
+                save_options = self.adobe.PhotoshopSaveOptions
+           
+            document.saveAs(self.adobe.File(path), save_options)
 
             # restore the active document
             self.adobe.app.activeDocument = previous_active_document
