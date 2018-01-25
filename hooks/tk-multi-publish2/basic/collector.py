@@ -120,7 +120,9 @@ class PhotoshopCCSceneCollector(HookBaseClass):
             document_item.properties["document"] = document
 
             path = _document_path(document) 
-            if path: 
+            if path:
+                # try to set the thumbnail for display. won't display anything
+                # for psd/psb, but others should work.
                 document_item.set_thumbnail_from_path(path) 
 
             document_item.properties["work_template"] = work_template
@@ -173,6 +175,8 @@ class PhotoshopCCSceneCollector(HookBaseClass):
 
             path = _document_path(document) 
             if path: 
+                # try to set the thumbnail for display. won't display anything
+                # for psd/psb, but others should work.
                 document_item.set_thumbnail_from_path(path) 
 
             # store the template on the item for use by publish plugins. we
