@@ -386,21 +386,11 @@ def _document_path(document):
     Returns the path on disk to the supplied document. May be ``None`` if the
     document has not been saved.
     """
+    engine = sgtk.platform.current_engine()
+    return engine.adobe.get_document_path(document)
 
-    try:
-        path = document.fullName.fsName
-    except Exception:
-        path = None
 
-    # The RPC API is always going to return a utf-8 encoded string
-    # here. This is fine (and correct) in almost all cases, but there
-    # are some situations on Windows where the encoded path, if it
-    # includes non-ascii characters, will test as false when checking
-    # existence. In that case, we're forced to decode the string to
-    # unicode.
-    #
-    # Note: This does not appear to be an issue on OS X.
-    if path and sys.platform.startswith("win") and not os.path.exists(path):
-        path = path.decode("utf-8")
 
-    return path
+
+
+
