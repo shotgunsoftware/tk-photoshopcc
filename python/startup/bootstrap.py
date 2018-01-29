@@ -198,10 +198,9 @@ def _ensure_extension_up_to_date():
     )
 
     if not os.path.exists(installed_version_file_path):
-        raise Exception(
-            "Could not find installed version file '%s'" %
-            (installed_version_file_path,)
-        )
+        logger.debug("Could not find installed version file '%s', reinstalling" % (installed_version_file_path,))
+        _install_extension(bundled_ext_path, installed_ext_dir)
+        return
 
     # the version of the installed extension
     installed_version = None
@@ -212,8 +211,9 @@ def _ensure_extension_up_to_date():
         installed_version = installed_version_file.read().strip()
 
     if installed_version is None:
-        raise Exception(
-            "Could not determine version for the installed extension.")
+        logger.debug("Could not determine version for the installed extension. Reinstalling")
+        _install_extension(bundled_ext_path, installed_ext_dir)
+        return
 
     logger.debug("Installed extension's version is: %s" % (installed_version,))
 
@@ -240,34 +240,9 @@ def _ensure_extension_up_to_date():
             "build! Updating..."
         )
 
-    # move the installed extension to the backup directory
-    backup_ext_dir = tempfile.mkdtemp()
-    logger.debug("Backing up the installed extension to: %s" % (backup_ext_dir,))
-    try:
-        backup_folder(installed_ext_dir, backup_ext_dir)
-    except Exception:
-        shutil.rmtree(backup_ext_dir)
-        raise Exception("Unable to create backup during extension update.")
-
-    # now remove the installed extension
-    logger.debug("Removing the installed extension directory...")
-    try:
-        shutil.rmtree(installed_ext_dir)
-    except Exception:
-        # try to restore the backup
-        move_folder(backup_ext_dir, installed_ext_dir)
-        raise Exception("Unable to remove the old extension during update.")
-
     # install the bundled .zxp file
     _install_extension(bundled_ext_path, installed_ext_dir)
 
-    # if we're here, the install was successful. remove the backup
-    try:
-        logger.debug("Install success. Removing the backed up extension.")
-        shutil.rmtree(backup_ext_dir)
-    except Exception:
-        # can't remove temp dir. no biggie.
-        pass
 
 def _install_extension(ext_path, dest_dir):
     """
@@ -278,12 +253,32 @@ def _install_extension(ext_path, dest_dir):
     :param dest_dir: The CEP extension's destination
     :return:
     """
+   
+    # move the installed extension to the backup directory
+    backup_ext_dir = tempfile.mkdtemp()
+    logger.debug("Backing up the installed extension to: %s" % (backup_ext_dir,))
+    try:
+        backup_folder(dest_dir, backup_ext_dir)
+    except Exception:
+        shutil.rmtree(backup_ext_dir)
+        raise Exception("Unable to create backup during extension update.")
+
+    # now remove the installed extension
+    logger.debug("Removing the installed extension directory...")
+    try:
+        shutil.rmtree(dest_dir)
+    except Exception:
+        # try to restore the backup
+        move_folder(backup_ext_dir, dest_dir)
+        raise Exception("Unable to remove the old extension during update.")
 
     logger.debug(
         "Installing bundled extension: '%s' to '%s'" % (ext_path, dest_dir))
 
     # make sure the bundled extension exists
     if not os.path.exists(ext_path):
+        # retrieve backup before aborting install
+        move_folder(backup_ext_dir, dest_dir)
         raise Exception(
             "Expected CEP extension does not exist. Looking for %s" %
             (ext_path,)
@@ -292,4 +287,12 @@ def _install_extension(ext_path, dest_dir):
     # extract the .zxp file into the destination dir
     with contextlib.closing(zipfile.ZipFile(ext_path, 'r')) as ext_zxp:
         ext_zxp.extractall(dest_dir)
+
+    # if we're here, the install was successful. remove the backup
+    try:
+        logger.debug("Install success. Removing the backed up extension.")
+        shutil.rmtree(backup_ext_dir)
+    except Exception:
+        # can't remove temp dir. no biggie.
+        pass
 
