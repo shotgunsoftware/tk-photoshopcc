@@ -198,7 +198,10 @@ def _ensure_extension_up_to_date():
     )
 
     if not os.path.exists(installed_version_file_path):
-        logger.debug("Could not find installed version file '%s', reinstalling" % (installed_version_file_path,))
+        logger.debug(
+           "Could not find installed version file '%s'. Reinstalling" %
+           (installed_version_file_path,)
+        )
         _install_extension(bundled_ext_path, installed_ext_dir)
         return
 
