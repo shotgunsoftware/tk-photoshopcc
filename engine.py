@@ -507,9 +507,13 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
         
             (_, ext) = os.path.splitext(path)
             ext = ext.lower()
-
-            # these extensions are supported by photoshop      
-            if ext ==".bmp":
+          
+            if ext == ".psb":
+                self.adobe._save_as_psb(self.adobe.File(path))
+                # restore the active document
+                self.adobe.app.activeDocument = previous_active_document
+                return     
+            elif ext ==".bmp":
                 save_options = self.adobe.BMPSaveOptions
             elif ext ==".dcs":
                 # DCS1_SaveOptions is not used for ".dcs" files, DCS2_SaveOptions is used instead
@@ -524,7 +528,7 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
                 save_options.quality = 12
             elif ext ==".pdf":
                 save_options = self.adobe.PDFSaveOptions
-            elif ext in [".psd", ".psb"]:
+            elif ext == ".psd":
                 save_options = self.adobe.PhotoshopSaveOptions
             elif ext in [".pict", ".pct", ".pic"]:
                 # PICTResourceSaveOptions is skipped for now, need a way to differentiate PICT
