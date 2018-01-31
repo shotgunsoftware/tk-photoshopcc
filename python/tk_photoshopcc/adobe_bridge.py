@@ -303,9 +303,45 @@ class AdobeBridge(Communicator):
         (root, ext) = os.path.splitext(file_path)
 
         if ext.lower() == ".psb":
-            self._save_as_psb(file_path)
+            self.save_as_psb(file_path)
         else:
             doc.saveAs(self.File(file_path))
+
+    def save_as_psb(self, file_path):
+        """
+        Saves a PSB file.
+
+        :param str file_path: The PSB file path to save to.
+        """
+        # script listener generates this sequence of statements.
+        # var idsave = charIDToTypeID( "save" );
+        #     var desc29 = new ActionDescriptor();
+        #     var idAs = charIDToTypeID( "As  " );
+        #         var desc30 = new ActionDescriptor();
+        #         var idmaximizeCompatibility = stringIDToTypeID( "maximizeCompatibility" );
+        #         desc30.putBoolean( idmaximizeCompatibility, true );
+        #     var idPhteight = charIDToTypeID( "Pht8" );
+        #     desc29.putObject( idAs, idPhteight, desc30 );
+        #     var idIn = charIDToTypeID( "In  " );
+        #     desc29.putPath( idIn, new File( "/Users/boismej/Downloads/Untitled-1 copy.psd" ) );
+        # ... // Omitting parameters that don't concern us. We'll use the defaults for these.
+        # executeAction( idsave, desc29, DialogModes.NO );
+        #
+        # Note: There are instances where PSBs are saved using Pht3 instead. Haven't been able to
+        # isolate why. Pht3 stands for photoshop35Format according to documentation, but PSBs were
+        # introduced in CS1 (aka 8.0). It might be that this value is ignored by Photoshop when the
+        # extension is PSB? However, it's not clear why saving an empty canvas sometimes saves with
+        # pht8 and sometimes pht3.
+        desc_29 = self.ActionDescriptor()
+        id_save = self.charIDToTypeID("save")
+        id_as = self.charIDToTypeID("As  ")
+        desc_30 = self.ActionDescriptor()
+        id_max_compatibility = self.stringIDToTypeID("maximizeCompatibility")
+        id_pht_8 = self.charIDToTypeID("Pht8")
+        desc_29.putObject(id_as, id_pht_8, desc_30)
+        id_in = self.charIDToTypeID("In  ")
+        desc_29.putPath(id_in, self.File(file_path))
+        self.executeAction(id_save, desc_29, self.DialogModes.NO)
 
     ##########################################################################################
     # internal methods
@@ -368,42 +404,6 @@ class AdobeBridge(Communicator):
         """
         self.logger.debug("Emitting state_requested signal.")
         self.state_requested.emit()
-
-    def _save_as_psb(self, file_path):
-        """
-        Saves a PSB file.
-
-        :param str file_path: The PSB file path to save to.
-        """
-        # script listener generates this sequence of statements.
-        # var idsave = charIDToTypeID( "save" );
-        #     var desc29 = new ActionDescriptor();
-        #     var idAs = charIDToTypeID( "As  " );
-        #         var desc30 = new ActionDescriptor();
-        #         var idmaximizeCompatibility = stringIDToTypeID( "maximizeCompatibility" );
-        #         desc30.putBoolean( idmaximizeCompatibility, true );
-        #     var idPhteight = charIDToTypeID( "Pht8" );
-        #     desc29.putObject( idAs, idPhteight, desc30 );
-        #     var idIn = charIDToTypeID( "In  " );
-        #     desc29.putPath( idIn, new File( "/Users/boismej/Downloads/Untitled-1 copy.psd" ) );
-        # ... // Omitting parameters that don't concern us. We'll use the defaults for these.
-        # executeAction( idsave, desc29, DialogModes.NO );
-        #
-        # Note: There are instances where PSBs are saved using Pht3 instead. Haven't been able to
-        # isolate why. Pht3 stands for photoshop35Format according to documentation, but PSBs were
-        # introduced in CS1 (aka 8.0). It might be that this value is ignored by Photoshop when the
-        # extension is PSB? However, it's not clear why saving an empty canvas sometimes saves with
-        # pht8 and sometimes pht3.
-        desc_29 = self.ActionDescriptor()
-        id_save = self.charIDToTypeID("save")
-        id_as = self.charIDToTypeID("As  ")
-        desc_30 = self.ActionDescriptor()
-        id_max_compatibility = self.stringIDToTypeID("maximizeCompatibility")
-        id_pht_8 = self.charIDToTypeID("Pht8")
-        desc_29.putObject(id_as, id_pht_8, desc_30)
-        id_in = self.charIDToTypeID("In  ")
-        desc_29.putPath(id_in, self.File(file_path))
-        self.executeAction(id_save, desc_29, self.DialogModes.NO)
 
     @timeout(SHOTGUN_ADOBE_RESPONSE_TIMEOUT, "Timed out waiting for response.")
     def _wait_for_response(self, uid):

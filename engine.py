@@ -508,7 +508,15 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
             (_, ext) = os.path.splitext(path)
             ext = ext.lower()
 
-            # these extensions are supported by photoshop      
+            # first, check if file is .psb since it is processed using the adobe bridge
+            if ext == ".psb":
+                self.adobe.save_as_psb(path)
+                # restore the active document
+                self.adobe.app.activeDocument = previous_active_document
+                return     
+            
+            # the following extensions follow the same pattern of defining options
+            # that will be supplied to the document's saveAs method
             if ext ==".bmp":
                 save_options = self.adobe.BMPSaveOptions
             elif ext ==".dcs":
@@ -524,8 +532,6 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
                 save_options.quality = 12
             elif ext ==".pdf":
                 save_options = self.adobe.PDFSaveOptions
-            elif ext in [".psd", ".psb"]:
-                save_options = self.adobe.PhotoshopSaveOptions
             elif ext in [".pict", ".pct", ".pic"]:
                 # PICTResourceSaveOptions is skipped for now, need a way to differentiate PICT
                 # files from PICT resource files
@@ -534,6 +540,8 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
                 save_options = self.adobe.PixarSaveOptions
             elif ext ==".png":
                 save_options = self.adobe.PNGSaveOptions
+            elif ext == ".psd":
+                save_options = self.adobe.PhotoshopSaveOptions
             elif ext ==".raw":
                 save_options = self.adobe.RawSaveOptions
             elif ext in [".sgi", ".rgb", ".rgba", ".bw", ".int", ".inta"]:
