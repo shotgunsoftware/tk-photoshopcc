@@ -104,12 +104,16 @@ sg_socket_io.SocketManager = new function() {
     };
 
     /*
-    Replaces Windows-style backslash paths with forward slashes.
+    Replaces Windows-style backslash paths with forward slashes. Also
+    replaces any %24 strings found with $, which is a problem that
+    arises with system paths coming from the CS interface on Windows
+    that contain $ for things like roaming user profiles.
 
     :param file_path: The file path string to sanitize.
     */
     var sanitize_path = function(file_path) {
-        return file_path.replace(RegExp('\\\\', 'g'), '/');
+        var file_path = file_path.replace(RegExp('\\\\', 'g'), '/');
+        return file_path.replace("%24", "$");
     };
 
     /*

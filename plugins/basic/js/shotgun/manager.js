@@ -228,8 +228,15 @@ sg_manager.Manager = new function() {
         const app_id = _cs_interface.hostEnvironment.appId;
         const engine_name = sg_constants.product_info[app_id].tk_engine_name;
 
-        // the path to this extension
-        const ext_dir = _cs_interface.getSystemPath(SystemPath.EXTENSION);
+        // The path to this extension. We're also replacing any encoded
+        // $ characters that might be returned with a literal $. On
+        // Windows we're seeing the CS interface returning system paths
+        // without having $ decoded. This becomes a problem when there's
+        // a $ in the path, like when using roaming user profiles on
+        // a Windows network.
+        const ext_dir = _cs_interface.getSystemPath(
+            SystemPath.EXTENSION
+        ).replace("%24", "$");
 
         // path to the python folder within the extension
         const plugin_python_path = path.join(ext_dir, "python");
