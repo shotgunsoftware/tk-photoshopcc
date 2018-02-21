@@ -271,6 +271,28 @@ sg_socket_io.SocketManager = new function() {
             };
 
             /*
+
+            */
+            this.is_equal = function(params, next) {
+                var left = JSON.parse(params.shift());
+                var right = JSON.parse(params.shift());
+
+                var left_value = left["value"];
+                var right_value = right["value"];
+
+                if (left["is_wrapped"] === true) {
+                    left_value = "__OBJECT_REGISTRY[" + left["uid"] + "]";
+                }
+                if (right["is_wrapped"] === true) {
+                    right_value = "__OBJECT_REGISTRY[" + right["uid"] + "]";
+                }
+
+                var cmd = left_value + " == " + right_value;
+                log_network_debug(cmd);
+                this.eval([cmd], next);
+            };
+
+            /*
             Sets the value of the given property on the given object.
 
             :param params: The list of parameters associated with the rpc call.

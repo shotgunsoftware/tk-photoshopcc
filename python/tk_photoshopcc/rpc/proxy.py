@@ -182,6 +182,35 @@ class ProxyWrapper(object):
             parent=self._parent,
         )
 
+    def __eq__(self, other):
+        """
+        Custom equality comparison behavior. This will compare the proxy object
+        to the other object in the remote process. This is not a comparison of
+        the given Python objects, but rather a equality check of the
+        represented objects on the other side of the RPC connection.
+
+        :param other: The value to compare against.
+
+        :rtype: bool
+        """
+        try:
+            return self._communicator.rpc_is_equal(self, other)
+        except ValueError:
+            return False
+
+    def __ne__(self, other):
+        """
+        Custom inequality comparison behavior. This will compare the proxy object
+        to the other object in the remote process. This is not a comparison of
+        the given Python objects, but rather an inequality check of the
+        represented objects on the other side of the RPC connection.
+
+        :param other: The value to compare against.
+
+        :rtype: bool
+        """
+        return not self.__eq__(other)
+
     def __iter__(self):
         """
         Custom iteration behavior. This will loop up from index 0 until a failed

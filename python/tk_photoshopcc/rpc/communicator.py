@@ -282,6 +282,47 @@ class Communicator(object):
                 )
             raise RuntimeError(msg)
 
+    def rpc_is_equal(self, left, right):
+        """
+
+        """
+        self.log_network_debug(
+            "Sending an equality check message using rpc_is_equal..."
+        )
+
+        packages = []
+
+        for value in (left, right):
+            if isinstance(value, ProxyWrapper):
+                packages.append(
+                    dict(
+                        is_wrapped=True,
+                        uid=left.uid,
+                        value=None,
+                    )
+                )
+            else:
+                packages.append(
+                    dict(
+                        is_wrapped=False,
+                        uid=None,
+                        value=left,
+                    )
+                )
+
+        self.log_network_debug("Packages are: %s" % packages)
+
+        try:
+            return self.__run_rpc_command(
+                method="is_equal",
+                proxy_object=None,
+                params=packages,
+                wrapper_class=ProxyWrapper,
+            )
+        except RuntimeError:
+            self.log_network_debug("Comparison of packages failed: %s" % packages)
+            raise ValueError("Unable to compare packages.")
+
     def rpc_eval(self, command):
         """
         Evaluates the given string command via RPC.
