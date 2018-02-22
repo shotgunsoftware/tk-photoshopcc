@@ -271,11 +271,21 @@ sg_socket_io.SocketManager = new function() {
             };
 
             /*
+            Compares two objects for equality.
 
+            :param params: A list containing two objects describing what to
+                compare. Each object should contain three properties: uid,
+                value, and is_wrapped. If is_wrapped is true, the comparison
+                will use the uid property to determine what object to use. If
+                is_wrapped is false, the data in the value property will be
+                used for comparison.
+            :param next: The handle to the "next" callback that triggers the
+                return of data to the caller and causes the next RPC call queued
+                up to be processed.
             */
             this.is_equal = function(params, next) {
-                var left = JSON.parse(params.shift());
-                var right = JSON.parse(params.shift());
+                var left = params.shift();
+                var right = params.shift();
 
                 var left_value = left["value"];
                 var right_value = right["value"];
@@ -289,7 +299,10 @@ sg_socket_io.SocketManager = new function() {
 
                 var cmd = left_value + " == " + right_value;
                 log_network_debug(cmd);
-                this.eval([cmd], next);
+                csLib.evalScript(
+                    cmd,
+                    _eval_callback.bind(this, next)
+                );
             };
 
             /*

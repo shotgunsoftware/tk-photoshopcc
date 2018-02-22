@@ -193,9 +193,20 @@ class ProxyWrapper(object):
 
         :rtype: bool
         """
+        # If they're both proxy wrappers and the uids match, then they are
+        # representing the same object and are equal. Note that if the uids
+        # do NOT match, that does NOT mean they're inequal. It's entirely
+        # possible to have two object registry entires on the remote side
+        # correspond to equal values/objects.
+        if isinstance(other, ProxyWrapper) and self.uid == other.uid:
+            return True
+
         try:
             return self._communicator.rpc_is_equal(self, other)
         except ValueError:
+            # Something went wrong with the RPC comparison, so we have to assume
+            # that they are inequal. The communicator will have logged some info
+            # about the RPC call that can be used for debugging.
             return False
 
     def __ne__(self, other):

@@ -284,12 +284,18 @@ class Communicator(object):
 
     def rpc_is_equal(self, left, right):
         """
+        Checks the equality of the given left and right values. If the
+        given objects are ProxyWrapper instances, the wrapped object's
+        UID will be sent across the RPC channel for comparison of the
+        wrapped object in the remote interpreter.
 
+        :param left: The left-hand value to be tested.
+        :param right: The right-hand value to be tested.
+
+        :rtype: bool
+        :raises: ValueError
         """
-        self.log_network_debug(
-            "Sending an equality check message using rpc_is_equal..."
-        )
-
+        self.log_network_debug("Sending an is_equal message using rpc_is_equal...")
         packages = []
 
         for value in (left, right):
@@ -297,7 +303,7 @@ class Communicator(object):
                 packages.append(
                     dict(
                         is_wrapped=True,
-                        uid=left.uid,
+                        uid=value.uid,
                         value=None,
                     )
                 )
@@ -306,12 +312,9 @@ class Communicator(object):
                     dict(
                         is_wrapped=False,
                         uid=None,
-                        value=left,
+                        value=value,
                     )
                 )
-
-        self.log_network_debug("Packages are: %s" % packages)
-
         try:
             return self.__run_rpc_command(
                 method="is_equal",
