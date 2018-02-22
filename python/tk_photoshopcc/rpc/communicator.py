@@ -303,15 +303,13 @@ class Communicator(object):
                 packages.append(
                     dict(
                         is_wrapped=True,
-                        uid=value.uid,
-                        value=None,
+                        value=value.uid,
                     )
                 )
             else:
                 packages.append(
                     dict(
                         is_wrapped=False,
-                        uid=None,
                         value=value,
                     )
                 )
