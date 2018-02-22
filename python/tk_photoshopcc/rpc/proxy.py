@@ -196,8 +196,8 @@ class ProxyWrapper(object):
         # If they're both proxy wrappers and the uids match, then they are
         # representing the same object and are equal. Note that if the uids
         # do NOT match, that does NOT mean they're inequal. It's entirely
-        # possible to have two object registry entires on the remote side
-        # correspond to equal values/objects.
+        # possible to have two object registry entries on the remote side
+        # that correspond to equal values/objects.
         if isinstance(other, ProxyWrapper) and self.uid == other.uid:
             return True
 
