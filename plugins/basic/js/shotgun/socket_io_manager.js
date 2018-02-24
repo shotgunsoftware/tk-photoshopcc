@@ -271,6 +271,41 @@ sg_socket_io.SocketManager = new function() {
             };
 
             /*
+            Compares two objects for equality.
+
+            :param params: A list containing two objects describing what to
+                compare. Each object should contain two properties:
+                value, and is_wrapped. If is_wrapped is true, the comparison
+                will treat the value as an object registry UID and look up
+                the appropriate object for comparison. Otherwise, the value
+                is compared as is.
+            :param next: The handle to the "next" callback that triggers the
+                return of data to the caller and causes the next RPC call queued
+                up to be processed.
+            */
+            this.is_equal = function(params, next) {
+                var left = params.shift();
+                var right = params.shift();
+
+                var left_value = left["value"];
+                var right_value = right["value"];
+
+                if (left["is_wrapped"] === true) {
+                    left_value = "__OBJECT_REGISTRY[" + left_value + "]";
+                }
+                if (right["is_wrapped"] === true) {
+                    right_value = "__OBJECT_REGISTRY[" + right_value + "]";
+                }
+
+                var cmd = left_value + " == " + right_value;
+                log_network_debug(cmd);
+                csLib.evalScript(
+                    cmd,
+                    _eval_callback.bind(this, next)
+                );
+            };
+
+            /*
             Sets the value of the given property on the given object.
 
             :param params: The list of parameters associated with the rpc call.

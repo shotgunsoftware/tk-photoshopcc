@@ -182,6 +182,46 @@ class ProxyWrapper(object):
             parent=self._parent,
         )
 
+    def __eq__(self, other):
+        """
+        Custom equality comparison behavior. This will compare the proxy object
+        to the other object in the remote process. This is not a comparison of
+        the given Python objects, but rather a equality check of the
+        represented objects on the other side of the RPC connection.
+
+        :param other: The value to compare against.
+
+        :rtype: bool
+        """
+        # If they're both proxy wrappers and the uids match, then they are
+        # representing the same object and are equal. Note that if the uids
+        # do NOT match, that does NOT mean they're inequal. It's entirely
+        # possible to have two object registry entries on the remote side
+        # that correspond to equal values/objects.
+        if isinstance(other, ProxyWrapper) and self.uid == other.uid:
+            return True
+
+        try:
+            return self._communicator.rpc_is_equal(self, other)
+        except ValueError:
+            # Something went wrong with the RPC comparison, so we have to assume
+            # that they are inequal. The communicator will have logged some info
+            # about the RPC call that can be used for debugging.
+            return False
+
+    def __ne__(self, other):
+        """
+        Custom inequality comparison behavior. This will compare the proxy object
+        to the other object in the remote process. This is not a comparison of
+        the given Python objects, but rather an inequality check of the
+        represented objects on the other side of the RPC connection.
+
+        :param other: The value to compare against.
+
+        :rtype: bool
+        """
+        return not self.__eq__(other)
+
     def __iter__(self):
         """
         Custom iteration behavior. This will loop up from index 0 until a failed
