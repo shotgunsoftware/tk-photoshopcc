@@ -104,15 +104,18 @@ if __name__ == "__main__":
     # the communication port is supplied by javascript. the toolkit engine
     # env to bootstrap into is also supplied by javascript
     (port, engine_name, app_id) = sys.argv[1:4]
-
     try:
-        # first, make sure we can import PySide. If not, there's no need to
-        # continue.
-        from PySide import QtCore, QtGui
+        # First, make sure we can import PySide or PySide2.
+        # If not, there's no need to continue.
+        from PySide2 import QtCore, QtGui
     except ImportError:
-        sys.stdout.write("[ERROR]: %s" % (traceback.format_exc(),))
-        sys.stdout.flush()
-        sys.exit(EXIT_STATUS_NO_PYSIDE)
+        try:
+            # No PySide2, let's try PySide.
+            from PySide import QtCore, QtGui
+        except ImportError:
+            sys.stdout.write("[ERROR]: %s" % (traceback.format_exc(),))
+            sys.stdout.flush()
+            sys.exit(EXIT_STATUS_NO_PYSIDE)
 
     # wrap the entire plugin boostrap process so that we can respond to any
     # errors and display them in the panel.
