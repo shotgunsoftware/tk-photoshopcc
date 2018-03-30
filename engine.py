@@ -955,32 +955,12 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
 
         :returns: dict
         """
-        base = {}
-        try:
-            self.logger.info("Checking if PySide2 is available...")
-            import PySide2
-            # Let the base implementation do its magic to present a PySide
-            # compatible interface with PySide2.
-            base = super(PhotoshopCCEngine, self)._define_qt_base()
-            QtGui = base["qt_gui"]
-            #q_message_box = QtWidgets.QMessageBox
-        except ImportError as e:
-            self.logger.debug("PySide2 not available: %s" % e, exc_info=True)
-            self.logger.info("Checking if PySide is available...")
-            from PySide import QtCore, QtGui
-            base["dialog_base"] = QtGui.QDialog
-            base["qt_core"] = QtCore
-            base["qt_gui"] = QtGui
-            #q_message_box = QtGui.QMessageBox
-
-            # tell QT to handle text strings as utf-8 by default. Please note that
-            # we don't have to do this for PySide2/Qt5 since the codec is by
-            # default "utf-8" and setCodecForCStrings does not exist anymore.
-            utf8 = QtCore.QTextCodec.codecForName("utf-8")
-            QtCore.QTextCodec.setCodecForCStrings(utf8)
-
+        # Just call the base implementation and monkey patch QMessageBox.
+        base = super(PhotoshopCCEngine, self)._define_qt_base()
+        if not base:
+            raise ImportError("Unable to find a QT Python module")
+        QtGui = base["qt_gui"]
         self._override_qmessagebox(QtGui.QMessageBox)
-
         return base
 
     def _override_qmessagebox(self, q_message_box):
