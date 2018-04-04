@@ -62,6 +62,7 @@ def bootstrap(root_path, port, engine_name, app_id):
     engine = sgtk.platform.current_engine()
 
     from sgtk.platform.qt import QtGui
+    from sgtk.platform.engine_logging import ToolkitEngineHandler
 
     app_name = "Shotgun Engine for Photoshop CC"
 
@@ -94,8 +95,34 @@ def bootstrap(root_path, port, engine_name, app_id):
     # once the event loop starts, the bootstrap process is complete and
     # everything should be connected. this is a blocking call, so nothing else
     # can happen afterward.
-    print "Starting Qt event loop..."
-    sys.exit(app.exec_())
+    engine.logger.debug("Starting Qt event loop...")
+
+    # Note: Qt exits the event loop when the process receives a TERM signal which
+    # is sent by the parent process when leaving Photoshop or restarting the
+    # integration.
+    ret = app.exec_()
+    # We need to remove the engine log handler which tries to send back messages
+    # to Photoshop either through a socket or stdout: we have no guarantee that
+    # any of those is still open when Photoshop is quitting and any message send
+    # through those will make our Python process hang.
+    root_logger = sgtk.LogManager().root_logger
+    handlers = list(root_logger.handlers)
+    while handlers:
+        handler = handlers.pop()
+        if isinstance(handler, ToolkitEngineHandler):
+            root_logger.removeHandler(handler)
+    # Destroy the engine which will stop any background thread that was started.
+    engine.logger.debug("Shutting down engine")
+    engine.destroy_engine()
+    engine.logger.debug("Exiting process...")
+    # FiXME: Temp workaround for Shotgun-utils BackgroundTaskManager thread not
+    # being joined on shutdown: if we exit immediately we will get some
+    # "QThread: Destroyed while thread is still running" errors which can lead to
+    # crashes. Until this problem is fixed (#46207) we give the thread a chance
+    # to exit its exec loop by sleeping a couple of seconds.
+    import time
+    time.sleep(2)
+    sys.exit(ret)
 
 
 # executed from javascript
@@ -104,15 +131,18 @@ if __name__ == "__main__":
     # the communication port is supplied by javascript. the toolkit engine
     # env to bootstrap into is also supplied by javascript
     (port, engine_name, app_id) = sys.argv[1:4]
-
     try:
-        # first, make sure we can import PySide. If not, there's no need to
-        # continue.
-        from PySide import QtCore, QtGui
+        # First, make sure we can import PySide or PySide2.
+        # If not, there's no need to continue.
+        from PySide2 import QtCore, QtGui
     except ImportError:
-        sys.stdout.write("[ERROR]: %s" % (traceback.format_exc(),))
-        sys.stdout.flush()
-        sys.exit(EXIT_STATUS_NO_PYSIDE)
+        try:
+            # No PySide2, let's try PySide.
+            from PySide import QtCore, QtGui
+        except ImportError:
+            sys.stdout.write("[ERROR]: %s" % (traceback.format_exc(),))
+            sys.stdout.flush()
+            sys.exit(EXIT_STATUS_NO_PYSIDE)
 
     # wrap the entire plugin boostrap process so that we can respond to any
     # errors and display them in the panel.

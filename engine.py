@@ -263,6 +263,7 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
         """
         Called when the engine should tear down itself and all its apps.
         """
+        self.logger.debug("Destroying engine...")
         # Set our parent widget back to being owned by the window manager
         # instead of Photoshop's application window.
         if self._PROXY_WIN_HWND and sys.platform == "win32":
@@ -955,35 +956,29 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
 
         :returns: dict
         """
-        base = {}
-        from PySide import QtCore, QtGui
-        base["qt_core"] = QtCore
-        base["qt_gui"] = QtGui
-        base["dialog_base"] = QtGui.QDialog
-
-        # tell QT to handle text strings as utf-8 by default
-        utf8 = QtCore.QTextCodec.codecForName("utf-8")
-        QtCore.QTextCodec.setCodecForCStrings(utf8)
-
-        self._override_qmessagebox()
-
+        # Just call the base implementation and monkey patch QMessageBox.
+        base = super(PhotoshopCCEngine, self)._define_qt_base()
+        if not base:
+            raise ImportError("Unable to find a QT Python module")
+        QtGui = base["qt_gui"]
+        self._override_qmessagebox(QtGui.QMessageBox)
         return base
 
-    def _override_qmessagebox(self):
+    def _override_qmessagebox(self, q_message_box):
         """
         Redefine the method calls for QMessageBox static methods.
 
         These are often called from within apps and because QT is running in a
         separate process, they will pop up behind the photoshop window. Wrap
         each of these calls in a raise method to activate the QT process.
+
+        :param q_message_box: The QMessageBox class to patch.
         """
 
-        from PySide import QtCore, QtGui
-
-        info_fn = QtGui.QMessageBox.information
-        critical_fn = QtGui.QMessageBox.critical
-        question_fn = QtGui.QMessageBox.question
-        warning_fn = QtGui.QMessageBox.warning
+        info_fn = q_message_box.information
+        critical_fn = q_message_box.critical
+        question_fn = q_message_box.question
+        warning_fn = q_message_box.warning
 
         @staticmethod
         def _info_wrapper(*args, **kwargs):
@@ -1005,10 +1000,10 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
             self.__activate_python()
             return warning_fn(*args, **kwargs)
 
-        QtGui.QMessageBox.information = _info_wrapper
-        QtGui.QMessageBox.critical = _critical_wrapper
-        QtGui.QMessageBox.question = _question_wrapper
-        QtGui.QMessageBox.warning = _warning_wrapper
+        q_message_box.information = _info_wrapper
+        q_message_box.critical = _critical_wrapper
+        q_message_box.question = _question_wrapper
+        q_message_box.warning = _warning_wrapper
 
     def _win32_get_photoshop_main_hwnd(self):
         """

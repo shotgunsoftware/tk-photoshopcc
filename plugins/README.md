@@ -112,6 +112,16 @@ As per the Adobe docs:
 >
 > You should only need to do this once.
 
+If on Mac 10.9 and higher
+
+>Staring with Mac 10.9, Apple introduced a caching mechanism for plist files.
+>Your modifications to plist files does not take effect until the cache gets updated
+>(on a periodic basis, you cannot know exactly when the update will happen). To make sure
+>your modifications take effect, there are two methods.
+>
+>* Kill cfprefsd process, e.g. `killall cfprefsd`. It will restart automatically. Then the update takes effect.
+>* Restart your Mac, or log out the current user and re-log in.
+
 ### Local testing without signing
 
 It is possible to build and test the extension without bundling it into a `.zxp`
