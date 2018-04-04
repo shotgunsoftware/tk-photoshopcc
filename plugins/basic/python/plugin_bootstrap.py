@@ -111,9 +111,9 @@ def bootstrap(root_path, port, engine_name, app_id):
         if isinstance(handler, ToolkitEngineHandler):
             root_logger.removeHandler(handler)
     # Destroy the engine which will stop any background thread that was started.
-    engine.logger.info("Shutting down engine")
+    engine.logger.debug("Shutting down engine")
     engine.destroy_engine()
-    engine.logger.info("Exiting process...")
+    engine.logger.debug("Exiting process...")
     # FiXME: Temp workaround for Shotgun-utils BackgroundTaskManager thread not
     # being joined on shutdown: if we exit immediately we will get some
     # "QThread: Destroyed while thread is still running" errors which can lead to
