@@ -96,6 +96,7 @@ def bootstrap(root_path, port, engine_name, app_id):
     # everything should be connected. this is a blocking call, so nothing else
     # can happen afterward.
     engine.logger.debug("Starting Qt event loop...")
+
     # Note: Qt exits the event loop when the process receives a TERM signal which
     # is sent by the parent process when leaving Photoshop or restarting the
     # integration.
