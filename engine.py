@@ -263,6 +263,7 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
         """
         Called when the engine should tear down itself and all its apps.
         """
+        self.logger.debug("Destroying engine...")
         # Set our parent widget back to being owned by the window manager
         # instead of Photoshop's application window.
         if self._PROXY_WIN_HWND and sys.platform == "win32":

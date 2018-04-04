@@ -62,6 +62,7 @@ def bootstrap(root_path, port, engine_name, app_id):
     engine = sgtk.platform.current_engine()
 
     from sgtk.platform.qt import QtGui
+    from sgtk.platform.engine_logging import ToolkitEngineHandler
 
     app_name = "Shotgun Engine for Photoshop CC"
 
@@ -94,8 +95,33 @@ def bootstrap(root_path, port, engine_name, app_id):
     # once the event loop starts, the bootstrap process is complete and
     # everything should be connected. this is a blocking call, so nothing else
     # can happen afterward.
-    print "Starting Qt event loop..."
-    sys.exit(app.exec_())
+    engine.logger.debug("Starting Qt event loop...")
+    # Note: Qt exits the event loop when the process receives a TERM signal which
+    # is sent by the parent process when leaving Photoshop or restarting the
+    # integration.
+    ret = app.exec_()
+    # We need to remove the engine log handler which tries to send back messages
+    # to Photoshop either through a socket or stdout: we have no guarantee that
+    # any of those is still open when Photoshop is quitting and any message send
+    # through those will make our Python process hang.
+    root_logger = sgtk.LogManager().root_logger
+    handlers = list(root_logger.handlers)
+    while handlers:
+        handler = handlers.pop()
+        if isinstance(handler, ToolkitEngineHandler):
+            root_logger.removeHandler(handler)
+    # Destroy the engine which will stop any background thread that was started.
+    engine.logger.info("Shutting down engine")
+    engine.destroy_engine()
+    engine.logger.info("Exiting process...")
+    # FiXME: Temp workaround for Shotgun-utils BackgroundTaskManager thread not
+    # being joined on shutdown: if we exit immediately we will get some
+    # "QThread: Destroyed while thread is still running" errors which can lead to
+    # crashes. Until this problem is fixed (#46207) we give the thread a chance
+    # to exit its exec loop by sleeping a couple of seconds.
+    import time
+    time.sleep(2)
+    sys.exit(ret)
 
 
 # executed from javascript
