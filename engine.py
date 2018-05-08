@@ -557,8 +557,7 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
                 save_options = self.adobe.PhotoshopSaveOptions
 
             # Photoshop won't ensure that the folder is created when saving, so we must make sure it exists
-            folder = os.path.dirname(path)
-            ensure_folder_exists(folder)
+            ensure_folder_exists(os.path.dirname(path))
 
             document.saveAs(self.adobe.File(path), save_options)
 
