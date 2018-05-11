@@ -1041,6 +1041,7 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
         # Get the main Photoshop window:
         ps_hwnd = self._win32_get_photoshop_main_hwnd()
         win32_proxy_win = None
+        proxy_win_hwnd = None
 
         if ps_hwnd:
             from tank.platform.qt import QtGui, QtCore
@@ -1079,8 +1080,6 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
 
                 if proxy_win_hwnd_found:
                     proxy_win_hwnd = proxy_win_hwnd_found[0]
-                else:
-                    proxy_win_hwnd
 
         # Parent to the Photoshop application window.
         if proxy_win_hwnd is not None:
