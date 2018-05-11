@@ -1058,20 +1058,6 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
                 proxy_win_hwnd = self.__tk_photoshopcc.win_32_api.qwidget_winid_to_hwnd(
                     win32_proxy_win.winId(),
                 )
-
-                # Set the window style/flags. We don't need or want our Python
-                # dialogs to notify the Photoshop application window when they're
-                # opened or closed, so we'll disable that behavior.
-                win_ex_style = self.__tk_photoshopcc.win_32_api.GetWindowLong(
-                    proxy_win_hwnd,
-                    self.__tk_photoshopcc.win_32_api.GWL_EXSTYLE,
-                )
-
-                self.__tk_photoshopcc.win_32_api.SetWindowLong(
-                    proxy_win_hwnd,
-                    self.__tk_photoshopcc.win_32_api.GWL_EXSTYLE, 
-                    win_ex_style | self.__tk_photoshopcc.win_32_api.WS_EX_NOPARENTNOTIFY,
-                )
             else:
                 # With PySide2, we're required to look up our proxy parent
                 # widget's HWND the hard way, following the same logic used
@@ -1098,6 +1084,19 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
 
         # Parent to the Photoshop application window.
         if proxy_win_hwnd is not None:
+            # Set the window style/flags. We don't need or want our Python
+            # dialogs to notify the Photoshop application window when they're
+            # opened or closed, so we'll disable that behavior.
+            win_ex_style = self.__tk_photoshopcc.win_32_api.GetWindowLong(
+                proxy_win_hwnd,
+                self.__tk_photoshopcc.win_32_api.GWL_EXSTYLE,
+            )
+
+            self.__tk_photoshopcc.win_32_api.SetWindowLong(
+                proxy_win_hwnd,
+                self.__tk_photoshopcc.win_32_api.GWL_EXSTYLE, 
+                win_ex_style | self.__tk_photoshopcc.win_32_api.WS_EX_NOPARENTNOTIFY,
+            )
             self.__tk_photoshopcc.win_32_api.SetParent(proxy_win_hwnd, ps_hwnd)
             self._PROXY_WIN_HWND = proxy_win_hwnd
 
