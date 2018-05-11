@@ -1047,27 +1047,57 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
 
             # Create the proxy QWidget.
             win32_proxy_win = QtGui.QWidget()
-            win32_proxy_win.setWindowTitle('sgtk dialog owner proxy')
+            window_title = "sgtk dialog owner proxy"
+            win32_proxy_win.setWindowTitle(window_title)
 
-            proxy_win_hwnd = self.__tk_photoshopcc.win_32_api.qwidget_winid_to_hwnd(
-                win32_proxy_win.winId(),
-            )
+            # We have to take different approaches depending on whether
+            # we're using Qt4 (PySide) or Qt5 (PySide2). The functionality
+            # needed to turn a Qt5 WId into an HWND is not exposed in PySide2,
+            # so we can't do what we did below for Qt4.
+            if QtCore.__version__.startswith("4."):
+                proxy_win_hwnd = self.__tk_photoshopcc.win_32_api.qwidget_winid_to_hwnd(
+                    win32_proxy_win.winId(),
+                )
 
-            # Set the window style/flags. We don't need or want our Python
-            # dialogs to notify the Photoshop application window when they're
-            # opened or closed, so we'll disable that behavior.
-            win_ex_style = self.__tk_photoshopcc.win_32_api.GetWindowLong(
-                proxy_win_hwnd,
-                self.__tk_photoshopcc.win_32_api.GWL_EXSTYLE,
-            )
+                # Set the window style/flags. We don't need or want our Python
+                # dialogs to notify the Photoshop application window when they're
+                # opened or closed, so we'll disable that behavior.
+                win_ex_style = self.__tk_photoshopcc.win_32_api.GetWindowLong(
+                    proxy_win_hwnd,
+                    self.__tk_photoshopcc.win_32_api.GWL_EXSTYLE,
+                )
 
-            self.__tk_photoshopcc.win_32_api.SetWindowLong(
-                proxy_win_hwnd,
-                self.__tk_photoshopcc.win_32_api.GWL_EXSTYLE, 
-                win_ex_style | self.__tk_photoshopcc.win_32_api.WS_EX_NOPARENTNOTIFY,
-            )
+                self.__tk_photoshopcc.win_32_api.SetWindowLong(
+                    proxy_win_hwnd,
+                    self.__tk_photoshopcc.win_32_api.GWL_EXSTYLE, 
+                    win_ex_style | self.__tk_photoshopcc.win_32_api.WS_EX_NOPARENTNOTIFY,
+                )
+            else:
+                # With PySide2, we're required to look up our proxy parent
+                # widget's HWND the hard way, following the same logic used
+                # to find Photoshop's main window. To do that, we actually have
+                # to show our widget so that Windows knows about it. We can make
+                # it effectively invisible if we zero out its size, so we do that,
+                # show the widget, and then look up its HWND by window title before
+                # hiding it.
+                win32_proxy_win.setGeometry(0, 0, 0, 0)
+                win32_proxy_win.show()
 
-            # Parent to the Photoshop application window.
+                try:
+                    proxy_win_hwnd_found = self.__tk_photoshopcc.win_32_api.find_windows(
+                        stop_if_found=True,
+                        window_text=window_title,
+                    )
+                finally:
+                    win32_proxy_win.hide()
+
+                if proxy_win_hwnd_found:
+                    proxy_win_hwnd = proxy_win_hwnd_found[0]
+                else:
+                    proxy_win_hwnd
+
+        # Parent to the Photoshop application window.
+        if proxy_win_hwnd is not None:
             self.__tk_photoshopcc.win_32_api.SetParent(proxy_win_hwnd, ps_hwnd)
             self._PROXY_WIN_HWND = proxy_win_hwnd
 
@@ -1084,18 +1114,23 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
         show_dialog & show_modal.
         """
         # determine the parent widget to use:
-        from tank.platform.qt import QtGui, QtCore
+        try:
+            from tank.platform.qt import QtGui, QtCore
 
-        if not self._DIALOG_PARENT:
-            if sys.platform == "win32":
-                # for windows, we create a proxy window parented to the
-                # main application window that we can then set as the owner
-                # for all Toolkit dialogs
-                self._DIALOG_PARENT = self._win32_get_proxy_window()
-            else:
-                self._DIALOG_PARENT = QtGui.QApplication.activeWindow()
-            
-        return self._DIALOG_PARENT
+            if not self._DIALOG_PARENT:
+                if sys.platform == "win32":
+                    # for windows, we create a proxy window parented to the
+                    # main application window that we can then set as the owner
+                    # for all Toolkit dialogs
+                    self._DIALOG_PARENT = self._win32_get_proxy_window()
+                else:
+                    self._DIALOG_PARENT = QtGui.QApplication.activeWindow()
+                
+            return self._DIALOG_PARENT
+        except Exception as exc:
+            self.logger.exception(exc)
+            self.logger.warning("Unable to determine a dialog parent. No parent will be used.")
+            return None
 
     def show_dialog(self, title, bundle, widget_class, *args, **kwargs):
         """
