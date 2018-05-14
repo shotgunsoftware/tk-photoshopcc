@@ -21,6 +21,7 @@ import re
 from contextlib import contextmanager
 
 import sgtk
+from sgtk.util.filesystem import ensure_folder_exists
 
 
 class PhotoshopCCEngine(sgtk.platform.Engine):
@@ -554,7 +555,10 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
             else:
                 # default value
                 save_options = self.adobe.PhotoshopSaveOptions
-           
+
+            # Photoshop won't ensure that the folder is created when saving, so we must make sure it exists
+            ensure_folder_exists(os.path.dirname(path))
+
             document.saveAs(self.adobe.File(path), save_options)
 
             # restore the active document
