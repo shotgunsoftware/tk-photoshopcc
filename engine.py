@@ -1048,7 +1048,7 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
 
             # Create the proxy QWidget.
             win32_proxy_win = QtGui.QWidget()
-            window_title = "sgtk dialog owner proxy"
+            window_title = "Shotgun Toolkit"
             win32_proxy_win.setWindowTitle(window_title)
 
             # We have to take different approaches depending on whether
@@ -1081,8 +1081,17 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
                 if proxy_win_hwnd_found:
                     proxy_win_hwnd = proxy_win_hwnd_found[0]
 
-        # Parent to the Photoshop application window.
-        if proxy_win_hwnd is not None:
+        # Parent to the Photoshop application window if we found everything
+        # we needed. If we didn't find our proxy window for some reason, we
+        # will return None below. In that case, we'll just end up with no
+        # window parenting, but apps will still launch.
+        if proxy_win_hwnd is None:
+            self.logger.warning(
+                "Unable setup window parenting properly. Dialogs shown will "
+                "not be parented to Photoshop, but they will still function "
+                "properly otherwise."
+            )
+        else:
             # Set the window style/flags. We don't need or want our Python
             # dialogs to notify the Photoshop application window when they're
             # opened or closed, so we'll disable that behavior.
@@ -1112,23 +1121,18 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
         show_dialog & show_modal.
         """
         # determine the parent widget to use:
-        try:
-            from tank.platform.qt import QtGui, QtCore
+        from tank.platform.qt import QtGui, QtCore
 
-            if not self._DIALOG_PARENT:
-                if sys.platform == "win32":
-                    # for windows, we create a proxy window parented to the
-                    # main application window that we can then set as the owner
-                    # for all Toolkit dialogs
-                    self._DIALOG_PARENT = self._win32_get_proxy_window()
-                else:
-                    self._DIALOG_PARENT = QtGui.QApplication.activeWindow()
-                
-            return self._DIALOG_PARENT
-        except Exception as exc:
-            self.logger.exception(exc)
-            self.logger.warning("Unable to determine a dialog parent. No parent will be used.")
-            return None
+        if not self._DIALOG_PARENT:
+            if sys.platform == "win32":
+                # for windows, we create a proxy window parented to the
+                # main application window that we can then set as the owner
+                # for all Toolkit dialogs
+                self._DIALOG_PARENT = self._win32_get_proxy_window()
+            else:
+                self._DIALOG_PARENT = QtGui.QApplication.activeWindow()
+            
+        return self._DIALOG_PARENT
 
     def show_dialog(self, title, bundle, widget_class, *args, **kwargs):
         """
