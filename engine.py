@@ -1069,12 +1069,11 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
                 # hiding it.
                 win32_proxy_win.setGeometry(0, 0, 0, 0)
                 win32_proxy_win.show()
-                QtGui.QApplication.processEvents()
 
                 try:
                     proxy_win_hwnd_found = self.__tk_photoshopcc.win_32_api.find_windows(
                         stop_if_found=True,
-                        window_text=window_title,
+                        class_name="Qt5QWindowIcon",
                     )
                 finally:
                     win32_proxy_win.hide()
