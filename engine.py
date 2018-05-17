@@ -1045,18 +1045,63 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
         # Get the main Photoshop window:
         ps_hwnd = self._win32_get_photoshop_main_hwnd()
         win32_proxy_win = None
+        proxy_win_hwnd = None
 
         if ps_hwnd:
             from tank.platform.qt import QtGui, QtCore
 
             # Create the proxy QWidget.
             win32_proxy_win = QtGui.QWidget()
-            win32_proxy_win.setWindowTitle('sgtk dialog owner proxy')
+            window_title = "Shotgun Toolkit Parent Widget"
+            win32_proxy_win.setWindowTitle(window_title)
 
-            proxy_win_hwnd = self.__tk_photoshopcc.win_32_api.qwidget_winid_to_hwnd(
-                win32_proxy_win.winId(),
+            # We have to take different approaches depending on whether
+            # we're using Qt4 (PySide) or Qt5 (PySide2). The functionality
+            # needed to turn a Qt5 WId into an HWND is not exposed in PySide2,
+            # so we can't do what we did below for Qt4.
+            if QtCore.__version__.startswith("4."):
+                proxy_win_hwnd = self.__tk_photoshopcc.win_32_api.qwidget_winid_to_hwnd(
+                    win32_proxy_win.winId(),
+                )
+            else:
+                # With PySide2, we're required to look up our proxy parent
+                # widget's HWND the hard way, following the same logic used
+                # to find Photoshop's main window. To do that, we actually have
+                # to show our widget so that Windows knows about it. We can make
+                # it effectively invisible if we zero out its size, so we do that,
+                # show the widget, and then look up its HWND by window title before
+                # hiding it.
+                win32_proxy_win.setGeometry(0, 0, 0, 0)
+                win32_proxy_win.show()
+
+                try:
+                    proxy_win_hwnd_found = self.__tk_photoshopcc.win_32_api.find_windows(
+                        stop_if_found=True,
+                        class_name="Qt5QWindowIcon",
+                        process_id=os.getpid(),
+                    )
+                finally:
+                    win32_proxy_win.hide()
+
+                if proxy_win_hwnd_found:
+                    proxy_win_hwnd = proxy_win_hwnd_found[0]
+        else:
+            self.logger.debug(
+                "Unable to determine the HWND of Photoshop itself. This means "
+                "that we can't properly setup window parenting for Toolkit apps."
             )
 
+        # Parent to the Photoshop application window if we found everything
+        # we needed. If we didn't find our proxy window for some reason, we
+        # will return None below. In that case, we'll just end up with no
+        # window parenting, but apps will still launch.
+        if proxy_win_hwnd is None:
+            self.logger.warning(
+                "Unable setup window parenting properly. Dialogs shown will "
+                "not be parented to Photoshop, but they will still function "
+                "properly otherwise."
+            )
+        else:
             # Set the window style/flags. We don't need or want our Python
             # dialogs to notify the Photoshop application window when they're
             # opened or closed, so we'll disable that behavior.
@@ -1070,8 +1115,6 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
                 self.__tk_photoshopcc.win_32_api.GWL_EXSTYLE, 
                 win_ex_style | self.__tk_photoshopcc.win_32_api.WS_EX_NOPARENTNOTIFY,
             )
-
-            # Parent to the Photoshop application window.
             self.__tk_photoshopcc.win_32_api.SetParent(proxy_win_hwnd, ps_hwnd)
             self._PROXY_WIN_HWND = proxy_win_hwnd
 
