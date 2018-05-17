@@ -1048,7 +1048,7 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
 
             # Create the proxy QWidget.
             win32_proxy_win = QtGui.QWidget()
-            window_title = "Shotgun Toolkit"
+            window_title = "Shotgun Toolkit Parent Widget"
             win32_proxy_win.setWindowTitle(window_title)
 
             # We have to take different approaches depending on whether
@@ -1080,6 +1080,11 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
 
                 if proxy_win_hwnd_found:
                     proxy_win_hwnd = proxy_win_hwnd_found[0]
+        else:
+            self.logger.debug(
+                "Unable to determine the HWND of Photoshop itself. This means "
+                "that we can't properly setup window parenting for Toolkit apps."
+            )
 
         # Parent to the Photoshop application window if we found everything
         # we needed. If we didn't find our proxy window for some reason, we
