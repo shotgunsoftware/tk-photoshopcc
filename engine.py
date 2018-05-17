@@ -1074,6 +1074,7 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
                     proxy_win_hwnd_found = self.__tk_photoshopcc.win_32_api.find_windows(
                         stop_if_found=True,
                         class_name="Qt5QWindowIcon",
+                        process_id=os.getpid(),
                     )
                 finally:
                     win32_proxy_win.hide()
