@@ -79,6 +79,8 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
     _PROJECT_CONTEXT = None
     _CONTEXT_CACHE_KEY = "photoshopcc_context_cache"
 
+    _HAS_CHECKED_CONTEXT_POST_LAUNCH = False
+
     ############################################################################
     # context changing
 
@@ -245,20 +247,6 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
                 self._CONTEXT_CACHE_KEY,
                 dict(),
             )
-
-        active_document_path = self.adobe.get_active_document_path()
-
-        if active_document_path:
-            try:
-                context = sgtk.sgtk_from_path(active_document_path).context_from_path(
-                    active_document_path,
-                    previous_context=self.context,
-                )
-                self.__add_to_context_cache(active_document_path, context)
-            except Exception:
-                self.logger.debug(
-                    "Active document isn't known to SGTK, not adding to context cache."
-                )
 
     def destroy_engine(self):
         """
@@ -649,6 +637,45 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
             # Will allow queued up messages (like logging calls)
             # to be handled on the Python end.
             self.adobe.process_new_messages()
+
+        # We also have a one-time check we need to make after the timer is
+        # started. In the event that the user opened a document before the
+        # integration completed its initialization, we need to make sure
+        # that the context is correct. Since we rely of Photoshop sending
+        # an event on active document change to control our context, if that
+        # occurred before we were listening then we likely missed it and
+        # need to make sure we're not in a stale state.
+        #
+        # Note: This is occurring in the timer here because the context
+        # change can only occur once the engine initialization process has
+        # completed. As such, we can rely on the timer to delay its execution
+        # until we're in a state where the context change will succeed.
+        if not self._HAS_CHECKED_CONTEXT_POST_LAUNCH:
+            if sgtk.platform.current_engine():
+                self.logger.debug(
+                    "Engine initialization complete -- checking active "
+                    "document context..."
+                )
+
+                active_document_path = self.adobe.get_active_document_path()
+
+                if active_document_path:
+                    self.logger.debug(
+                        "There is an active document. Checking to see if a "
+                        "context change is required."
+                    )
+                    self._handle_active_document_change(active_document_path)
+                else:
+                   self.logger.debug(
+                        "There is no active document, so there is no need to change context."
+                    )
+
+                self._HAS_CHECKED_CONTEXT_POST_LAUNCH = True
+            else:
+                self.logger.debug(
+                    "Engine initialization has not completed -- waiting to "
+                    "check the active document context..."
+                )
 
     def _emit_log_message(self, handler, record):
         """
