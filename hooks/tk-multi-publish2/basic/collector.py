@@ -10,6 +10,7 @@
 
 import os
 import sgtk
+import tempfile
 
 HookBaseClass = sgtk.get_hook_baseclass()
 
@@ -115,11 +116,15 @@ class PhotoshopCCSceneCollector(HookBaseClass):
             self.logger.info(
                 "Collected Photoshop document: %s" % (document.name))
             document_item.set_icon_from_path(icon_path)
-            document_item.thumbnail_enabled = False
+            document_item.thumbnail_enabled = True
             document_item.properties["document"] = document
-            path = _document_path(document)
+
+            path = _document_path(document) 
             if path:
-                document_item.set_thumbnail_from_path(path)
+                # try to set the thumbnail for display. won't display anything
+                # for psd/psb, but others should work.
+                document_item.set_thumbnail_from_path(path) 
+
             document_item.properties["work_template"] = work_template
             self.logger.debug("Work template defined for Photoshop collection.")
             return
@@ -148,7 +153,7 @@ class PhotoshopCCSceneCollector(HookBaseClass):
             # disable thumbnail creation for photoshop documents. for the
             # default workflow, the thumbnail will be auto-updated after the
             # version creation plugin runs
-            document_item.thumbnail_enabled = False
+            document_item.thumbnail_enabled = True
 
             # add the document object to the properties so that the publish
             # plugins know which open document to associate with this item
@@ -168,12 +173,11 @@ class PhotoshopCCSceneCollector(HookBaseClass):
                 document_item.expanded = False
                 document_item.checked = False
 
-            path = _document_path(document)
-
-            if path:
+            path = _document_path(document) 
+            if path: 
                 # try to set the thumbnail for display. won't display anything
                 # for psd/psb, but others should work.
-                document_item.set_thumbnail_from_path(path)
+                document_item.set_thumbnail_from_path(path) 
 
             # store the template on the item for use by publish plugins. we
             # can't evaluate the fields here because there's no guarantee the
@@ -187,7 +191,6 @@ class PhotoshopCCSceneCollector(HookBaseClass):
 
         # reset the original document to restore the state for the user
         engine.adobe.app.activeDocument = current_document
-
 
 def _document_path(document):
     """
