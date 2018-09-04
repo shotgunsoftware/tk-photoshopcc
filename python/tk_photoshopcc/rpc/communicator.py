@@ -16,12 +16,25 @@ import time
 import logging
 import contextlib
 
-# Add our third-party packages to sys.path.
-sys.path.append(os.path.join(os.path.dirname(__file__), "packages"))
+# Add our third-party packages to sys.path. We've created a zip file because some of the file paths
+# are pretty long. We're also normalizing the path or we're getting import errors.
+sys.path.insert(
+    0,
+    os.path.normpath(
+        os.path.join(
+            os.path.dirname(__file__), # ./python/tk_photoshopcc/rpc
+            "..",                      # ./python/tk_photoshopcc
+            "..",                      # ./python
+            "..",                      # .
+            "pkgs.zip",                # ./pkgs.zip
+        )
+    )
+)
 
 import socketIO_client.exceptions
 from socketIO_client import SocketIO
 from .proxy import ProxyScope, ProxyWrapper, ClassInstanceProxyWrapper
+
 
 class Communicator(object):
     """
@@ -94,7 +107,7 @@ class Communicator(object):
         :param int port: The port to connect to. Default is 8090.
         :param str host: The host to connect to. Default is localhost.
         :param disconnect_callback: A callback to call if a disconnect
-                                    message is received from the host. 
+                                    message is received from the host.
         """
         if identifier in cls._REGISTRY:
             instance = cls._REGISTRY[identifier]
