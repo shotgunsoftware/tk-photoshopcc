@@ -349,10 +349,5 @@ def _document_path(document):
     Returns the path on disk to the supplied document. May be ``None`` if the
     document has not been saved.
     """
-
-    try:
-        path = document.fullName.fsName
-    except Exception:
-        path = None
-
-    return path
+    engine = sgtk.platform.current_engine()
+    return engine.adobe.get_document_path(document)

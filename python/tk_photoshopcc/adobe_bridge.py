@@ -9,6 +9,7 @@
 # not expressly granted therein are reserved by Shotgun Software Inc.
 
 import os
+import sys
 import functools
 import threading
 
@@ -201,16 +202,31 @@ class AdobeBridge(Communicator):
         if not doc:
             return None
 
+        return self.get_document_path(doc)
+
+    def get_document_path(self, document):
+        """
+        Gets the path on disk for the given Photoshop document. The path
+        is returned in unicode form to avoid string encoding issues when
+        the document's name contains non-ascii characters.
+
+        :returns: The document's file path on disk as a unicode string,
+            or None if the document has never been saved to disk.
+        :rtype: unicode or None
+        """
         with self.response_logging_silenced():
             try:
-                path = doc.fullName.fsName
+                path = document.fullName.fsName
             except Exception:
-                path = None
+                return None
 
-            if isinstance(path, unicode):
-                path = path.encode("utf-8")
-
-        return path
+        # The RPC API is always going to return a utf-8 encoded string
+        # here. This is fine (and correct) in almost all cases, but there
+        # are some situations on Windows where the encoded path, if it
+        # includes non-ascii characters, will test as false when checking
+        # existence. To avoid these kinds of problems, we're forced to
+        # decode the string into unicode and return that.
+        return path.decode("utf-8")
 
     def log_message(self, level, msg):
         """
