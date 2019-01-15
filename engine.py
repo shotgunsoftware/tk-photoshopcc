@@ -503,7 +503,7 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
                 self.adobe.save_as_psb(path)
                 # restore the active document
                 self.adobe.app.activeDocument = previous_active_document
-                return     
+                return
             
             # the following extensions follow the same pattern of defining options
             # that will be supplied to the document's saveAs method

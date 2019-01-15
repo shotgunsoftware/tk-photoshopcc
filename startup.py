@@ -11,6 +11,7 @@
 import os
 import sys
 
+import sgtk.platform.framework
 from sgtk.platform import SoftwareLauncher, SoftwareVersion, LaunchInformation
 
 
@@ -44,6 +45,13 @@ class PhotoshopLauncher(SoftwareLauncher):
         "win32": "C:/Program Files/Adobe/Adobe Photoshop CC {version}/Photoshop.exe"
     }
 
+    AFX_EXECUTABLE_MATCH_TEMPLATES = {
+        # /Applications/Adobe Photoshop CC 2017/Adobe Photoshop CC 2017.app
+        "darwin": "/Applications/Adobe After Effects CC {version}/Adobe After Effects CC {version_back}.app",
+        # C:\program files\Adobe\Adobe Photoshop CC 2017\Photoshop.exe
+        "win32": "C:/Program Files/Adobe/Adobe After Effects CC {version}/Support Files/AfterFX.exe"
+    }
+
     @property
     def minimum_supported_version(self):
         """
@@ -67,14 +75,14 @@ class PhotoshopLauncher(SoftwareLauncher):
         # note: all the business logic for how to launch is
         #       located in the python/startup folder to be compatible
         #       with older versions of the launch workflow
+
+
         bootstrap_python_path = os.path.join(self.disk_location, "python", "startup")
         sys.path.insert(0, bootstrap_python_path)
         import bootstrap
 
         # determine all environment variables
-        required_env = bootstrap.compute_environment()
-        # copy the extension across to the deploy folder
-        bootstrap.ensure_extension_up_to_date()
+        required_env = bootstrap.compute_environment(self.sgtk, self.descriptor)
 
         # Add std context and site info to the env
         std_env = self.get_standard_plugin_environment()
@@ -115,6 +123,26 @@ class PhotoshopLauncher(SoftwareLauncher):
             sw_version = SoftwareVersion(
                 executable_version,
                 "Photoshop CC",
+                executable_path,
+                icon_path
+            )
+            supported, reason = self._is_supported(sw_version)
+            if supported:
+                all_sw_versions.append(sw_version)
+            else:
+                self.logger.debug(reason)
+
+        for executable_path, tokens in self._glob_and_match(
+            self.AFX_EXECUTABLE_MATCH_TEMPLATES[sys.platform], self.COMPONENT_REGEX_LOOKUP
+        ):
+            self.logger.debug("Processing %s with tokens %s", executable_path, tokens)
+            # extract the components (default to None if not included). but
+            # version is in all templates, so should be there.
+            executable_version = tokens.get("version")
+
+            sw_version = SoftwareVersion(
+                executable_version,
+                "After Effects CC",
                 executable_path,
                 icon_path
             )
