@@ -90,7 +90,7 @@ def _get_adobe_framework_location(tank, descriptor):
         full_config = full_config.get(framework_location_description[0].pop(0), {})
 
     return tank.pipeline_configuration.get_framework_descriptor(full_config.get('location', {})).get_path()
-    
+
 
 def compute_environment(tank, descriptor):
     """
@@ -106,6 +106,7 @@ def compute_environment(tank, descriptor):
     # set the interpreter with which to launch the CC integration
     env["SHOTGUN_ADOBE_PYTHON"] = sys.executable
     env["SHOTGUN_ADOBE_FRAMEWORK_LOCATION"] = _get_adobe_framework_location(tank, descriptor)
+    env["SHOTGUN_ENGINE"] = "tk-photoshopcc"
 
     # We're going to append all of this Python process's sys.path to the
     # PYTHONPATH environment variable. This will ensure that we have access
