@@ -21,7 +21,7 @@ class TestAdobeRPC(unittest.TestCase):
         cls.resources = os.path.abspath(
             os.path.join(
                 os.path.dirname(__file__),
-                "..",
+                os.pardir,
                 "resources",
             ),
         )
