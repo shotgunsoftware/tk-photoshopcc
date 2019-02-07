@@ -218,7 +218,7 @@ class PhotoshopUploadVersionPlugin(HookBaseClass):
 
                 # jpg file/options
                 jpg_file = engine.adobe.File(upload_path)
-                jpg_options = engine.adobe.JPEGSaveOptions
+                jpg_options = engine.adobe.JPEGSaveOptions()
                 jpg_options.quality = 12
 
                 # mark the temp upload path for removal
