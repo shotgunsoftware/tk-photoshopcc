@@ -7,26 +7,19 @@
 # By accessing, using, copying or modifying this work you indicate your 
 # agreement to the Shotgun Pipeline Toolkit Source Code License. All rights 
 # not expressly granted therein are reserved by Shotgun Software Inc.
-
-import contextlib
 import os
-import shutil
 import sys
-import codecs
-import tempfile
-import zipfile
+
 
 import sgtk
 import sgtk.platform.framework
-from sgtk.util.filesystem import (
-    backup_folder,
-    ensure_folder_exists,
-    move_folder,
-)
+
 
 logger = sgtk.LogManager.get_logger(__name__)
 
+
 class EngineConfigurationError(Exception): pass
+
 
 def bootstrap(engine_name, context, app_path, app_args, **kwargs):
     """
@@ -114,6 +107,5 @@ def compute_environment():
     env["PYTHONPATH"] = os.environ["PYTHONPATH"]
 
     return env
-
 
 

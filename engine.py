@@ -7,10 +7,8 @@
 # By accessing, using, copying or modifying this work you indicate your 
 # agreement to the Shotgun Pipeline Toolkit Source Code License. All rights 
 # not expressly granted therein are reserved by Shotgun Software Inc.
-
 import logging
 import os
-import re
 import subprocess
 import sys
 import tempfile
@@ -18,7 +16,9 @@ import threading
 import uuid
 import re
 
+
 from contextlib import contextmanager
+
 
 import sgtk
 from sgtk.util.filesystem import ensure_folder_exists
