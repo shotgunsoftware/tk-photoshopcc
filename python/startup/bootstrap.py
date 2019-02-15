@@ -50,28 +50,32 @@ def bootstrap(engine_name, context, app_path, app_args, **kwargs):
     return (app_path, app_args)
 
 
-def _get_adobe_framework_location():
-    """ This helper method will query the current environment for the configured
-        location on disk where the tk-adobe-framework is to be found.
+def _get_adobe_framework():
+    """
+    This helper method will query the current environment for the configured
+    tk-adobe-framework.
 
-        This is necessary, as the the framework relies on an environment variable
-        to be set by the parent engine.
+    This is necessary, as the the framework relies on an environment variable
+    to be set by the parent engine and also the CEP panel to be installed.
 
-        Returns (str): The folder path to the latest framework. Empty string if no match.
+    Returns (Framework or None): The tk-adobe-framework configured under the tk-multi-launchapp
     """
     engine = sgtk.platform.current_engine()
     if engine is None:
         logger.warn('No engine is currently running.')
-        return ''
+        return
+
     launch_app = engine.apps.get('tk-multi-launchapp')
     if launch_app is None:
-        logger.warn('The engine {!r} must have tk-multi-launchapp configured in order to launch tk-photoshopcc.'.format(engine.name))
-        return ''
+        logger.warn('The engine {!r} must have tk-multi-launchapp configured in order to launch tk-aftereffectscc.'.format(engine.name))
+        return
+
     adobe_framework = launch_app.frameworks.get('tk-framework-adobe')
     if adobe_framework is None:
-        logger.warn('The app {!r} must have tk-framework-adobe configured in order to launch tk-photoshopcc.'.format(launch_app.name))
-        return ''
-    return adobe_framework.disk_location
+        logger.warn('The app {!r} must have tk-framework-adobe configured in order to launch tk-aftereffectscc.'.format(launch_app.name))
+        return
+
+    return adobe_framework
 
 
 def compute_environment():
@@ -85,7 +89,13 @@ def compute_environment():
     """
     env = {}
 
-    framework_location = _get_adobe_framework_location()
+    adobe_framework = _get_adobe_framework()
+    if adobe_framework is None:
+        raise EngineConfigurationError('The tk-framework-adobe could not be found in the current environment. Please check the log for more information.')
+
+    adobe_framework.ensure_extension_up_to_date()
+
+    framework_location = adobe_framework.disk_location
     if not os.path.exists(framework_location):
         raise EngineConfigurationError('The tk-adobe-framework could not be found in the current environment. Please check the log for more information.')
 
