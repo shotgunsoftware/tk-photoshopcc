@@ -12,7 +12,7 @@ import imp
 import os
 import sys
 
-import sgtk.platform.framework
+
 from sgtk.platform import SoftwareLauncher, SoftwareVersion, LaunchInformation
 
 

@@ -18,7 +18,8 @@ import sgtk.platform.framework
 logger = sgtk.LogManager.get_logger(__name__)
 
 
-class EngineConfigurationError(Exception): pass
+class EngineConfigurationError(Exception):
+    pass
 
 
 def bootstrap(engine_name, context, app_path, app_args, **kwargs):

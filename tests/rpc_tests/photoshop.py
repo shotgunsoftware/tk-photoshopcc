@@ -18,7 +18,7 @@ class TestPhotoshopRPC(TestAdobeRPC):
     @classmethod
     def setUpClass(cls):
         TestAdobeRPC.setUpClass()
-        file_obj = cls.adobe.File(os.path.join(cls.resources,"empty.psd").replace(os.sep, '/'))
+        file_obj = cls.adobe.File(os.path.join(cls.resources, "empty.psd").replace(os.sep, '/'))
         cls.document = cls.adobe.app.open(
             file_obj,
         )
