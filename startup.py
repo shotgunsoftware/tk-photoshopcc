@@ -70,9 +70,8 @@ class PhotoshopLauncher(SoftwareLauncher):
         #       located in the python/startup folder to be compatible
         #       with older versions of the launch workflow
         bootstrap_python_path = os.path.join(self.disk_location, "python", "startup", "bootstrap.py")
-        mod_file = open(bootstrap_python_path, "r")
-        bootstrap = imp.load_module('bootstrap', mod_file, 'tk-photoshopcc.bootstrap', ('.py', 'U', 1))
-        mod_file.close()
+        with open(bootstrap_python_path, "r") as mod_file:
+            bootstrap = imp.load_module('bootstrap', mod_file, 'tk-photoshopcc.bootstrap', ('.py', 'U', 1))
 
         # determine all environment variables
         required_env = bootstrap.compute_environment()

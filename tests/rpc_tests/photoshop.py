@@ -12,6 +12,7 @@ import os
 
 from . import TestAdobeRPC
 
+
 class TestPhotoshopRPC(TestAdobeRPC):
     document = None
 

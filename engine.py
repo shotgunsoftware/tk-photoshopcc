@@ -59,12 +59,12 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
     TEST_SCRIPT_BASENAME = "run_tests.py"
 
     PY_TO_JS_LOG_LEVEL_MAPPING = {
-                "CRITICAL": "error",
-                "ERROR": "error",
-                "WARNING": "warn",
-                "INFO": "info",
-                "DEBUG": "debug",
-            }
+        "CRITICAL": "error",
+        "ERROR": "error",
+        "WARNING": "warn",
+        "INFO": "info",
+        "DEBUG": "debug",
+    }
 
     _COMMAND_UID_COUNTER = 0
     _LOCK = threading.Lock()
@@ -183,8 +183,8 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
         self.__settings_manager = self.__settings.UserSettings(self)
 
         # connect the retriever signals
-        self.__sg_data.work_completed.connect( self.__on_worker_signal)
-        self.__sg_data.work_failure.connect( self.__on_worker_failure)
+        self.__sg_data.work_completed.connect(self.__on_worker_signal)
+        self.__sg_data.work_failure.connect(self.__on_worker_failure)
 
         # context request uids. we keep track of these to make sure we're only
         # processing the current requests.
@@ -388,7 +388,7 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
                 if doc_width and doc_height:
                     max_sz = max(doc_width, doc_height)
                     if max_sz > max_size:
-                        scale = min(float(max_size)/float(max_sz), 1.0)
+                        scale = min(float(max_size) / float(max_sz), 1.0)
                         jpeg_width = max(min(int(doc_width * scale), doc_width), 1)
                         jpeg_height = max(min(int(doc_height * scale), doc_height), 1)
                 else:
@@ -507,42 +507,42 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
             
             # the following extensions follow the same pattern of defining options
             # that will be supplied to the document's saveAs method
-            if ext ==".bmp":
-                save_options = self.adobe.BMPSaveOptions
-            elif ext ==".dcs":
+            if ext == ".bmp":
+                save_options = self.adobe.BMPSaveOptions()
+            elif ext == ".dcs":
                 # DCS1_SaveOptions is not used for ".dcs" files, DCS2_SaveOptions is used instead
-                save_options = self.adobe.DCS2_SaveOptions
-            elif ext ==".eps":
-                save_options = self.adobe.EPSSaveOptions
-            elif ext ==".gif":
-                save_options = self.adobe.GIFSaveOptions
+                save_options = self.adobe.DCS2_SaveOptions()
+            elif ext == ".eps":
+                save_options = self.adobe.EPSSaveOptions()
+            elif ext == ".gif":
+                save_options = self.adobe.GIFSaveOptions()
             elif ext in [".jpg", ".jpeg"]:
-                save_options = self.adobe.JPEGSaveOptions
+                save_options = self.adobe.JPEGSaveOptions()
                 # the default quality for jpg is 3, so we set it to the maximum: 12
                 save_options.quality = 12
-            elif ext ==".pdf":
-                save_options = self.adobe.PDFSaveOptions
+            elif ext == ".pdf":
+                save_options = self.adobe.PDFSaveOptions()
             elif ext in [".pict", ".pct", ".pic"]:
                 # PICTResourceSaveOptions is skipped for now, need a way to differentiate PICT
                 # files from PICT resource files
-                save_options = self.adobe.PICTFileSaveOptions
-            elif ext ==".pixar":
-                save_options = self.adobe.PixarSaveOptions
-            elif ext ==".png":
-                save_options = self.adobe.PNGSaveOptions
+                save_options = self.adobe.PICTFileSaveOptions()
+            elif ext == ".pixar":
+                save_options = self.adobe.PixarSaveOptions()
+            elif ext == ".png":
+                save_options = self.adobe.PNGSaveOptions()
             elif ext == ".psd":
-                save_options = self.adobe.PhotoshopSaveOptions
-            elif ext ==".raw":
-                save_options = self.adobe.RawSaveOptions
+                save_options = self.adobe.PhotoshopSaveOptions()
+            elif ext == ".raw":
+                save_options = self.adobe.RawSaveOptions()
             elif ext in [".sgi", ".rgb", ".rgba", ".bw", ".int", ".inta"]:
-                save_options = self.adobe.SGIRGBSaveOptions
+                save_options = self.adobe.SGIRGBSaveOptions()
             elif ext in [".tga", ".targa"]:
-                save_options = self.adobe.TargaSaveOptions
+                save_options = self.adobe.TargaSaveOptions()
             elif ext in [".tif", ".tiff"]:
-                save_options = self.adobe.TiffSaveOptions
+                save_options = self.adobe.TiffSaveOptions()
             else:
                 # default value
-                save_options = self.adobe.PhotoshopSaveOptions
+                save_options = self.adobe.PhotoshopSaveOptions()
 
             # Photoshop won't ensure that the folder is created when saving, so we must make sure it exists
             ensure_folder_exists(os.path.dirname(path))
@@ -666,7 +666,7 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
                     )
                     self._handle_active_document_change(active_document_path)
                 else:
-                   self.logger.debug(
+                    self.logger.debug(
                         "There is no active document, so there is no need to change context."
                     )
 
@@ -1158,7 +1158,7 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
         show_dialog & show_modal.
         """
         # determine the parent widget to use:
-        from tank.platform.qt import QtGui, QtCore
+        from tank.platform.qt import QtGui
 
         if not self._DIALOG_PARENT:
             if sys.platform == "win32":
@@ -1533,7 +1533,6 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
         from sgtk.platform.qt import QtGui, QtCore
         url = self.context.shotgun_url
         QtGui.QDesktopServices.openUrl(QtCore.QUrl(url))
-
 
     def _jump_to_fs(self):
         """

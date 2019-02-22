@@ -18,7 +18,7 @@ import sgtk.platform.framework
 logger = sgtk.LogManager.get_logger(__name__)
 
 
-class EngineConfigurationError(Exception):
+class EngineConfigurationError(sgtk.TankError):
     pass
 
 
@@ -45,37 +45,8 @@ def bootstrap(engine_name, context, app_path, app_args, **kwargs):
     # set the environment
     os.environ.update(env)
 
-
     # all good to go
     return (app_path, app_args)
-
-
-def _get_adobe_framework():
-    """
-    This helper method will query the current environment for the configured
-    tk-adobe-framework.
-
-    This is necessary, as the the framework relies on an environment variable
-    to be set by the parent engine and also the CEP panel to be installed.
-
-    Returns (Framework or None): The tk-adobe-framework configured under the tk-multi-launchapp
-    """
-    engine = sgtk.platform.current_engine()
-    if engine is None:
-        logger.warn('No engine is currently running.')
-        return
-
-    launch_app = engine.apps.get('tk-multi-launchapp')
-    if launch_app is None:
-        logger.warn('The engine {!r} must have tk-multi-launchapp configured in order to launch tk-aftereffectscc.'.format(engine.name))
-        return
-
-    adobe_framework = launch_app.frameworks.get('tk-framework-adobe')
-    if adobe_framework is None:
-        logger.warn('The app {!r} must have tk-framework-adobe configured in order to launch tk-aftereffectscc.'.format(launch_app.name))
-        return
-
-    return adobe_framework
 
 
 def compute_environment():
@@ -89,15 +60,11 @@ def compute_environment():
     """
     env = {}
 
-    adobe_framework = _get_adobe_framework()
-    if adobe_framework is None:
+    framework_location = _get_adobe_framework_location()
+    if framework_location is None:
         raise EngineConfigurationError('The tk-framework-adobe could not be found in the current environment. Please check the log for more information.')
 
-    adobe_framework.ensure_extension_up_to_date()
-
-    framework_location = adobe_framework.disk_location
-    if not os.path.exists(framework_location):
-        raise EngineConfigurationError('The tk-adobe-framework could not be found in the current environment. Please check the log for more information.')
+    _ensure_framework_is_installed(framework_location)
 
     # set the interpreter with which to launch the CC integration
     env["SHOTGUN_ADOBE_PYTHON"] = sys.executable
@@ -118,5 +85,74 @@ def compute_environment():
     env["PYTHONPATH"] = os.environ["PYTHONPATH"]
 
     return env
+
+
+def _get_adobe_framework_location():
+    """
+    This helper method will query the current disc-location for the configured
+    tk-adobe-framework.
+
+    This is necessary, as the the framework relies on an environment variable
+    to be set by the parent engine and also the CEP panel to be installed.
+
+    TODO: When the following logic was implemented, there was no way of
+        accessing the engine's frameworks at launch time. Once this is
+        possible, this logic should be replaced.
+
+    Returns (str or None): The tk-adobe-framework disc-location directory path
+        configured under the tk-multi-launchapp
+    """
+
+    engine = sgtk.platform.current_engine()
+    env_name = engine.environment.get("name")
+    if env_name is None:
+        logger.warn(("The current environment of engine {!r} "
+                     "seems to be invalid. No name found. "
+                     "Environment: {!r}").format(engine.name, engine.environment))
+        return
+
+    env = engine.tank.pipeline_configuration.get_environment(env_name)
+    engine_desc = env.get_engine_descriptor("tk-photoshopcc")
+    if env_name is None:
+        logger.warn(("The current environment {!r} "
+                     "is not configured to run the tk-photohopcc "
+                     "engine. Please add the engine to your env-file: "
+                     "{!r}").format(env, env.disk_location))
+        return
+
+    framework_name = None
+    for req_framework in engine_desc.get_required_frameworks():
+        if req_framework.get("name") == "tk-framework-adobe":
+            name_parts = [req_framework["name"]]
+            if "version" in req_framework:
+                name_parts.append(req_framework["version"])
+            framework_name = "_".join(name_parts)
+            break
+    else:
+        logger.warn(("The engine tk-photoshopcc must have the "
+                     "tk-framework-adobe configured in order to run"))
+        return
+
+    desc = env.get_framework_descriptor(framework_name)
+    return desc.get_path()
+
+
+def _ensure_framework_is_installed(framework_location):
+    """
+    This method calls the frameworks CEP extension installation
+    logic.
+    """
+
+    # TODO: The following import should be replaced with
+    # a more a call like import_framework, once one has
+    # access to the configured frameworks at engine start.
+    bootstrap_python_path = os.path.join(framework_location, "python")
+
+    sys.path.insert(0, bootstrap_python_path)
+    import startup_utils
+    sys.path.remove(bootstrap_python_path)
+
+    # installing the CEP extension.
+    startup_utils.ensure_extension_up_to_date(logger)
 
 
