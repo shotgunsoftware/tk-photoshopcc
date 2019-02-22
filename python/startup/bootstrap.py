@@ -149,7 +149,7 @@ def _ensure_framework_is_installed(framework_location):
     bootstrap_python_path = os.path.join(framework_location, "python")
 
     sys.path.insert(0, bootstrap_python_path)
-    import startup_utils
+    import tk_framework_adobe_utils.startup as startup_utils
     sys.path.remove(bootstrap_python_path)
 
     # installing the CEP extension.
