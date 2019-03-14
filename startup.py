@@ -1,4 +1,4 @@
-# Copyright (c) 2016 Shotgun Software Inc.
+# Copyright (c) 2019 Shotgun Software Inc.
 #
 # CONFIDENTIAL AND PROPRIETARY
 #
@@ -8,8 +8,10 @@
 # agreement to the Shotgun Pipeline Toolkit Source Code License. All rights
 # not expressly granted therein are reserved by Shotgun Software Inc.
 
+import imp
 import os
 import sys
+
 
 from sgtk.platform import SoftwareLauncher, SoftwareVersion, LaunchInformation
 
@@ -67,14 +69,12 @@ class PhotoshopLauncher(SoftwareLauncher):
         # note: all the business logic for how to launch is
         #       located in the python/startup folder to be compatible
         #       with older versions of the launch workflow
-        bootstrap_python_path = os.path.join(self.disk_location, "python", "startup")
-        sys.path.insert(0, bootstrap_python_path)
-        import bootstrap
+        bootstrap_python_path = os.path.join(self.disk_location, "python", "startup", "bootstrap.py")
+        with open(bootstrap_python_path, "r") as mod_file:
+            bootstrap = imp.load_module('bootstrap', mod_file, 'tk-photoshopcc.bootstrap', ('.py', 'U', 1))
 
         # determine all environment variables
         required_env = bootstrap.compute_environment()
-        # copy the extension across to the deploy folder
-        bootstrap.ensure_extension_up_to_date()
 
         # Add std context and site info to the env
         std_env = self.get_standard_plugin_environment()

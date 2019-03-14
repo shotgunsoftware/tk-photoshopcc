@@ -12,14 +12,16 @@ import os
 
 from . import TestAdobeRPC
 
+
 class TestPhotoshopRPC(TestAdobeRPC):
     document = None
 
     @classmethod
     def setUpClass(cls):
         TestAdobeRPC.setUpClass()
+        file_obj = cls.adobe.File(os.path.join(cls.resources, "empty.psd").replace(os.sep, '/'))
         cls.document = cls.adobe.app.open(
-            cls.adobe.File(os.path.join(cls.resources,"empty.psd")),
+            file_obj,
         )
 
     @classmethod

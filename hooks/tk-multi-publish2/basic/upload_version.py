@@ -218,7 +218,7 @@ class PhotoshopUploadVersionPlugin(HookBaseClass):
 
                 # jpg file/options
                 jpg_file = engine.adobe.File(upload_path)
-                jpg_options = engine.adobe.JPEGSaveOptions
+                jpg_options = engine.adobe.JPEGSaveOptions()
                 jpg_options.quality = 12
 
                 # mark the temp upload path for removal
@@ -258,7 +258,7 @@ class PhotoshopUploadVersionPlugin(HookBaseClass):
                     "label": "Version Data",
                     "tooltip": "Show the complete Version data dictionary",
                     "text": "<pre>%s</pre>" % (
-                    pprint.pformat(version_data),)
+                        pprint.pformat(version_data),)
                 }
             }
         )
@@ -289,7 +289,7 @@ class PhotoshopUploadVersionPlugin(HookBaseClass):
         thumb = item.get_thumbnail_as_path()
         # if thumbnail not set, consider the one created from file path
         if not thumb:
-           thumb = upload_path
+            thumb = upload_path
 
         # go ahead and update the publish thumbnail (if there was one)
         if publish_data:
@@ -301,7 +301,6 @@ class PhotoshopUploadVersionPlugin(HookBaseClass):
             )
             self.logger.info("Publish thumbnail updated!")
             
-
         item.properties["upload_path"] = upload_path
 
     def finalize(self, settings, item):

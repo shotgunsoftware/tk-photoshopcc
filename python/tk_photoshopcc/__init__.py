@@ -1,4 +1,4 @@
-# Copyright (c) 2016 Shotgun Software Inc.
+# Copyright (c) 2019 Shotgun Software Inc.
 #
 # CONFIDENTIAL AND PROPRIETARY
 #
@@ -9,9 +9,30 @@
 # not expressly granted therein are reserved by Shotgun Software Inc.
 
 import sys
+import sgtk
 
-from .adobe_bridge import AdobeBridge, RPCTimeoutError
-import shotgunutils
+
+adobe_bridge = sgtk.platform.import_framework(
+    "tk-framework-adobe",
+    "tk_framework_adobe.adobe_bridge"
+)
+
+
+AdobeBridge = adobe_bridge.AdobeBridge
+
+
+shotgun_data = sgtk.platform.import_framework("tk-framework-shotgunutils", "shotgun_data")
+
+
+shotgun_globals = sgtk.platform.import_framework("tk-framework-shotgunutils", "shotgun_globals")
+
+
+shotgun_settings = sgtk.platform.import_framework("tk-framework-shotgunutils", "settings")
+
 
 if sys.platform == "win32":
-    import win_32_api
+    win_32_api = sgtk.platform.import_framework(
+        "tk-framework-adobe",
+        "tk_framework_adobe_utils.win_32_api"
+    )
+
