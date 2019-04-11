@@ -399,7 +399,7 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
                 # Get a file object from Photoshop for this path and the current
                 # jpg save options:
                 jpeg_file = adobe.File(jpeg_pub_path)
-                jpeg_options = adobe.JPEGSaveOptions
+                jpeg_options = adobe.JPEGSaveOptions()
                 jpeg_options.quality = quality
 
                 # duplicate the original doc:
