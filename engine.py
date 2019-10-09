@@ -1216,6 +1216,13 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
         # make sure the window raised so it doesn't
         # appear behind the main Photoshop window
         self.logger.debug("Showing dialog: %s" % (title,))
+
+        # Adding this window flag will ensure that our dialogs won't be
+        # tabbed together into a single window on OSX.
+        if sys.platform == "darwin":
+            from sgtk.platform.qt import QtCore
+            dialog.setWindowFlags(dialog.windowFlags() | QtCore.Qt.CustomizeWindowHint)
+
         dialog.show()
         dialog.raise_()
         dialog.activateWindow()
