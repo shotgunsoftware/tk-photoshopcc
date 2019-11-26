@@ -63,7 +63,6 @@ class PhotoshopLauncher(SoftwareLauncher):
         :param str file_to_open: (optional) Full path name of a file to open on launch.
         :returns: :class:`LaunchInformation` instance
         """
-        # todo - add support for the file_to_open parameter.
 
         # find the bootstrap script and import it.
         # note: all the business logic for how to launch is
@@ -79,6 +78,10 @@ class PhotoshopLauncher(SoftwareLauncher):
         # Add std context and site info to the env
         std_env = self.get_standard_plugin_environment()
         required_env.update(std_env)
+
+        # populate the file to open env.
+        if file_to_open:
+            required_env["SGTK_FILE_TO_OPEN"] = file_to_open
 
         return LaunchInformation(exec_path, args, required_env)
 
