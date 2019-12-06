@@ -248,17 +248,6 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
                 dict(),
             )
 
-        # Normally the bootstrap logic would handle the file open, but since the bootstrap logic is handled by
-        # the adobe framework, and is generic, we should handle it here.
-        file_to_open = os.environ.get("SGTK_FILE_TO_OPEN")
-
-        if file_to_open:
-            # open the specified script
-            self.adobe.app.load(self.adobe.File(file_to_open))
-            # clear the environment variable after loading so that it doesn't get reopened on an engine restart.
-            del os.environ["SGTK_FILE_TO_OPEN"]
-
-
     def destroy_engine(self):
         """
         Called when the engine should tear down itself and all its apps.

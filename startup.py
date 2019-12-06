@@ -92,9 +92,11 @@ class PhotoshopLauncher(SoftwareLauncher):
         std_env = self.get_standard_plugin_environment()
         required_env.update(std_env)
 
-        # populate the file to open env.
         if file_to_open:
-            required_env["SGTK_FILE_TO_OPEN"] = file_to_open
+            # If we have a file to open, add it to the end of the args so Photoshop opens the file.
+            # By providing the file as an arg, this will ensure that on Windows, Photoshop will open the file
+            # in a pre-existing Photoshop session if one is found.
+            args = " ".join([args, file_to_open])
 
         return LaunchInformation(exec_path, args, required_env)
 
