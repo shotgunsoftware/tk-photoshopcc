@@ -1203,6 +1203,13 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
             *args, **kwargs
         )
 
+        # We need to tweak the window flags for dialogs shown on OSX to keep them
+        # from tabbing themselves together if there are multiple Toolkit dialogs
+        # open at the same time.
+        if sys.platform == "darwin":
+            from sgtk.platform.qt import QtCore
+            dialog.setWindowFlags(QtCore.Qt.Tool)
+
         # Note - the base engine implementation will try to clean up
         # dialogs and widgets after they've been closed.  However this
         # can cause a crash in Photoshop as the system may try to send
