@@ -22,6 +22,7 @@ from contextlib import contextmanager
 
 import sgtk
 from sgtk.util.filesystem import ensure_folder_exists
+from tank_vendor import six
 
 
 class PhotoshopCCEngine(sgtk.platform.Engine):
@@ -225,7 +226,7 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
                 self._CONTEXT_CACHE_KEY, dict(), self.__settings_manager.SCOPE_PROJECT,
             )
 
-            for key, value in serial_cache.iteritems():
+            for key, value in serial_cache.items():
                 self._CONTEXT_CACHE[key] = sgtk.Context.deserialize(value)
         else:
             # If there are fewer than 2 documents open, we don't need the stored
@@ -724,7 +725,7 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
         # Make sure we have a properly-encoded string for the path. We can
         # possibly get a file path/name that contains unicode, and we don't
         # want to deal with that later on.
-        if isinstance(active_document_path, unicode):
+        if isinstance(active_document_path, six.text_type):
             active_document_path = active_document_path.encode("utf-8")
 
         # This will be True if the context_changes_disabled context manager is
@@ -1366,7 +1367,7 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
 
         # iterate over all the registered commands and gather the necessary info
         # to display them in adobe
-        for (command_name, command_info) in self.commands.iteritems():
+        for (command_name, command_info) in self.commands.items():
 
             # commands come with a dict of properties that may or may not
             # contain certain data.
@@ -1559,7 +1560,7 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
             self._CONTEXT_CACHE[path] = context
 
             serial_cache = dict()
-            for k, v in self._CONTEXT_CACHE.iteritems():
+            for k, v in self._CONTEXT_CACHE.items():
                 serial_cache[k] = v.serialize()
 
             self.logger.debug("Storing context cache: %s" % serial_cache)
