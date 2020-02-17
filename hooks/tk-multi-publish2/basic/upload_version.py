@@ -1,11 +1,11 @@
 # Copyright (c) 2017 Shotgun Software Inc.
-# 
+#
 # CONFIDENTIAL AND PROPRIETARY
-# 
-# This work is provided "AS IS" and subject to the Shotgun Pipeline Toolkit 
+#
+# This work is provided "AS IS" and subject to the Shotgun Pipeline Toolkit
 # Source Code License included in this distribution package. See LICENSE.
-# By accessing, using, copying or modifying this work you indicate your 
-# agreement to the Shotgun Pipeline Toolkit Source Code License. All rights 
+# By accessing, using, copying or modifying this work you indicate your
+# agreement to the Shotgun Pipeline Toolkit Source Code License. All rights
 # not expressly granted therein are reserved by Shotgun Software Inc.
 
 import os
@@ -30,12 +30,7 @@ class PhotoshopUploadVersionPlugin(HookBaseClass):
         """
 
         # look for icon one level up from this hook's folder in "icons" folder
-        return os.path.join(
-            self.disk_location,
-            os.pardir,
-            "icons",
-            "review.png"
-        )
+        return os.path.join(self.disk_location, os.pardir, "icons", "review.png")
 
     @property
     def name(self):
@@ -64,7 +59,11 @@ class PhotoshopUploadVersionPlugin(HookBaseClass):
         copy of the file will be attached to it. The file can then be reviewed
         via the project's <a href='%s'>Media</a> page, <a href='%s'>RV</a>, or
         the <a href='%s'>Shotgun Review</a> mobile app.
-        """ % (media_page_url, review_url, review_url)
+        """ % (
+            media_page_url,
+            review_url,
+            review_url,
+        )
 
     @property
     def settings(self):
@@ -138,19 +137,14 @@ class PhotoshopUploadVersionPlugin(HookBaseClass):
             # provide a save button. the document will need to be saved before
             # validation will succeed.
             self.logger.warn(
-                "The Photoshop document '%s' has not been saved." %
-                (document.name,),
-                extra=_get_save_as_action(document)
+                "The Photoshop document '%s' has not been saved." % (document.name,),
+                extra=_get_save_as_action(document),
             )
 
         self.logger.info(
-            "Photoshop '%s' plugin accepted document: %s" %
-            (self.name, document.name)
+            "Photoshop '%s' plugin accepted document: %s" % (self.name, document.name)
         )
-        return {
-            "accepted": True,
-            "checked": True
-        }
+        return {"accepted": True, "checked": True}
 
     def validate(self, settings, item):
         """
@@ -172,12 +166,10 @@ class PhotoshopUploadVersionPlugin(HookBaseClass):
         if not path:
             # the document still requires saving. provide a save button.
             # validation fails.
-            error_msg = "The Photoshop document '%s' has not been saved." % \
-                        (document.name,)
-            self.logger.error(
-                error_msg,
-                extra=_get_save_as_action(document)
+            error_msg = "The Photoshop document '%s' has not been saved." % (
+                document.name,
             )
+            self.logger.error(error_msg, extra=_get_save_as_action(document))
             raise Exception(error_msg)
 
         return True
@@ -212,8 +204,7 @@ class PhotoshopUploadVersionPlugin(HookBaseClass):
 
                 # path to a temp jpg file
                 upload_path = os.path.join(
-                    tempfile.gettempdir(),
-                    "%s_sgtk.jpg" % uuid.uuid4().hex
+                    tempfile.gettempdir(), "%s_sgtk.jpg" % uuid.uuid4().hex
                 )
 
                 # jpg file/options
@@ -241,7 +232,7 @@ class PhotoshopUploadVersionPlugin(HookBaseClass):
             "code": publish_name,
             "description": item.description,
             "entity": self._get_version_entity(item),
-            "sg_task": item.context.task
+            "sg_task": item.context.task,
         }
 
         publish_data = item.properties.get("sg_publish_data")
@@ -257,10 +248,9 @@ class PhotoshopUploadVersionPlugin(HookBaseClass):
                 "action_show_more_info": {
                     "label": "Version Data",
                     "tooltip": "Show the complete Version data dictionary",
-                    "text": "<pre>%s</pre>" % (
-                        pprint.pformat(version_data),)
+                    "text": "<pre>%s</pre>" % (pprint.pformat(version_data),),
                 }
-            }
+            },
         )
 
         # create the version
@@ -278,10 +268,7 @@ class PhotoshopUploadVersionPlugin(HookBaseClass):
         # upload the file to SG
         self.logger.info("Uploading content...")
         self.parent.shotgun.upload(
-            "Version",
-            version["id"],
-            upload_path,
-            "sg_uploaded_movie"
+            "Version", version["id"], upload_path, "sg_uploaded_movie"
         )
         self.logger.info("Upload complete!")
 
@@ -295,12 +282,10 @@ class PhotoshopUploadVersionPlugin(HookBaseClass):
         if publish_data:
             self.logger.info("Updating publish thumbnail...")
             self.parent.shotgun.upload_thumbnail(
-                publish_data["type"],
-                publish_data["id"],
-                thumb
+                publish_data["type"], publish_data["id"], thumb
             )
             self.logger.info("Publish thumbnail updated!")
-            
+
         item.properties["upload_path"] = upload_path
 
     def finalize(self, settings, item):
@@ -322,9 +307,9 @@ class PhotoshopUploadVersionPlugin(HookBaseClass):
                 "action_show_in_shotgun": {
                     "label": "Show Version",
                     "tooltip": "Reveal the version in Shotgun.",
-                    "entity": version
+                    "entity": version,
                 }
-            }
+            },
         )
 
         upload_path = item.properties["upload_path"]
@@ -334,8 +319,7 @@ class PhotoshopUploadVersionPlugin(HookBaseClass):
             try:
                 os.remove(upload_path)
             except Exception:
-                self.logger.warn(
-                    "Unable to remove temp file: %s" % (upload_path,))
+                self.logger.warn("Unable to remove temp file: %s" % (upload_path,))
                 pass
 
     def _get_version_entity(self, item):
@@ -371,7 +355,7 @@ def _get_save_as_action(document):
         "action_button": {
             "label": "Save As...",
             "tooltip": "Save the current document",
-            "callback": callback
+            "callback": callback,
         }
     }
 

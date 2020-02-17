@@ -1,11 +1,11 @@
 # Copyright (c) 2019 Shotgun Software Inc.
-# 
+#
 # CONFIDENTIAL AND PROPRIETARY
-# 
-# This work is provided "AS IS" and subject to the Shotgun Pipeline Toolkit 
+#
+# This work is provided "AS IS" and subject to the Shotgun Pipeline Toolkit
 # Source Code License included in this distribution package. See LICENSE.
-# By accessing, using, copying or modifying this work you indicate your 
-# agreement to the Shotgun Pipeline Toolkit Source Code License. All rights 
+# By accessing, using, copying or modifying this work you indicate your
+# agreement to the Shotgun Pipeline Toolkit Source Code License. All rights
 # not expressly granted therein are reserved by Shotgun Software Inc.
 
 import os
@@ -75,7 +75,9 @@ class PhotoshopCCDocumentPublishPlugin(HookBaseClass):
         A file can be published multiple times however only the most recent
         publish will be available to other users. Warnings will be provided
         during validation if there are previous publishes.
-        """ % (loader_url,)
+        """ % (
+            loader_url,
+        )
         # TODO: add link to workflow docs
 
     @property
@@ -99,8 +101,7 @@ class PhotoshopCCDocumentPublishPlugin(HookBaseClass):
         """
 
         # inherit the settings from the base publish plugin
-        base_settings = \
-            super(PhotoshopCCDocumentPublishPlugin, self).settings or {}
+        base_settings = super(PhotoshopCCDocumentPublishPlugin, self).settings or {}
 
         # settings specific to this class
         photoshop_publish_settings = {
@@ -108,8 +109,8 @@ class PhotoshopCCDocumentPublishPlugin(HookBaseClass):
                 "type": "template",
                 "default": None,
                 "description": "Template path for published work files. Should"
-                               "correspond to a template defined in "
-                               "templates.yml.",
+                "correspond to a template defined in "
+                "templates.yml.",
             }
         }
 
@@ -173,19 +174,14 @@ class PhotoshopCCDocumentPublishPlugin(HookBaseClass):
             # provide a save button. the document will need to be saved before
             # validation will succeed.
             self.logger.warn(
-                "The Photoshop document '%s' has not been saved." %
-                (document.name,),
-                extra=_get_save_as_action(document)
+                "The Photoshop document '%s' has not been saved." % (document.name,),
+                extra=_get_save_as_action(document),
             )
 
         self.logger.info(
-            "Photoshop '%s' plugin accepted document: %s." %
-            (self.name, document.name)
+            "Photoshop '%s' plugin accepted document: %s." % (self.name, document.name)
         )
-        return {
-            "accepted": True,
-            "checked": True
-        }
+        return {"accepted": True, "checked": True}
 
     def validate(self, settings, item):
         """
@@ -211,12 +207,10 @@ class PhotoshopCCDocumentPublishPlugin(HookBaseClass):
         if not path:
             # the document still requires saving. provide a save button.
             # validation fails.
-            error_msg = "The Photoshop document '%s' has not been saved." % \
-                        (document.name,)
-            self.logger.error(
-                error_msg,
-                extra=_get_save_as_action(document)
+            error_msg = "The Photoshop document '%s' has not been saved." % (
+                document.name,
             )
+            self.logger.error(error_msg, extra=_get_save_as_action(document))
             raise Exception(error_msg)
 
         # ---- check the document against any attached work template
@@ -239,15 +233,14 @@ class PhotoshopCCDocumentPublishPlugin(HookBaseClass):
                         "action_button": {
                             "label": "Save File",
                             "tooltip": "Save the current Photoshop document"
-                                       "to a different file name",
+                            "to a different file name",
                             # will launch wf2 if configured
-                            "callback": _get_save_as_action(document)
+                            "callback": _get_save_as_action(document),
                         }
-                    }
+                    },
                 )
             else:
-                self.logger.debug(
-                    "Work template configured and matches document path.")
+                self.logger.debug("Work template configured and matches document path.")
         else:
             self.logger.debug("No work template configured.")
 
@@ -256,15 +249,15 @@ class PhotoshopCCDocumentPublishPlugin(HookBaseClass):
         # check to see if the next version of the work file already exists on
         # disk. if so, warn the user and provide the ability to jump to save
         # to that version now
-        (next_version_path, version) = self._get_next_version_info(path,
-                                                                   item)
+        (next_version_path, version) = self._get_next_version_info(path, item)
         if next_version_path and os.path.exists(next_version_path):
 
             # determine the next available version_number. just keep asking for
             # the next one until we get one that doesn't exist.
             while os.path.exists(next_version_path):
                 (next_version_path, version) = self._get_next_version_info(
-                    next_version_path, item)
+                    next_version_path, item
+                )
 
             error_msg = "The next version of this file already exists on disk."
             self.logger.error(
@@ -273,11 +266,12 @@ class PhotoshopCCDocumentPublishPlugin(HookBaseClass):
                     "action_button": {
                         "label": "Save to v%s" % (version,),
                         "tooltip": "Save to the next available version number, "
-                                   "v%s" % (version,),
+                        "v%s" % (version,),
                         "callback": lambda: engine.save_to_path(
-                            document, next_version_path)
+                            document, next_version_path
+                        ),
                     }
-                }
+                },
             )
             raise Exception(error_msg)
 
@@ -286,7 +280,8 @@ class PhotoshopCCDocumentPublishPlugin(HookBaseClass):
         # populate the publish template on the item if found
         publish_template_setting = settings.get("Publish Template")
         publish_template = publisher.engine.get_template_by_name(
-            publish_template_setting.value)
+            publish_template_setting.value
+        )
         if publish_template:
             item.properties["publish_template"] = publish_template
 
@@ -296,8 +291,7 @@ class PhotoshopCCDocumentPublishPlugin(HookBaseClass):
         item.properties["path"] = path
 
         # run the base class validation
-        return super(PhotoshopCCDocumentPublishPlugin, self).validate(
-            settings, item)
+        return super(PhotoshopCCDocumentPublishPlugin, self).validate(settings, item)
 
     def publish(self, settings, item):
         """
@@ -375,7 +369,7 @@ def _get_save_as_action(document):
         "action_button": {
             "label": "Save As...",
             "tooltip": "Save the current document",
-            "callback": callback
+            "callback": callback,
         }
     }
 
