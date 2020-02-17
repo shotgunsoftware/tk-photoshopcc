@@ -351,7 +351,7 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
 
                 try:
                     active_doc = document or adobe.app.activeDocument
-                except RuntimeError, e:
+                except RuntimeError as e:
                     # Exceptions reported by Photoshop CEP through the RPC API
                     # are pretty useless, so catch the error, raise our own exception
                     # but still log the original exception for debug purpose.
@@ -453,7 +453,7 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
                 max_size=self.MAX_THUMB_SIZE,
                 quality=3, # Default quality value for Photoshop Jpeg option
             )
-        except Exception, e:
+        except Exception as e:
             # Log the error for debug purpose.
             self.logger.warning(
                 "Couldn't generate thumbnail: %s" % e,
@@ -960,7 +960,7 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
         try:
             self.logger.debug("Pausing heartbeat...")
             self._HEARTBEAT_DISABLED = True
-        except Exception, e:
+        except Exception as e:
             self.logger.debug("Unable to pause heartbeat as requested.")
             self.logger.error(str(e))
         else:
