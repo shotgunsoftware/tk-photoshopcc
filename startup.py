@@ -81,9 +81,7 @@ class PhotoshopLauncher(SoftwareLauncher):
         # note: all the business logic for how to launch is
         #       located in the python/startup folder to be compatible
         #       with older versions of the launch workflow
-        bootstrap_python_path = os.path.join(
-            self.disk_location, "python", "startup",  # "bootstrap.py"
-        )
+        bootstrap_python_path = os.path.join(self.disk_location, "python", "startup")
         (file_obj, filename, desc) = imp.find_module(
             "bootstrap", [bootstrap_python_path]
         )
