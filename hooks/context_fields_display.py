@@ -38,9 +38,7 @@ class ContextFieldsDisplay(HookBaseClass):
 
         # supported by most entities
         std_fields = base_fields
-        std_fields.extend(
-            ["code", "project", "sg_status_list", "description",]
-        )
+        std_fields.extend(["code", "project", "sg_status_list", "description"])
 
         # ---- fields for specific entity contexts
 
@@ -50,14 +48,12 @@ class ContextFieldsDisplay(HookBaseClass):
 
         elif entity_type == "Asset":
             fields = std_fields
-            fields.extend(
-                ["sg_asset_type",]
-            )
+            fields.extend(["sg_asset_type"])
 
         elif entity_type == "Shot":
             fields = std_fields
             fields.extend(
-                ["sg_cut_in", "sg_cut_out", "sg_head_in", "sg_tail_out", "sg_sequence",]
+                ["sg_cut_in", "sg_cut_out", "sg_head_in", "sg_tail_out", "sg_sequence"]
             )
 
         elif entity_type == "Task":
