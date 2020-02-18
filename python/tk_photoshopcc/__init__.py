@@ -13,26 +13,29 @@ import sgtk
 
 
 adobe_bridge = sgtk.platform.import_framework(
-    "tk-framework-adobe",
-    "tk_framework_adobe.adobe_bridge"
+    "tk-framework-adobe", "tk_framework_adobe.adobe_bridge"
 )
 
 
 AdobeBridge = adobe_bridge.AdobeBridge
 
 
-shotgun_data = sgtk.platform.import_framework("tk-framework-shotgunutils", "shotgun_data")
+shotgun_data = sgtk.platform.import_framework(
+    "tk-framework-shotgunutils", "shotgun_data"
+)
 
 
-shotgun_globals = sgtk.platform.import_framework("tk-framework-shotgunutils", "shotgun_globals")
+shotgun_globals = sgtk.platform.import_framework(
+    "tk-framework-shotgunutils", "shotgun_globals"
+)
 
 
-shotgun_settings = sgtk.platform.import_framework("tk-framework-shotgunutils", "settings")
+shotgun_settings = sgtk.platform.import_framework(
+    "tk-framework-shotgunutils", "settings"
+)
 
 
 if sys.platform == "win32":
     win_32_api = sgtk.platform.import_framework(
-        "tk-framework-adobe",
-        "tk_framework_adobe_utils.win_32_api"
+        "tk-framework-adobe", "tk_framework_adobe_utils.win_32_api"
     )
-

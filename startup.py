@@ -47,13 +47,13 @@ class PhotoshopLauncher(SoftwareLauncher):
             # /Applications/Adobe Photoshop 2020/Adobe Photoshop CC 2020.app
             "darwin": "/Applications/Adobe Photoshop {version}/Adobe Photoshop {version_back}.app",
             # C:\program files\Adobe\Adobe Photoshop 2020\Photoshop.exe
-            "win32": "C:/Program Files/Adobe/Adobe Photoshop {version}/Photoshop.exe"
+            "win32": "C:/Program Files/Adobe/Adobe Photoshop {version}/Photoshop.exe",
         },
         {
             # /Applications/Adobe Photoshop CC 2017/Adobe Photoshop CC 2017.app
             "darwin": "/Applications/Adobe Photoshop CC {version}/Adobe Photoshop CC {version_back}.app",
             # C:\program files\Adobe\Adobe Photoshop CC 2017\Photoshop.exe
-            "win32": "C:/Program Files/Adobe/Adobe Photoshop CC {version}/Photoshop.exe"
+            "win32": "C:/Program Files/Adobe/Adobe Photoshop CC {version}/Photoshop.exe",
         },
     ]
 
@@ -81,9 +81,13 @@ class PhotoshopLauncher(SoftwareLauncher):
         # note: all the business logic for how to launch is
         #       located in the python/startup folder to be compatible
         #       with older versions of the launch workflow
-        bootstrap_python_path = os.path.join(self.disk_location, "python", "startup", "bootstrap.py")
+        bootstrap_python_path = os.path.join(
+            self.disk_location, "python", "startup", "bootstrap.py"
+        )
         with open(bootstrap_python_path, "r") as mod_file:
-            bootstrap = imp.load_module('bootstrap', mod_file, 'tk-photoshopcc.bootstrap', ('.py', 'U', 1))
+            bootstrap = imp.load_module(
+                "bootstrap", mod_file, "tk-photoshopcc.bootstrap", (".py", "U", 1)
+            )
 
         # determine all environment variables
         required_env = bootstrap.compute_environment()
@@ -110,10 +114,7 @@ class PhotoshopLauncher(SoftwareLauncher):
         self.logger.debug("Scanning for photoshop executables...")
 
         # use the bundled icon
-        icon_path = os.path.join(
-            self.disk_location,
-            "icon_256.png"
-        )
+        icon_path = os.path.join(self.disk_location, "icon_256.png")
         self.logger.debug("Using icon path: %s" % (icon_path,))
 
         if sys.platform not in self.SUPPORTED_PLATFORMS:
@@ -126,16 +127,15 @@ class PhotoshopLauncher(SoftwareLauncher):
             for executable_path, tokens in self._glob_and_match(
                 match_template_set[sys.platform], self.COMPONENT_REGEX_LOOKUP
             ):
-                self.logger.debug("Processing %s with tokens %s", executable_path, tokens)
+                self.logger.debug(
+                    "Processing %s with tokens %s", executable_path, tokens
+                )
                 # extract the components (default to None if not included). but
                 # version is in all templates, so should be there.
                 executable_version = tokens.get("version")
 
                 sw_version = SoftwareVersion(
-                    executable_version,
-                    "Photoshop CC",
-                    executable_path,
-                    icon_path
+                    executable_version, "Photoshop CC", executable_path, icon_path
                 )
                 supported, reason = self._is_supported(sw_version)
                 if supported:
