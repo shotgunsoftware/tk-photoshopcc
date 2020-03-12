@@ -85,8 +85,8 @@ class PhotoshopCCSceneCollector(HookBaseClass):
             engine.logger.debug("No active document found.")
             active_doc_name = None
 
-        # attempt to retrive a configured work template. we can attach
-        # it to the collected project items
+        # Attempt to retrieve a configured work template. We can attach
+        # it to the collected project items.
         work_template_setting = settings.get("Work Template")
         work_template = None
         if work_template_setting:
@@ -137,9 +137,9 @@ class PhotoshopCCSceneCollector(HookBaseClass):
 
             document_item.set_icon_from_path(icon_path)
 
-            # disable thumbnail creation for photoshop documents. for the
+            # Disable thumbnail creation for Photoshop documents. For the
             # default workflow, the thumbnail will be auto-updated after the
-            # version creation plugin runs
+            # version creation plugin runs.
             document_item.thumbnail_enabled = False
 
             # add the document object to the properties so that the publish
