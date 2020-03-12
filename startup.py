@@ -81,13 +81,11 @@ class PhotoshopLauncher(SoftwareLauncher):
         # note: all the business logic for how to launch is
         #       located in the python/startup folder to be compatible
         #       with older versions of the launch workflow
-        bootstrap_python_path = os.path.join(
-            self.disk_location, "python", "startup", "bootstrap.py"
+        bootstrap_python_path = os.path.join(self.disk_location, "python", "startup")
+        (file_obj, filename, desc) = imp.find_module(
+            "bootstrap", [bootstrap_python_path]
         )
-        with open(bootstrap_python_path, "r") as mod_file:
-            bootstrap = imp.load_module(
-                "bootstrap", mod_file, "tk-photoshopcc.bootstrap", (".py", "U", 1)
-            )
+        bootstrap = imp.load_module("bootstrap", file_obj, filename, desc)
 
         # determine all environment variables
         required_env = bootstrap.compute_environment()
@@ -111,7 +109,7 @@ class PhotoshopLauncher(SoftwareLauncher):
         :return: A list of :class:`SoftwareVersion` objects.
         """
 
-        self.logger.debug("Scanning for photoshop executables...")
+        self.logger.debug("Scanning for Photoshop executables...")
 
         # use the bundled icon
         icon_path = os.path.join(self.disk_location, "icon_256.png")
