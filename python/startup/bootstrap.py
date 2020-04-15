@@ -72,17 +72,6 @@ def compute_environment():
     env["SHOTGUN_ADOBE_PYTHON"] = sys.executable
     env["SHOTGUN_ADOBE_FRAMEWORK_LOCATION"] = framework_location
     env["SHOTGUN_ENGINE"] = "tk-photoshopcc"
-
-    # We're going to append all of this Python process's sys.path to the
-    # PYTHONPATH environment variable. This will ensure that we have access
-    # to all libraries available in this process in subprocesses like the
-    # Python process that is spawned by the Shotgun CEP extension on launch
-    # of an Adobe host application. We're appending instead of setting because
-    # we don't want to stomp on any PYTHONPATH that might already exist that
-    # we want to persist when the Python subprocess is spawned.
-    sgtk.util.append_path_to_env_var(
-        "PYTHONPATH", os.pathsep.join(sys.path),
-    )
     env["PYTHONPATH"] = os.environ["PYTHONPATH"]
 
     return env
