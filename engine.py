@@ -1638,7 +1638,7 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
                 There was an error retrieving fields for this context. Please
                 see the logs for the specific error message. If this is a
                 recurring error and you need further assistance, please
-                contact our support team via {}""".format(
+                contact our support team via {}.""".format(
                     sgtk.support_url
                 )
             )
