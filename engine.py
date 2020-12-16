@@ -15,6 +15,7 @@ import tempfile
 import threading
 import uuid
 import re
+import json
 
 
 from contextlib import contextmanager
@@ -78,6 +79,40 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
 
     ############################################################################
     # context changing
+
+    def load_sidecar_data(self):
+        sidecar_path = self.adobe.app.activeDocument.path + ".sidecar"
+        with open(sidecar_path, "rt") as sidecar:
+            return json.load(sidecar)
+
+    def on_scene_opened(self):
+        for layer_id, path in self.load_sidecar_data().items():
+            self.replace_media(layer_id, path)
+
+    def track_file(self, layer, path):
+        sidecar_path = self.adobe.app.activeDocument.path + ".sidecar"
+        data = load_sidecar_data(sidecar_path)
+
+        data[layer.id] = path
+
+        with open(sidecar_path, "wt") as sidecar:
+            json.dump(sidecar, data)
+
+    def replace_media(self, layer_id, path):
+        # Inspired from https://stackoverflow.com/q/52631398
+        previous_active_layer = app.activeDocument.layers[layer_id]
+        try:
+            idplacedLayerReplaceContents = adobe.stringIDToTypeID(
+                "placedLayerReplaceContents"
+            )
+            desc = adobe.ActionDescriptor()
+            idnull = adobe.charIDToTypeID("null")
+            desc.putPath(idnull, adobe.File(ShotgunPath.expand(path)))
+            idPgNm = adobe.charIDToTypeID("PgNm")
+            desc.putInteger(idPgNm, 1)
+            adobe.executeAction(idplacedLayerReplaceContents, desc, DialogModes.NO)
+        except Exception:
+            app.activeDocument.activeLayer = previous_active_layer
 
     def post_context_change(self, old_context, new_context):
         """
