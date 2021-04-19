@@ -1073,7 +1073,7 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
 
             # Create the proxy QWidget.
             win32_proxy_win = QtGui.QWidget()
-            window_title = "Shotgun Toolkit Parent Widget"
+            window_title = "SG Toolkit Parent Widget"
             win32_proxy_win.setWindowTitle(window_title)
 
             # We have to take different approaches depending on whether
