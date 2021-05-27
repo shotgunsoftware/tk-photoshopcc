@@ -22,7 +22,7 @@ configuration:
         type: list
         description:
           Controls the registered commands that show up in the favorites shelf
-          in the Shotgun panel. This is a list where each item is a dictionary
+          in the ShotGrid panel. This is a list where each item is a dictionary
           with keys 'app_instance' and 'name'. The 'app_instance' key connects
           this entry to a particular app instance defined in the environment
           configuration file. The 'name' is a command name to make a favorite.
@@ -51,8 +51,8 @@ configuration:
 requires_shotgun_fields:
 
 # More verbose description of this item
-display_name: "Shotgun Engine for Photoshop CC"
-description: "Shotgun Integration for Photoshop CC"
+display_name: "ShotGrid Engine for Photoshop CC"
+description: "ShotGrid Integration for Photoshop CC"
 
 # Required minimum versions for this item to run
 requires_shotgun_version:

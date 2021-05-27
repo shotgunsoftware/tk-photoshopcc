@@ -52,19 +52,20 @@ class PhotoshopUploadVersionPlugin(HookBaseClass):
         shotgun_url = publisher.sgtk.shotgun_url
 
         media_page_url = "%s/page/media_center" % (shotgun_url,)
-        review_url = "https://www.shotgunsoftware.com/features/#review"
+        mobile_url = "https://help.autodesk.com/view/SGSUB/ENU/?guid=SG_Supervisor_Artist_sa_mobile_review_html"
+        rv_url = "https://help.autodesk.com/view/SGSUB/ENU/?guid=SG_RV_rv_manuals_rv_easy_setup_html"
 
         return """
-        Upload the file to Shotgun for review.<br><br>
+        Upload the file to ShotGrid for review.<br><br>
 
-        A <b>Version</b> entry will be created in Shotgun and a transcoded
+        A <b>Version</b> entry will be created in ShotGrid and a transcoded
         copy of the file will be attached to it. The file can then be reviewed
         via the project's <a href='%s'>Media</a> page, <a href='%s'>RV</a>, or
-        the <a href='%s'>Shotgun Review</a> mobile app.
+        the <a href='%s'>ShotGrid Review</a> mobile app.
         """ % (
             media_page_url,
-            review_url,
-            review_url,
+            rv_url,
+            mobile_url,
         )
 
     @property
@@ -306,7 +307,7 @@ class PhotoshopUploadVersionPlugin(HookBaseClass):
             extra={
                 "action_show_in_shotgun": {
                     "label": "Show Version",
-                    "tooltip": "Reveal the version in Shotgun.",
+                    "tooltip": "Reveal the version in ShotGrid.",
                     "entity": version,
                 }
             },
