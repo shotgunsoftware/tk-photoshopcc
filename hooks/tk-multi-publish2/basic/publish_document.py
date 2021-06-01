@@ -36,8 +36,8 @@ class PhotoshopCCDocumentPublishPlugin(HookBaseClass):
         loader_url = "https://support.shotgunsoftware.com/hc/en-us/articles/219033078"
 
         return """
-        Publishes the file to Shotgun. A <b>Publish</b> entry will be
-        created in Shotgun which will include a reference to the file's current
+        Publishes the file to ShotGrid. A <b>Publish</b> entry will be
+        created in ShotGrid which will include a reference to the file's current
         path on disk. Other users will be able to access the published file via
         the <b><a href='%s'>Loader</a></b> so long as they have access to
         the file's location on disk.
@@ -50,7 +50,7 @@ class PhotoshopCCDocumentPublishPlugin(HookBaseClass):
         file to the next version after publishing.
 
         The <code>version</code> field of the resulting <b>Publish</b> in
-        Shotgun will also reflect the version number identified in the filename.
+        ShotGrid will also reflect the version number identified in the filename.
         The basic worklfow recognizes the following version formats by default:
 
         <ul>
