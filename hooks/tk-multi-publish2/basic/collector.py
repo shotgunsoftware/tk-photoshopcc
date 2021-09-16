@@ -116,6 +116,11 @@ class PhotoshopCCSceneCollector(HookBaseClass):
                 document_item.set_thumbnail_from_path(path)
             document_item.properties["work_template"] = work_template
             self.logger.debug("Work template defined for Photoshop collection.")
+            # create a child item to gather all the export tasks
+            export_item = document_item.create_item(
+                "photoshop.document.export", "Export", "All Session Export"
+            )
+            export_item.thumbnail_enabled = False
             return
         # FIXME: end temporary workaround
 
