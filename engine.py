@@ -37,7 +37,7 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
     SHOTGUN_ADOBE_APPID = os.environ.get("SHOTGUN_ADOBE_APPID")
 
     # Backwards compatibility added to support tk-photoshop environment vars.
-    # https://support.shotgunsoftware.com/hc/en-us/articles/219039748-Photoshop#If%20the%20engine%20does%20not%20start
+    # https://community.shotgridsoftware.com/t/adobe-engine-crashing-on-long-operations/8329
     SHOTGUN_ADOBE_HEARTBEAT_INTERVAL = os.environ.get(
         "SHOTGUN_ADOBE_HEARTBEAT_INTERVAL",
         os.environ.get("SGTK_PHOTOSHOP_HEARTBEAT_INTERVAL", 1.0,),
