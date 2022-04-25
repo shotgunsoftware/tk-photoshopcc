@@ -22,16 +22,21 @@ class TestPhotoshopRPC(TestAdobeRPC):
         file_obj = cls.adobe.File(
             os.path.join(cls.resources, "empty.psd").replace(os.sep, "/")
         )
-        cls.document = cls.adobe.app.open(file_obj,)
+        cls.document = cls.adobe.app.open(
+            file_obj,
+        )
 
     @classmethod
     def tearDownClass(cls):
         TestAdobeRPC.tearDownClass()
-        cls.document.close(cls.adobe.SaveOptions.DONOTSAVECHANGES,)
+        cls.document.close(
+            cls.adobe.SaveOptions.DONOTSAVECHANGES,
+        )
 
     def test_active_document(self):
         self.assertEqual(
-            self.document.fullName.path, self.adobe.app.activeDocument.fullName.path,
+            self.document.fullName.path,
+            self.adobe.app.activeDocument.fullName.path,
         )
 
     def test_layer_create_and_delete(self):

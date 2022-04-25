@@ -178,7 +178,9 @@ class ContextFieldsDisplay(HookBaseClass):
                 <td class='sg_value_td'>{status}</td>
               </tr>
             """.format(
-            name=asset_link, type=entity["sg_asset_type"], status=status,
+            name=asset_link,
+            type=entity["sg_asset_type"],
+            status=status,
         )
 
         # tags if there are any
@@ -230,7 +232,8 @@ class ContextFieldsDisplay(HookBaseClass):
             shot_display = """
                 {name}&nbsp;<span class='sg_label'>({seq_name})</span>
                 """.format(
-                name=shot_link, seq_name=seq_link,
+                name=shot_link,
+                seq_name=seq_link,
             )
 
         # always include name, type, and status
@@ -245,7 +248,8 @@ class ContextFieldsDisplay(HookBaseClass):
                 <td class='sg_value_td'>{status}</td>
               </tr>
             """.format(
-            name=shot_display, status=status,
+            name=shot_display,
+            status=status,
         )
 
         # tags if there are any
@@ -336,7 +340,8 @@ class ContextFieldsDisplay(HookBaseClass):
                 task_display = """
                     {name}&nbsp;<span class='sg_label'>({step_name})</span>
                     """.format(
-                    name=task_display, step_name=step_name,
+                    name=task_display,
+                    step_name=step_name,
                 )
 
         # always include name
@@ -367,7 +372,8 @@ class ContextFieldsDisplay(HookBaseClass):
                     <td class='sg_value_td'>{name}</td>
                   </tr>
                 """.format(
-                entity_type=linked_entity["type"], name=linked_entity_link,
+                entity_type=linked_entity["type"],
+                name=linked_entity_link,
             )
 
         # always show the status
@@ -397,7 +403,8 @@ class ContextFieldsDisplay(HookBaseClass):
                     <td class='sg_value_td'>{name}</td>
                   </tr>
                 """.format(
-                label=assignee_label, name=assignee_display,
+                label=assignee_label,
+                name=assignee_display,
             )
 
         # due date
@@ -432,7 +439,8 @@ class ContextFieldsDisplay(HookBaseClass):
                 <td class='sg_value_td'>{name}</td>
               </tr>
             """.format(
-            entity_type=entity_type, name=entity_link,
+            entity_type=entity_type,
+            name=entity_link,
         )
 
         # show a status if one can be determined
