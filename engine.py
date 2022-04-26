@@ -40,11 +40,17 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
     # https://community.shotgridsoftware.com/t/adobe-engine-crashing-on-long-operations/8329
     SHOTGUN_ADOBE_HEARTBEAT_INTERVAL = os.environ.get(
         "SHOTGUN_ADOBE_HEARTBEAT_INTERVAL",
-        os.environ.get("SGTK_PHOTOSHOP_HEARTBEAT_INTERVAL", 1.0,),
+        os.environ.get(
+            "SGTK_PHOTOSHOP_HEARTBEAT_INTERVAL",
+            1.0,
+        ),
     )
     SHOTGUN_ADOBE_HEARTBEAT_TOLERANCE = os.environ.get(
         "SHOTGUN_ADOBE_HEARTBEAT_TOLERANCE",
-        os.environ.get("SGTK_PHOTOSHOP_HEARTBEAT_TOLERANCE", 2,),
+        os.environ.get(
+            "SGTK_PHOTOSHOP_HEARTBEAT_TOLERANCE",
+            2,
+        ),
     )
     SHOTGUN_ADOBE_NETWORK_DEBUG = (
         "SGTK_PHOTOSHOP_NETWORK_DEBUG" in os.environ
@@ -223,7 +229,9 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
             self.logger.debug("Multiple documents found, loading stored context cache.")
 
             serial_cache = self.__settings_manager.retrieve(
-                self._CONTEXT_CACHE_KEY, dict(), self.__settings_manager.SCOPE_PROJECT,
+                self._CONTEXT_CACHE_KEY,
+                dict(),
+                self.__settings_manager.SCOPE_PROJECT,
             )
 
             for key, value in serial_cache.items():
@@ -236,7 +244,8 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
             self.logger.debug("Single document found, clearing stored context cache.")
 
             self.__settings_manager.store(
-                self._CONTEXT_CACHE_KEY, dict(),
+                self._CONTEXT_CACHE_KEY,
+                dict(),
             )
 
     def destroy_engine(self):
@@ -307,7 +316,9 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
         properties = properties or dict()
         properties["uid"] = self.__get_command_uid()
         return super(PhotoshopCCEngine, self).register_command(
-            name, callback, properties,
+            name,
+            callback,
+            properties,
         )
 
     def export_as_jpeg(
@@ -388,7 +399,10 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
                 else:
                     raise RuntimeError(
                         "Unable to retrieve document size from %s x %s "
-                        % (width_str, height_str,)
+                        % (
+                            width_str,
+                            height_str,
+                        )
                     )
 
                 # Get a file object from Photoshop for this path and the current
@@ -758,7 +772,8 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
                     context = sgtk.sgtk_from_path(
                         active_document_path
                     ).context_from_path(
-                        active_document_path, previous_context=self.context,
+                        active_document_path,
+                        previous_context=self.context,
                     )
                     self.__add_to_context_cache(active_document_path, context)
                 except Exception:
@@ -774,7 +789,8 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
                     # SGTK control.
                     if self._PROJECT_CONTEXT is None:
                         self._PROJECT_CONTEXT = sgtk.Context(
-                            tk=self.context.sgtk, project=self.context.project,
+                            tk=self.context.sgtk,
+                            project=self.context.project,
                         )
 
                     context = self._PROJECT_CONTEXT
@@ -1047,7 +1063,8 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
         """
         if not self._WIN32_PHOTOSHOP_MAIN_HWND:
             found_hwnds = self.__tk_photoshopcc.win_32_api.find_windows(
-                class_name="Photoshop", stop_if_found=True,
+                class_name="Photoshop",
+                stop_if_found=True,
             )
 
             if found_hwnds:
@@ -1096,10 +1113,12 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
                 win32_proxy_win.show()
 
                 try:
-                    proxy_win_hwnd_found = self.__tk_photoshopcc.win_32_api.find_windows(
-                        stop_if_found=True,
-                        class_name="Qt5QWindowIcon",
-                        process_id=os.getpid(),
+                    proxy_win_hwnd_found = (
+                        self.__tk_photoshopcc.win_32_api.find_windows(
+                            stop_if_found=True,
+                            class_name="Qt5QWindowIcon",
+                            process_id=os.getpid(),
+                        )
                     )
                 finally:
                     win32_proxy_win.hide()
@@ -1127,7 +1146,8 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
             # dialogs to notify the Photoshop application window when they're
             # opened or closed, so we'll disable that behavior.
             win_ex_style = self.__tk_photoshopcc.win_32_api.GetWindowLong(
-                proxy_win_hwnd, self.__tk_photoshopcc.win_32_api.GWL_EXSTYLE,
+                proxy_win_hwnd,
+                self.__tk_photoshopcc.win_32_api.GWL_EXSTYLE,
             )
 
             self.__tk_photoshopcc.win_32_api.SetWindowLong(
@@ -1452,7 +1472,8 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
         # force the Jump to Shotgun and Jump to Filesystem commands onto the
         # front of the list to match other integrations.
         context_menu_cmds = jump_commands + sorted(
-            context_menu_cmds, key=lambda d: d["display_name"],
+            context_menu_cmds,
+            key=lambda d: d["display_name"],
         )
 
         # ---- populate the state structure to hand over to adobe
@@ -1492,12 +1513,16 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
 
             from sgtk.platform.qt import QtCore
 
-            timer = QtCore.QTimer(parent=QtCore.QCoreApplication.instance(),)
+            timer = QtCore.QTimer(
+                parent=QtCore.QCoreApplication.instance(),
+            )
 
             timer.timeout.connect(self._check_connection)
 
             # The class variable is in seconds, so multiply to get milliseconds.
-            timer.start(self.SHOTGUN_ADOBE_HEARTBEAT_INTERVAL * 1000.0,)
+            timer.start(
+                self.SHOTGUN_ADOBE_HEARTBEAT_INTERVAL * 1000.0,
+            )
 
             self._CHECK_CONNECTION_TIMER = timer
             self.log_debug("Connection timer created and started.")
@@ -1689,7 +1714,8 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
                     thumb_path = "../images/default_Entity_thumb_dark.png"
 
                 data = dict(
-                    thumb_path=thumb_path, url=self.get_entity_url(context_entity),
+                    thumb_path=thumb_path,
+                    url=self.get_entity_url(context_entity),
                 )
                 self.adobe.send_context_thumbnail(data)
 
@@ -1755,7 +1781,8 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
               onclick='sg_panel.Panel.open_external_url("{url}")'
             >{text}</a>
             """.format(
-            url=url, text=text,
+            url=url,
+            text=text,
         )
 
     def __activate_python(self):
