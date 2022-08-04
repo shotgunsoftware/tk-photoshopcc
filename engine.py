@@ -1090,9 +1090,7 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
 
             # Create the proxy QWidget.
             win32_proxy_win = QtGui.QWidget()
-            window_title = "ShotGrid Toolkit Parent Widget {0}".format(
-                str(uuid.uuid4())
-            )
+            window_title = "ShotGrid Parent Widget {0}".format(uuid.uuid4().hex)
             win32_proxy_win.setWindowTitle(window_title)
 
             # We have to take different approaches depending on whether
