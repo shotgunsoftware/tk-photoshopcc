@@ -1090,7 +1090,7 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
 
             # Create the proxy QWidget.
             win32_proxy_win = QtGui.QWidget()
-            window_title = "SG Toolkit Parent Widget"
+            window_title = "ShotGrid Parent Widget {0}".format(uuid.uuid4().hex)
             win32_proxy_win.setWindowTitle(window_title)
 
             # We have to take different approaches depending on whether
@@ -1115,9 +1115,7 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
                 try:
                     proxy_win_hwnd_found = (
                         self.__tk_photoshopcc.win_32_api.find_windows(
-                            stop_if_found=True,
-                            class_name="Qt5QWindowIcon",
-                            process_id=os.getpid(),
+                            stop_if_found=True, window_text=window_title
                         )
                     )
                 finally:
