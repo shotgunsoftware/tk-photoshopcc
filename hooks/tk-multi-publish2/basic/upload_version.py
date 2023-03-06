@@ -242,7 +242,10 @@ class PhotoshopUploadVersionPlugin(HookBaseClass):
 
         # if the file was published, add the publish data to the version
         if publish_data:
-            version_data["published_files"] = [publish_data]
+            # do not change the type of publish_data when it already is a list
+            if not isinstance(publish_data, list):
+                publish_data = [publish_data]
+            version_data["published_files"] = publish_data
 
         # log the version data for debugging
         self.logger.debug(
