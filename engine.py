@@ -473,20 +473,22 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
         """
         Save the document in place
         """
-        # since Photoshop 24.1.0, saving an already saved file triggers errors
         if not document.saved:
-            with self.context_changes_disabled():
+            # since Photoshop 24.1.0, saving an already saved file triggers errors
+            return
 
-                # remember the active document so that we can restore it.
-                previous_active_document = self.adobe.app.activeDocument
+        with self.context_changes_disabled():
 
-                # make the document being processed the active document
-                self.adobe.app.activeDocument = document
+            # remember the active document so that we can restore it.
+            previous_active_document = self.adobe.app.activeDocument
 
-                document.save()
+            # make the document being processed the active document
+            self.adobe.app.activeDocument = document
 
-                # restore the active document
-                self.adobe.app.activeDocument = previous_active_document
+            document.save()
+
+            # restore the active document
+            self.adobe.app.activeDocument = previous_active_document
 
     def save_to_path(self, document, path):
         """
