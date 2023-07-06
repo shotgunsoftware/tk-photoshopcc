@@ -473,7 +473,7 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
         """
         Save the document in place
         """
-        if not document.saved:
+        if document.saved:
             # since Photoshop 24.1.0, saving an already saved file triggers errors
             return
 
