@@ -56,12 +56,12 @@ class PhotoshopUploadVersionPlugin(HookBaseClass):
         rv_url = "https://help.autodesk.com/view/SGSUB/ENU/?guid=SG_RV_rv_manuals_rv_easy_setup_html"
 
         return """
-        Upload the file to ShotGrid for review.<br><br>
+        Upload the file to Flow Production Tracking for review.<br><br>
 
-        A <b>Version</b> entry will be created in ShotGrid and a transcoded
-        copy of the file will be attached to it. The file can then be reviewed
-        via the project's <a href='%s'>Media</a> page, <a href='%s'>RV</a>, or
-        the <a href='%s'>ShotGrid Review</a> mobile app.
+        A <b>Version</b> entry will be created in Flow Production Tracking and a
+        transcoded copy of the file will be attached to it. The file can then be
+        reviewed via the project's <a href='%s'>Media</a> page, <a href='%s'>RV</a>,
+        or the <a href='%s'>Flow Production Tracking Review</a> mobile app.
         """ % (
             media_page_url,
             rv_url,
@@ -228,7 +228,7 @@ class PhotoshopUploadVersionPlugin(HookBaseClass):
         path_components = publisher.util.get_file_path_components(path)
         publish_name = path_components["filename"]
 
-        # populate the version data to send to SG
+        # populate the version data to send to PTR
         self.logger.info("Creating Version...")
         version_data = {
             "project": item.context.project,
@@ -263,10 +263,10 @@ class PhotoshopUploadVersionPlugin(HookBaseClass):
         # stash the version info in the item just in case
         item.properties["sg_version_data"] = version
 
-        # Make sure the string is utf8 encoded to avoid issues with the SG API.
+        # Make sure the string is utf8 encoded to avoid issues with the PTR API.
         upload_path = six.ensure_str(upload_path)
 
-        # Upload the file to SG
+        # Upload the file to PTR
         self.logger.info("Uploading content...")
         self.parent.shotgun.upload(
             "Version", version["id"], upload_path, "sg_uploaded_movie"
@@ -307,7 +307,7 @@ class PhotoshopUploadVersionPlugin(HookBaseClass):
             extra={
                 "action_show_in_shotgun": {
                     "label": "Show Version",
-                    "tooltip": "Reveal the version in ShotGrid.",
+                    "tooltip": "Reveal the version in Flow Production Tracking.",
                     "entity": version,
                 }
             },
