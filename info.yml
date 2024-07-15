@@ -52,8 +52,8 @@ configuration:
 requires_shotgun_fields:
 
 # More verbose description of this item
-display_name: "Flow Production Tracking Engine for Photoshop CC"
-description: "Flow Production Tracking Integration for Photoshop CC"
+display_name: "Flow Production Tracking Engine for Photoshop"
+description: "Flow Production Tracking Integration for Photoshop"
 
 # Required minimum versions for this item to run
 requires_shotgun_version:
