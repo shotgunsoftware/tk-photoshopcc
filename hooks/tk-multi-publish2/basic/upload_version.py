@@ -15,7 +15,10 @@ import uuid
 import sys
 import sgtk
 
-from tank_vendor import six
+try:
+    from tank_vendor import sgutils
+except ImportError:
+    from tank_vendor import six as sgutils
 
 HookBaseClass = sgtk.get_hook_baseclass()
 
@@ -264,7 +267,7 @@ class PhotoshopUploadVersionPlugin(HookBaseClass):
         item.properties["sg_version_data"] = version
 
         # Make sure the string is utf8 encoded to avoid issues with the PTR API.
-        upload_path = six.ensure_str(upload_path)
+        upload_path = sgutils.ensure_str(upload_path)
 
         # Upload the file to PTR
         self.logger.info("Uploading content...")

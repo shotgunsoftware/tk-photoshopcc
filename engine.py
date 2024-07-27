@@ -22,7 +22,11 @@ from contextlib import contextmanager
 
 import sgtk
 from sgtk.util.filesystem import ensure_folder_exists
-from tank_vendor import six
+
+try:
+    from tank_vendor import sgutils
+except ImportError:
+    from tank_vendor import six as sgutils
 
 
 class PhotoshopCCEngine(sgtk.platform.Engine):
@@ -742,7 +746,7 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
         # Make sure we have a properly-encoded string for the path. We can
         # possibly get a file path/name that contains unicode, and we don't
         # want to deal with that later on.
-        active_document_path = six.ensure_str(active_document_path)
+        active_document_path = sgutils.ensure_str(active_document_path)
 
         # This will be True if the context_changes_disabled context manager is
         # used. We're just in a temporary state of not allowing context changes,
