@@ -22,7 +22,11 @@ from contextlib import contextmanager
 
 import sgtk
 from sgtk.util.filesystem import ensure_folder_exists
-from tank_vendor import six
+
+try:
+    from tank_vendor import sgutils
+except ImportError:
+    from tank_vendor import six as sgutils
 
 
 class PhotoshopCCEngine(sgtk.platform.Engine):
@@ -741,13 +745,13 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
         # Make sure we have a properly-encoded string for the path. We can
         # possibly get a file path/name that contains unicode, and we don't
         # want to deal with that later on.
-        active_document_path = six.ensure_str(active_document_path)
+        active_document_path = sgutils.ensure_str(active_document_path)
 
         # This will be True if the context_changes_disabled context manager is
         # used. We're just in a temporary state of not allowing context changes,
         # which is useful when an app is doing a lot of Photoshop work that
         # might be triggering active document changes that we don't want to
-        # result in SGTK context changes.
+        # result in PTR context changes.
         with self.heartbeat_disabled():
             if self._CONTEXT_CHANGES_DISABLED:
                 self.logger.debug(
@@ -788,7 +792,7 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
                     self.__context_thumb_uid = None
 
                     # We go to the project context if this is a file outside of
-                    # SGTK control.
+                    # PTR control.
                     if self._PROJECT_CONTEXT is None:
                         self._PROJECT_CONTEXT = sgtk.Context(
                             tk=self.context.sgtk,
@@ -1092,39 +1096,30 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
 
             # Create the proxy QWidget.
             win32_proxy_win = QtGui.QWidget()
-            window_title = "ShotGrid Parent Widget {0}".format(uuid.uuid4().hex)
+            window_title = "Flow Production Tracking Parent Widget {0}".format(
+                uuid.uuid4().hex
+            )
             win32_proxy_win.setWindowTitle(window_title)
 
-            # We have to take different approaches depending on whether
-            # we're using Qt4 (PySide) or Qt5 (PySide2). The functionality
-            # needed to turn a Qt5 WId into an HWND is not exposed in PySide2,
-            # so we can't do what we did below for Qt4.
-            if QtCore.__version__.startswith("4."):
-                proxy_win_hwnd = self.__tk_photoshopcc.win_32_api.qwidget_winid_to_hwnd(
-                    win32_proxy_win.winId(),
+            # With PySide2, we're required to look up our proxy parent
+            # widget's HWND the hard way, following the same logic used
+            # to find Photoshop's main window. To do that, we actually have
+            # to show our widget so that Windows knows about it. We can make
+            # it effectively invisible if we zero out its size, so we do that,
+            # show the widget, and then look up its HWND by window title before
+            # hiding it.
+            win32_proxy_win.setGeometry(0, 0, 0, 0)
+            win32_proxy_win.show()
+
+            try:
+                proxy_win_hwnd_found = self.__tk_photoshopcc.win_32_api.find_windows(
+                    stop_if_found=True, window_text=window_title
                 )
-            else:
-                # With PySide2, we're required to look up our proxy parent
-                # widget's HWND the hard way, following the same logic used
-                # to find Photoshop's main window. To do that, we actually have
-                # to show our widget so that Windows knows about it. We can make
-                # it effectively invisible if we zero out its size, so we do that,
-                # show the widget, and then look up its HWND by window title before
-                # hiding it.
-                win32_proxy_win.setGeometry(0, 0, 0, 0)
-                win32_proxy_win.show()
+            finally:
+                win32_proxy_win.hide()
 
-                try:
-                    proxy_win_hwnd_found = (
-                        self.__tk_photoshopcc.win_32_api.find_windows(
-                            stop_if_found=True, window_text=window_title
-                        )
-                    )
-                finally:
-                    win32_proxy_win.hide()
-
-                if proxy_win_hwnd_found:
-                    proxy_win_hwnd = proxy_win_hwnd_found[0]
+            if proxy_win_hwnd_found:
+                proxy_win_hwnd = proxy_win_hwnd_found[0]
         else:
             self.logger.debug(
                 "Unable to determine the HWND of Photoshop itself. This means "
@@ -1386,7 +1381,7 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
 
         # iterate over all the registered commands and gather the necessary info
         # to display them in adobe
-        for (command_name, command_info) in self.commands.items():
+        for command_name, command_info in self.commands.items():
 
             # commands come with a dict of properties that may or may not
             # contain certain data.
@@ -1399,7 +1394,7 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
 
             # check this command's app against the engine's apps.
             if app_instance:
-                for (app_instance_name, app_instance_obj) in self.apps.items():
+                for app_instance_name, app_instance_obj in self.apps.items():
                     if app_instance_obj == app_instance:
                         app_name = app_instance_name
 
@@ -1438,7 +1433,7 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
         jump_commands.append(
             dict(
                 uid=self.__jump_to_sg_command_id,
-                display_name="Jump to ShotGrid",
+                display_name="Jump to Flow Production Tracking",
                 icon_path=sg_icon,
                 description="Open the current context in a web browser.",
                 type="context_menu",
@@ -1765,7 +1760,7 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
             return entity
 
     def get_entity_url(self, entity):
-        """Helper method to return a SG url for the supplied entity."""
+        """Helper method to return a PTR url for the supplied entity."""
         return "%s/detail/%s/%d" % (self.sgtk.shotgun_url, entity["type"], entity["id"])
 
     def get_panel_link(self, url, text):

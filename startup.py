@@ -133,7 +133,7 @@ class PhotoshopLauncher(SoftwareLauncher):
                 executable_version = tokens.get("version")
 
                 sw_version = SoftwareVersion(
-                    executable_version, "Photoshop CC", executable_path, icon_path
+                    executable_version, "Photoshop", executable_path, icon_path
                 )
                 supported, reason = self._is_supported(sw_version)
                 if supported:
