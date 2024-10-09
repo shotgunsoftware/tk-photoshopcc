@@ -482,7 +482,6 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
             return
 
         with self.context_changes_disabled():
-
             # remember the active document so that we can restore it.
             previous_active_document = self.adobe.app.activeDocument
 
@@ -503,7 +502,6 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
         # options. By default, the file will always be saved to a PDF.
 
         with self.context_changes_disabled():
-
             # remember the active document so that we can restore it.
             previous_active_document = self.adobe.app.activeDocument
 
@@ -627,6 +625,30 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
             "version": version,
         }
 
+    def _initialize_dark_look_and_feel(self):
+        """
+        Override the base engine method.
+        Apply specific styling for this DCC.
+        """
+
+        from sgtk.platform.qt import QtGui
+
+        # Initialize the SG Toolkit style to the application.
+        super()._initialize_dark_look_and_feel()
+
+        # Apply specific styling
+        app = QtGui.QApplication.instance()
+        app_palette = app.palette()
+        # The default placeholder text for this DCC is black, let's set it back to
+        # the text color (as it was in Qt5), but with the current placeholder
+        # text alpha value.
+        new_placeholder_text_color = app_palette.text().color()
+        placeholder_text_color = app_palette.placeholderText().color()
+        new_placeholder_text_color.setAlpha(placeholder_text_color.alpha())
+        app_palette.setColor(QtGui.QPalette.PlaceholderText, new_placeholder_text_color)
+        # Set the palette back with the specific styling
+        app.setPalette(app_palette)
+
     ############################################################################
     # RPC
 
@@ -709,7 +731,6 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
         # If the _adobe attribute is set, then we can forward logging calls
         # back to the js process via rpc.
         if hasattr(self, "_adobe"):
-
             level = self.PY_TO_JS_LOG_LEVEL_MAPPING[record.levelname]
 
             # log the message back to js via rpc
@@ -718,7 +739,6 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
         # prior to the _adobe attribute being set, we rely on the js process
         # handling stdout and logging it.
         else:
-
             # we don't use the handler's format method here because the adobe
             # side expects a certain format.
             msg_str = "[%s]: %s" % (record.levelname, record.message)
@@ -1383,7 +1403,6 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
         # iterate over all the registered commands and gather the necessary info
         # to display them in adobe
         for command_name, command_info in self.commands.items():
-
             # commands come with a dict of properties that may or may not
             # contain certain data.
             properties = command_info.get("properties", {})
@@ -1442,7 +1461,6 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
         )
 
         if self.context.filesystem_locations:
-
             # the icon to use for the command. bundled with the engine
             fs_icon = os.path.join(
                 self.disk_location, "resources", "shotgun_folder.png"
@@ -1540,7 +1558,6 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
         paths = self.context.filesystem_locations
         self.logger.debug("FS paths: %s" % (str(paths),))
         for disk_location in paths:
-
             # get the setting
             system = sys.platform
 
@@ -1649,7 +1666,6 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
 
         # log a message if the worker failed to retrieve the necessary info.
         if uid == self.__context_find_uid:
-
             # clear the find id since we are now processing it
             self.__context_find_uid = None
 
@@ -1666,7 +1682,6 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
             self.logger.error("Failed to query context fields: %s" % (msg,))
 
         elif uid == self.__context_thumb_uid:
-
             # clear the thumb id since we are now processing it
             self.__context_thumb_uid = None
 
@@ -1683,7 +1698,6 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
 
         # the find query for the context entity with the specified fields
         if uid == self.__context_find_uid:
-
             # clear the find id since we are now processing it
             self.__context_find_uid = None
 
@@ -1729,7 +1743,6 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
 
         # thumbnail download. forward the path and a url back to js
         elif uid == self.__context_thumb_uid:
-
             # clear the thumb id since we already processed it
             self.__context_thumb_uid = None
 
