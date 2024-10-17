@@ -1575,6 +1575,16 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
             if exit_code != 0:
                 self.logger.error("Failed to launch '%s'!" % cmd)
 
+    def _add_to_context_cache(self, path, context):
+        """
+        This method acts as a wrapper around the protected
+        '__add_to_context_cache()' method.
+
+        :param str path: The document path to add to the cache.
+        :param context: The context object to associate with the document.
+        """
+        self.__add_to_context_cache(path, context)
+
     ##########################################################################################
     # context data methods
 
