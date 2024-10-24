@@ -80,7 +80,7 @@ def compute_environment():
 def _get_adobe_framework_location():
     """
     This helper method will query the current disc-location for the configured
-    tk-adobe-framework.
+    tk-framework-adobe.
 
     This is necessary, as the the framework relies on an environment variable
     to be set by the parent engine and also the CEP panel to be installed.
@@ -89,7 +89,7 @@ def _get_adobe_framework_location():
         accessing the engine's frameworks at launch time. Once this is
         possible, this logic should be replaced.
 
-    Returns (str or None): The tk-adobe-framework disc-location directory path
+    Returns (str or None): The tk-framework-adobe disc-location directory path
         configured under the tk-multi-launchapp
     """
 
