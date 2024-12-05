@@ -801,7 +801,7 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
                         active_document_path,
                         previous_context=self.context,
                     )
-                    self.__add_to_context_cache(active_document_path, context)
+                    self.add_to_context_cache(active_document_path, context)
                 except Exception:
                     self.logger.debug(
                         "Unable to determine context from path. Setting the Project context."
@@ -1577,7 +1577,7 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
     ##########################################################################################
     # context data methods
 
-    def __add_to_context_cache(self, path, context):
+    def add_to_context_cache(self, path, context):
         """
         Adds the given active document path to the context cache, associating
         it with the given context object. This will trigger the storing of a
