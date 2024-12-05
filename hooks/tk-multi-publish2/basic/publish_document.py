@@ -347,7 +347,10 @@ class PhotoshopCCDocumentPublishPlugin(HookBaseClass):
         save_callback = lambda path, d=document: engine.save_to_path(d, path)
 
         # bump the document path to the next version
-        self._save_to_next_version(path, item, save_callback)
+        new_version_path = self._save_to_next_version(path, item, save_callback)
+
+        if hasattr(self.parent.engine, "add_to_context_cache"):
+            self.parent.engine.add_to_context_cache(new_version_path, item.context)
 
 
 def _get_save_as_action(document):
