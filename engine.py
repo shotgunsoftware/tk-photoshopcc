@@ -733,14 +733,14 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
             level = self.PY_TO_JS_LOG_LEVEL_MAPPING[record.levelname]
 
             # log the message back to js via rpc
-            self.adobe.log_message(level, record.message)
+            self.adobe.log_message(level, record.getMessage())
 
         # prior to the _adobe attribute being set, we rely on the js process
         # handling stdout and logging it.
         else:
             # we don't use the handler's format method here because the adobe
             # side expects a certain format.
-            msg_str = "[%s]: %s" % (record.levelname, record.message)
+            msg_str = "[%s]: %s" % (record.levelname, record.getMessage())
 
             sys.stdout.write(msg_str)
             sys.stdout.flush()
