@@ -102,7 +102,7 @@ class PhotoshopCCDocumentPublishPlugin(HookBaseClass):
         """
 
         # inherit the settings from the base publish plugin
-        base_settings = super(PhotoshopCCDocumentPublishPlugin, self).settings or {}
+        base_settings = super().settings or {}
 
         # settings specific to this class
         photoshop_publish_settings = {
@@ -292,7 +292,7 @@ class PhotoshopCCDocumentPublishPlugin(HookBaseClass):
         item.properties["path"] = path
 
         # run the base class validation
-        return super(PhotoshopCCDocumentPublishPlugin, self).validate(settings, item)
+        return super().validate(settings, item)
 
     def publish(self, settings, item):
         """
@@ -320,7 +320,7 @@ class PhotoshopCCDocumentPublishPlugin(HookBaseClass):
         item.properties["path"] = path
 
         # let the base class register the publish
-        super(PhotoshopCCDocumentPublishPlugin, self).publish(settings, item)
+        super().publish(settings, item)
 
     def finalize(self, settings, item):
         """
@@ -337,7 +337,7 @@ class PhotoshopCCDocumentPublishPlugin(HookBaseClass):
         engine = publisher.engine
 
         # do the base class finalization
-        super(PhotoshopCCDocumentPublishPlugin, self).finalize(settings, item)
+        super().finalize(settings, item)
 
         document = item.properties.get("document")
         path = item.properties["path"]

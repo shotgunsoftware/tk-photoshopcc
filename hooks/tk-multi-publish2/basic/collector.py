@@ -41,7 +41,7 @@ class PhotoshopCCSceneCollector(HookBaseClass):
         """
 
         # grab any base class settings
-        collector_settings = super(PhotoshopCCSceneCollector, self).settings or {}
+        collector_settings = super().settings or {}
 
         # settings specific to this collector
         photoshop_session_settings = {
