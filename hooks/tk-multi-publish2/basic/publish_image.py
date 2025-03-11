@@ -208,7 +208,7 @@ class PhotoshopCCImagePublishPlugin(HookBaseClass):
             item.local_properties["publish_version"] = work_fields["version"]
 
         # run the base class validation
-        return super(PhotoshopCCImagePublishPlugin, self).validate(settings, item)
+        return super().validate(settings, item)
 
     def publish(self, settings, item):
         """
@@ -240,7 +240,7 @@ class PhotoshopCCImagePublishPlugin(HookBaseClass):
         item.set_thumbnail_from_path(item.local_properties["path"])
 
         # Now that the path has been generated, hand it off to the
-        super(PhotoshopCCImagePublishPlugin, self).publish(settings, item)
+        super().publish(settings, item)
 
     def finalize(self, settings, item):
         """

@@ -23,11 +23,6 @@ from contextlib import contextmanager
 import sgtk
 from sgtk.util.filesystem import ensure_folder_exists
 
-try:
-    from tank_vendor import sgutils
-except ImportError:
-    from tank_vendor import six as sgutils
-
 
 class PhotoshopCCEngine(sgtk.platform.Engine):
     """
@@ -318,11 +313,7 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
         """
         properties = properties or dict()
         properties["uid"] = self.__get_command_uid()
-        return super(PhotoshopCCEngine, self).register_command(
-            name,
-            callback,
-            properties,
-        )
+        return super().register_command(name, callback, properties)
 
     def export_as_jpeg(
         self, document=None, output_path=None, max_size=2048, quality=12
@@ -765,7 +756,7 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
         # Make sure we have a properly-encoded string for the path. We can
         # possibly get a file path/name that contains unicode, and we don't
         # want to deal with that later on.
-        active_document_path = sgutils.ensure_str(active_document_path)
+        active_document_path = str(active_document_path)
 
         # This will be True if the context_changes_disabled context manager is
         # used. We're just in a temporary state of not allowing context changes,
@@ -1025,7 +1016,7 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
         :returns: dict
         """
         # Just call the base implementation and monkey patch QMessageBox.
-        base = super(PhotoshopCCEngine, self)._define_qt_base()
+        base = super()._define_qt_base()
         if not base:
             raise ImportError("Unable to find a QT Python module")
 
