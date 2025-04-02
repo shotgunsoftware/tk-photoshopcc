@@ -10,6 +10,8 @@
 
 import os
 
+import sgtk
+
 from . import TestAdobeRPC
 
 
@@ -19,12 +21,14 @@ class TestPhotoshopRPC(TestAdobeRPC):
     @classmethod
     def setUpClass(cls):
         TestAdobeRPC.setUpClass()
-        file_obj = cls.adobe.File(
-            os.path.join(cls.resources, "empty.psd").replace(os.sep, "/")
-        )
-        cls.document = cls.adobe.app.open(
-            file_obj,
-        )
+
+        engine = sgtk.platform.current_engine()
+
+        psd_path = os.path.join(cls.resources, "empty.psd")
+        engine.logger.info(f"Loading PSD file: {psd_path}")
+
+        file_obj = cls.adobe.File(psd_path)
+        cls.document = cls.adobe.app.open(file_obj)
 
     @classmethod
     def tearDownClass(cls):
