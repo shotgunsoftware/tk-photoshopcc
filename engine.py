@@ -1798,6 +1798,22 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
         elif sys.platform == "win32":
             pass
 
+    def _on_dialog_closed(self, dlg):
+        """
+        Called when a dialog created by this engine is closed.
+
+        :param dlg: The dialog being closed
+        :type dlg: :class:`PySide.QtGui.QWidget`
+
+        Derived implementations of this method should be sure to call
+        the base implementation
+        """
+        super()._on_dialog_closed(dlg)
+        # workaround fix that solves the obsolete pointer issue
+        # which produces a pointer pointing to a wrapped C++ object, that was
+        # already deleted by garbage collection ... I assume
+        self._DIALOG_PARENT = None
+
 
 # a little action script to activate the given python process.
 OSX_ACTIVATE_SCRIPT = """
