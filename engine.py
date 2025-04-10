@@ -599,7 +599,7 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
         """
         if not self.adobe:
             # Don't error out if the bridge was not yet started
-            return ("Adobe Photoshop", "unknown")
+            return {"name": "Adobe Photoshop", "version": "unknown"}
 
         version = self.adobe.app.version
         # app.version just returns 18.1.1 which is not what users see in the UI
