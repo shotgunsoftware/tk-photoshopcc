@@ -181,6 +181,11 @@ class PhotoshopCCSceneCollector(HookBaseClass):
                 document_item.properties["work_template"] = work_template
                 self.logger.debug("Work template defined for Photoshop collection.")
 
+            export_item = document_item.create_item(
+                "photoshop.document.export", "Export", "All Session Export"
+            )
+            export_item.thumbnail_enabled = False
+
         # reset the original document to restore the state for the user
         engine.adobe.app.activeDocument = current_document
 

@@ -10,8 +10,6 @@ import sgtk
 
 HookBaseClass = sgtk.get_hook_baseclass()
 
-# logger = sgtk.platform.get_logger(__name__)
-
 
 class PhotoshopCCImagePublishPlugin(HookBaseClass):
     """
@@ -85,7 +83,7 @@ class PhotoshopCCImagePublishPlugin(HookBaseClass):
         accept() method. Strings can contain glob patters such as *, for example
         ["maya.*", "file.maya"]
         """
-        return ["photoshop.document.export", "photoshop.document"]
+        return ["photoshop.document.export"]
 
     def accept(self, settings, item):
         """
@@ -109,21 +107,10 @@ class PhotoshopCCImagePublishPlugin(HookBaseClass):
         :returns: dictionary with boolean keys accepted, required and enabled
         """
 
-        self.logger.info("JULIEN_DEBUG 981")
-
-        document = item.properties.get("document")
+        document = item.parent.properties.get("document")
         if not document:
             self.logger.warn("Could not determine the document for item")
             return {"accepted": False}
-
-        # # ensure a work file template is available on the parent item
-        # work_template = item.parent.properties.get("work_template")
-        # if not work_template:
-        #     self.logger.debug(
-        #         "A work template is required for the session item in order to "
-        #         "publish document as image. Not accepting export publish plugin."
-        #     )
-        #     return {"accepted": False}
 
         # need to make sure we have access to the export method within tk-framework-adobe
         # this is an ugly way to do it but hasattr() return True in any case
@@ -147,10 +134,8 @@ class PhotoshopCCImagePublishPlugin(HookBaseClass):
         :returns: True if item is valid, False otherwise.
         """
 
-        self.logger.info("JULIEN_DEBUG 563")
-
         publisher = self.parent
-        document = item.properties["document"]
+        document = item.parent.properties["document"]
         path = _document_path(document)
         template_name = settings["Publish Template"].value
 
@@ -176,16 +161,9 @@ class PhotoshopCCImagePublishPlugin(HookBaseClass):
         # get the normalized path
         path = sgtk.util.ShotgunPath.normalize(path)
 
-        # ensure the publish template is defined and valid and that we also have
-        publish_template = publisher.get_template_by_name(template_name)
-        # if not publish_template:
-        #     self.logger.error(
-        #         "The valid publish template could not be determined for the "
-        #         "export image item."
-        #     )
-        #     return False
-
-        if publish_template:
+        if template_name:
+            # ensure the publish template is defined and valid and that we also have
+            publish_template = publisher.get_template_by_name(template_name)
             item.local_properties.publish_template = publish_template
 
             # get the configured work file template
@@ -221,7 +199,6 @@ class PhotoshopCCImagePublishPlugin(HookBaseClass):
                 settings["Export Settings"].value.get("format").lower(),
            )
 
-        self.logger.info("VALIDATE the path for the export: %s", item.local_properties["path"])
         item.local_properties["publish_path"] = item.local_properties["path"]
 
         # run the base class validation
@@ -238,15 +215,13 @@ class PhotoshopCCImagePublishPlugin(HookBaseClass):
 
         publisher = self.parent
         engine = publisher.engine
-        document = item.properties["document"]
+        document = item.parent.properties["document"]
         path = sgtk.util.ShotgunPath.normalize(_document_path(document))
 
-        self.logger.info("HELLO PUBLISH")
-        self.logger.info(f"  document: {document}")
         # as we cannot rely on properties to hold the publish path, build it from scratch
         template_name = settings["Publish Template"].value
-        publish_template = publisher.get_template_by_name(template_name)
-        if publish_template:
+        if template_name:
+            publish_template = publisher.get_template_by_name(template_name)
             work_template = item.parent.properties.get("work_template")
             work_fields = work_template.get_fields(path)
 
@@ -259,21 +234,14 @@ class PhotoshopCCImagePublishPlugin(HookBaseClass):
 
         item.local_properties["publish_path"] = item.local_properties["path"]
 
-        self.logger.info("PUBLISH the path for the export: %s", item.local_properties["path"])
         # export the file as png
         engine.adobe.export_image(
             document, item.local_properties["path"], settings["Export Settings"].value
         )
-        self.logger.info("Still there 4")
-        
         item.set_thumbnail_from_path(item.local_properties["path"])
 
-        self.logger.info("Still there 5")
-        
         # Now that the path has been generated, hand it off to the
         super().publish(settings, item)
-        
-        self.logger.info("Still there 6")
 
     def finalize(self, settings, item):
         """
@@ -294,7 +262,7 @@ class PhotoshopCCImagePublishPlugin(HookBaseClass):
 def _get_default_export_filename(filename, format):
     (basename, ext) = os.path.splitext(filename)
 
-    ext = 'png' if format == "png" else 'jpg' if format == "jpeg" else format
+    ext = 'jpg' if format == "jpeg" else format
 
     return f"{basename}.{ext}"
 
