@@ -175,6 +175,12 @@ class PhotoshopCCImagePublishPlugin(HookBaseClass):
 
             # get the configured work file template
             work_template = item.parent.properties.get("work_template")
+            if not work_template:
+                self.logger.error(
+                    "A work template is required for the session item in order to "
+                    "publish document as image. Not accepting export publish plugin."
+                )
+                return False
 
             # get the current scene path and extract fields from it using the work
             # template:
@@ -204,6 +210,14 @@ class PhotoshopCCImagePublishPlugin(HookBaseClass):
                 path,
                 settings["Export Settings"].value.get("format").lower(),
             )
+
+        if os.path.exists(item.local_properties["path"]):
+            self.logger.error(
+                'The "{filename}" file already exists on disk'.format(
+                    filename=os.path.basename(item.local_properties["path"]),
+                )
+            )
+            return False
 
         item.local_properties["publish_path"] = item.local_properties["path"]
 
