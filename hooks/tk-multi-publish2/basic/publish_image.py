@@ -177,8 +177,8 @@ class PhotoshopCCImagePublishPlugin(HookBaseClass):
             work_template = item.parent.properties.get("work_template")
             if not work_template:
                 self.logger.error(
-                    "A work template is required for the session item in order to "
-                    "publish document as image. Not accepting export publish plugin."
+                    "A work template is required for the session item in order "
+                    "to publish document as image"
                 )
                 return False
 
