@@ -4,6 +4,8 @@
 # provided at the time of installation or download, or which otherwise accompanies
 # this software in either electronic or hard copy form.
 
+import os
+
 import sgtk
 
 HookBaseClass = sgtk.get_hook_baseclass()
@@ -110,15 +112,6 @@ class PhotoshopCCImagePublishPlugin(HookBaseClass):
             self.logger.warn("Could not determine the document for item")
             return {"accepted": False}
 
-        # ensure a work file template is available on the parent item
-        work_template = item.parent.properties.get("work_template")
-        if not work_template:
-            self.logger.debug(
-                "A work template is required for the session item in order to "
-                "publish document as image. Not accepting export publish plugin."
-            )
-            return {"accepted": False}
-
         # need to make sure we have access to the export method within tk-framework-adobe
         # this is an ugly way to do it but hasattr() return True in any case
         if "export_image" not in dir(self.parent.engine.adobe):
@@ -168,44 +161,65 @@ class PhotoshopCCImagePublishPlugin(HookBaseClass):
         # get the normalized path
         path = sgtk.util.ShotgunPath.normalize(path)
 
-        # ensure the publish template is defined and valid and that we also have
-        publish_template = publisher.get_template_by_name(template_name)
-        if not publish_template:
+        if template_name:
+            # ensure the publish template is defined and valid and that we also have
+            publish_template = publisher.get_template_by_name(template_name)
+            if not publish_template:
+                self.logger.error(
+                    "The valid publish template could not be determined for the "
+                    "export image item."
+                )
+                return False
+
+            item.local_properties.publish_template = publish_template
+
+            # get the configured work file template
+            work_template = item.parent.properties.get("work_template")
+            if not work_template:
+                self.logger.error(
+                    "A work template is required for the session item in order "
+                    "to publish document as image"
+                )
+                return False
+
+            # get the current scene path and extract fields from it using the work
+            # template:
+            work_fields = work_template.get_fields(path)
+
+            # ensure the fields work for the publish template
+            missing_keys = publish_template.missing_keys(work_fields)
+            if missing_keys:
+                error_msg = (
+                    "Work file '%s' missing keys required for the "
+                    "publish template: %s" % (path, missing_keys)
+                )
+                self.logger.error(error_msg)
+                raise Exception(error_msg)
+
+            # create the publish path by applying the fields. store it in the item's
+            # properties. This is the path we'll create and then publish in the base
+            # publish plugin. Also set the publish_path to be explicit.
+            # We need to store the data in the item properties in order for the base class validation to be run successfully
+            item.local_properties["path"] = publish_template.apply_fields(work_fields)
+
+            # use the work file's version number when publishing
+            if "version" in work_fields:
+                item.local_properties["publish_version"] = work_fields["version"]
+        else:
+            item.local_properties["path"] = _get_default_export_filename(
+                path,
+                settings["Export Settings"].value.get("format").lower(),
+            )
+
+        if os.path.exists(item.local_properties["path"]):
             self.logger.error(
-                "The valid publish template could not be determined for the "
-                "export image item."
+                'The "{filename}" file already exists on disk'.format(
+                    filename=os.path.basename(item.local_properties["path"]),
+                )
             )
             return False
 
-        item.local_properties.publish_template = publish_template
-
-        # get the configured work file template
-        work_template = item.parent.properties.get("work_template")
-
-        # get the current scene path and extract fields from it using the work
-        # template:
-        work_fields = work_template.get_fields(path)
-
-        # ensure the fields work for the publish template
-        missing_keys = publish_template.missing_keys(work_fields)
-        if missing_keys:
-            error_msg = (
-                "Work file '%s' missing keys required for the "
-                "publish template: %s" % (path, missing_keys)
-            )
-            self.logger.error(error_msg)
-            raise Exception(error_msg)
-
-        # create the publish path by applying the fields. store it in the item's
-        # properties. This is the path we'll create and then publish in the base
-        # publish plugin. Also set the publish_path to be explicit.
-        # We need to store the data in the item properties in order for the base class validation to be run successfully
-        item.local_properties["path"] = publish_template.apply_fields(work_fields)
         item.local_properties["publish_path"] = item.local_properties["path"]
-
-        # use the work file's version number when publishing
-        if "version" in work_fields:
-            item.local_properties["publish_version"] = work_fields["version"]
 
         # run the base class validation
         return super().validate(settings, item)
@@ -226,11 +240,18 @@ class PhotoshopCCImagePublishPlugin(HookBaseClass):
 
         # as we cannot rely on properties to hold the publish path, build it from scratch
         template_name = settings["Publish Template"].value
-        publish_template = publisher.get_template_by_name(template_name)
-        work_template = item.parent.properties.get("work_template")
-        work_fields = work_template.get_fields(path)
+        if template_name:
+            publish_template = publisher.get_template_by_name(template_name)
+            work_template = item.parent.properties.get("work_template")
+            work_fields = work_template.get_fields(path)
 
-        item.local_properties["path"] = publish_template.apply_fields(work_fields)
+            item.local_properties["path"] = publish_template.apply_fields(work_fields)
+        else:
+            item.local_properties["path"] = _get_default_export_filename(
+                path,
+                settings["Export Settings"].value.get("format").lower(),
+            )
+
         item.local_properties["publish_path"] = item.local_properties["path"]
 
         # export the file as png
@@ -253,9 +274,15 @@ class PhotoshopCCImagePublishPlugin(HookBaseClass):
         :param item: Item to process
         """
         img_format = settings["Export Settings"].value.get("format")
-        self.logger.info(
-            "{} Image exported and published to Shotgun".format(img_format)
-        )
+        self.logger.info(f"{img_format} Image exported and published to FPTR")
+
+
+def _get_default_export_filename(filename, export_format):
+    (basename, ext) = os.path.splitext(filename)
+
+    ext = "jpg" if export_format == "jpeg" else export_format
+
+    return f"{basename}.{ext}"
 
 
 def _get_save_as_action(document):
