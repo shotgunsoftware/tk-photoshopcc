@@ -84,6 +84,8 @@ class PhotoshopLauncher(SoftwareLauncher):
         bootstrap_python_path = os.path.join(self.disk_location, "python", "startup", "bootstrap.py")
 
         spec = importlib.util.spec_from_file_location("bootstrap", bootstrap_python_path)
+        if spec is None or spec.loader is None:
+            raise ImportError(f"Failed to load the bootstrap module from {bootstrap_python_path}")
         bootstrap = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(bootstrap)
 
