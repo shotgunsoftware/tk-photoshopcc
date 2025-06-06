@@ -8,7 +8,7 @@
 # agreement to the Shotgun Pipeline Toolkit Source Code License. All rights
 # not expressly granted therein are reserved by Shotgun Software Inc.
 
-import imp
+import importlib.util
 import os
 import sys
 
@@ -81,11 +81,19 @@ class PhotoshopLauncher(SoftwareLauncher):
         # note: all the business logic for how to launch is
         #       located in the python/startup folder to be compatible
         #       with older versions of the launch workflow
-        bootstrap_python_path = os.path.join(self.disk_location, "python", "startup")
-        (file_obj, filename, desc) = imp.find_module(
-            "bootstrap", [bootstrap_python_path]
+        bootstrap_python_path = os.path.join(
+            self.disk_location, "python", "startup", "bootstrap.py"
         )
-        bootstrap = imp.load_module("bootstrap", file_obj, filename, desc)
+
+        spec = importlib.util.spec_from_file_location(
+            "bootstrap", bootstrap_python_path
+        )
+        if spec is None or spec.loader is None:
+            raise ImportError(
+                f"Failed to load the bootstrap module from {bootstrap_python_path}"
+            )
+        bootstrap = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(bootstrap)
 
         # determine all environment variables
         required_env = bootstrap.compute_environment()
