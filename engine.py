@@ -1809,10 +1809,12 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
         the base implementation
         """
         super()._on_dialog_closed(dlg)
-        # workaround fix that solves the obsolete pointer issue
-        # which produces a pointer pointing to a wrapped C++ object, that was
-        # already deleted by garbage collection ... I assume
-        self._DIALOG_PARENT = None
+
+        if sgtk.util.is_macos():
+            # workaround fix that solves the obsolete pointer issue
+            # which produces a pointer pointing to a wrapped C++ object, that was
+            # already deleted by garbage collection ... I assume
+            self._DIALOG_PARENT = None
 
 
 # a little action script to activate the given python process.
