@@ -597,23 +597,32 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
         :returns: A {"name": application name, "version": application version}
                   dictionary.
         """
+
+        info = {"name": "Adobe Photoshop", "version": "unknown"}
+
         if not self.adobe:
             # Don't error out if the bridge was not yet started
-            return ("Adobe Photoshop", "unknown")
+            return info
 
-        version = self.adobe.app.version
-        # app.version just returns 18.1.1 which is not what users see in the UI
+        if self.adobe.app.name:
+            info["name"] = self.adobe.app.name
+
+        info["version"] = self.adobe.app.version
+
+        # app.version just returns 25.12.0 which is not what users see in the UI
         # extract a more meaningful version from the systemInformation property
         # which gives something like:
-        # Adobe Photoshop Version: 2017.1.1 20170425.r.252 2017/04/25:23:00:00 CL 1113967  x64\rNumber of .....
+        # Adobe Photoshop Version: 25.12.0 20240903.r.806 055f5e9  x64 ...
         # and use it instead if available.
-        m = re.search("Version:\s+([\.0-9]+)", self.adobe.app.systemInformation)
+        m = re.search(
+            "Version:\s+([\.0-9]+\s+)?(?P<year>[0-9]{4})",
+            self.adobe.app.systemInformation,
+        )
         if m:
-            version = m.group(1)
-        return {
-            "name": self.adobe.app.name,
-            "version": version,
-        }
+            info["version"] = m.group("year")
+            info["version2"] = version
+
+        return info
 
     def _initialize_dark_look_and_feel(self):
         """
