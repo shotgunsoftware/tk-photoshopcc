@@ -14,7 +14,6 @@ import sys
 import sgtk
 import sgtk.platform.framework
 
-
 logger = sgtk.LogManager.get_logger(__name__)
 
 
