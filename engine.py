@@ -607,7 +607,7 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
         # which gives something like:
         # Adobe Photoshop Version: 2017.1.1 20170425.r.252 2017/04/25:23:00:00 CL 1113967  x64\rNumber of .....
         # and use it instead if available.
-        m = re.search("Version:\s+([\.0-9]+)", self.adobe.app.systemInformation)
+        m = re.search("Version:\\s+([\\.0-9]+)", self.adobe.app.systemInformation)
         if m:
             version = m.group(1)
         return {
