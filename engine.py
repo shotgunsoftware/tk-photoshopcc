@@ -498,7 +498,7 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
             # make the document being processed the active document
             self.adobe.app.activeDocument = document
 
-            (_, ext) = os.path.splitext(path)
+            _, ext = os.path.splitext(path)
             ext = ext.lower()
 
             # first, check if file is .psb since it is processed using the adobe bridge
@@ -1654,15 +1654,11 @@ class PhotoshopCCEngine(sgtk.platform.Engine):
             self.__context_find_uid = None
 
             # send an error message back to the context header.
-            self.adobe.send_context_display(
-                """
+            self.adobe.send_context_display("""
                 There was an error retrieving fields for this context. Please
                 see the logs for the specific error message. If this is a
                 recurring error and you need further assistance, please
-                contact our support team via {}.""".format(
-                    sgtk.support_url
-                )
-            )
+                contact our support team via {}.""".format(sgtk.support_url))
             self.logger.error("Failed to query context fields: %s" % (msg,))
 
         elif uid == self.__context_thumb_uid:
@@ -1816,6 +1812,4 @@ OSX_ACTIVATE_SCRIPT = """
 tell application "System Events"
   set frontmost of the first process whose unix id is {pid} to true
 end tell
-""".format(
-    pid=os.getpid()
-)
+""".format(pid=os.getpid())
