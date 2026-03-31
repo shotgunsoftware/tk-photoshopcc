@@ -1,12 +1,11 @@
 # Toolkit Engine for Adobe Photoshop
 
-![Supported Photoshop versions: 2022 (v23) - 2025 (v26)](https://img.shields.io/badge/Photoshop-2022_%28v23%29_--_2025_%28v26%29-blue "Supported Photoshop versions")
+![Supported Photoshop versions: 2023 (v24) - 2026 (v27)](https://img.shields.io/badge/Photoshop-2023_%28v24%29_--_2026_%28v27%29-blue "Supported Photoshop versions")
 [![Supported VFX Platform: CY2022 - CY2026](https://img.shields.io/badge/VFX_Reference_Platform-CY2022_|_CY2023_|_CY2024_|_CY2025_|_CY2026-blue)](http://www.vfxplatform.com/ "Supported VFX Reference Platform versions")
 [![Supported Python versions: 3.9, 3.10, 3.11, 3.13](https://img.shields.io/badge/Python-3.9_|_3.10_|_3.11_|_3.13-blue?logo=python&logoColor=f5f5f5)](https://www.python.org/ "Supported Python versions")
 
 [![Build Status](https://dev.azure.com/shotgun-ecosystem/Toolkit/_apis/build/status/Engines/tk-photoshopcc?branchName=master)](https://dev.azure.com/shotgun-ecosystem/Toolkit/_build/latest?definitionId=69&branchName=master)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
-[![Linting](https://img.shields.io/badge/PEP8%20by-Hound%20CI-a873d1.svg)](https://houndci.com)
 
 ## Documentation
 This repository is a part of the Flow Production Tracking Toolkit.
